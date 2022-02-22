@@ -68,6 +68,10 @@ __FBSDID("$FreeBSD$");
 #include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+#include <x86/iommu/intel_iommu.h>
 
 static int domain_unmap_buf_locked(struct dmar_domain *domain,
     iommu_gaddr_t base, iommu_gaddr_t size, int flags);

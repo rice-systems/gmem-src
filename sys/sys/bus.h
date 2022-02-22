@@ -35,6 +35,7 @@
 #include <machine/_bus.h>
 #include <sys/_bus_dma.h>
 #include <sys/ioccom.h>
+#include <sys/gmem.h>
 
 /**
  * @defgroup NEWBUS newbus - a generic framework for managing devices
@@ -627,6 +628,8 @@ int	device_set_unit(device_t dev, int unit);	/* XXX DONT USE XXX */
 int	device_shutdown(device_t dev);
 void	device_unbusy(device_t dev);
 void	device_verbose(device_t dev);
+void device_set_gmem_dev(device_t dev, gmem_dev_t *gmem_dev);
+gmem_dev_t *device_get_gmem_dev(device_t dev);
 
 /*
  * Access functions for devclass.

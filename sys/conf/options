@@ -1011,6 +1011,9 @@ NVME_USE_NVD	opt_nvme.h
 # amdsbwd options
 AMDSBWD_DEBUG	opt_amdsbwd.h
 
+# GMEM options
+GMEM 			opt_global.h
+
 # gcov support
 GCOV		opt_global.h
 LINDEBUGFS

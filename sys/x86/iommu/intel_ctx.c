@@ -70,6 +70,11 @@ __FBSDID("$FreeBSD$");
 #include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+#include <x86/iommu/intel_iommu.h>
+
 
 static MALLOC_DEFINE(M_DMAR_CTX, "dmar_ctx", "Intel DMAR Context");
 static MALLOC_DEFINE(M_DMAR_DOMAIN, "dmar_dom", "Intel DMAR Domain");
@@ -552,6 +557,19 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		 * higher chance to succeed if the sleep is allowed.
 		 */
 		DMAR_UNLOCK(dmar);
+
+		// GMEM Code: The gmem dev must instantiate a uvas along with
+		// the ctx instantiation.
+		// The dev happens to be the requester which actually uses IOMMU
+		// So, it could be a good idea to check if the device is a gmem_device
+		if (!is_gmem_dev(dev))
+		{
+			// GMEM code: register this gmem device using iommu_ops
+			// Let's not panic, it could be normal
+			// panic("requesting device was not registered as a gmem device\n");
+			gmem_dev_add(dev, &intel_iommu_ops);
+		}
+
 		dmar_ensure_ctx_page(dmar, PCI_RID2BUS(rid));
 		domain1 = dmar_domain_alloc(dmar, id_mapped);
 		if (domain1 == NULL) {

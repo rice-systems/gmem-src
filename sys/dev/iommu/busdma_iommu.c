@@ -66,6 +66,11 @@ __FBSDID("$FreeBSD$");
 #include <machine/iommu.h>
 #include <dev/iommu/busdma_iommu.h>
 
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+#include <x86/iommu/intel_iommu.h>
+
 /*
  * busdma_iommu.c, the implementation of the busdma(9) interface using
  * IOMMU units from Intel VT-d.
@@ -380,6 +385,11 @@ iommu_bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	newtag->ctx = oldtag->ctx;
 	newtag->owner = oldtag->owner;
 
+	// GMEM code: inherit parent gmem structures
+	// Note that DMA Tag only restricts DMA transactions, not DMA mappings
+	// So, both dev and uvas must be created upon the context creation time.
+	newtag->gmem_dev = oldtag->gmem_dev;
+
 	*dmat = (bus_dma_tag_t)newtag;
 out:
 	CTR4(KTR_BUSDMA, "%s returned tag %p tag flags 0x%x error %d",
@@ -418,6 +428,13 @@ iommu_bus_dma_tag_destroy(bus_dma_tag_t dmat1)
 				free(dmat->segments, M_IOMMU_DMAMAP);
 				free(dmat, M_DEVBUF);
 				dmat = parent;
+
+				// GMEM code: remove the gmem device here
+				// However, we do not actually remove it, because the parent device
+				// will just hold it.
+				// This will shortcut future redundant gmem_dev_add for childrens of
+				// this parent device.
+				// gmem_dev_remove(dmat->gmem_dev);
 			} else
 				dmat = NULL;
 		}
@@ -923,17 +940,22 @@ iommu_bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map,
 }
 
 struct bus_dma_impl bus_dma_iommu_impl = {
+	// GMEM dev involved
 	.tag_create = iommu_bus_dma_tag_create,
 	.tag_destroy = iommu_bus_dma_tag_destroy,
+
 	.tag_set_domain = iommu_bus_dma_tag_set_domain,
 	.id_mapped = iommu_bus_dma_id_mapped,
 	.map_create = iommu_bus_dmamap_create,
 	.map_destroy = iommu_bus_dmamap_destroy,
 	.mem_alloc = iommu_bus_dmamem_alloc,
 	.mem_free = iommu_bus_dmamem_free,
+
+	// GMEM uvas involved
 	.load_phys = iommu_bus_dmamap_load_phys,
 	.load_buffer = iommu_bus_dmamap_load_buffer,
 	.load_ma = iommu_bus_dmamap_load_ma,
+
 	.map_waitok = iommu_bus_dmamap_waitok,
 	.map_complete = iommu_bus_dmamap_complete,
 	.map_unload = iommu_bus_dmamap_unload,

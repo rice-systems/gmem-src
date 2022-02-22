@@ -72,6 +72,10 @@ __FBSDID("$FreeBSD$");
 #include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+#include <x86/iommu/intel_iommu.h>
 
 #ifdef DEV_APIC
 #include "pcib_if.h"
@@ -169,6 +173,7 @@ dmar_identify(driver_t *driver, device_t parent)
 	ACPI_DMAR_HARDWARE_UNIT *dmarh;
 	ACPI_STATUS status;
 	int i, error;
+	gmem_dev_t *gmem_dev_tmp;
 
 	if (acpi_disabled("dmar"))
 		return;
@@ -215,6 +220,11 @@ dmar_identify(driver_t *driver, device_t parent)
 			device_delete_child(parent, dmar_devs[i]);
 			dmar_devs[i] = NULL;
 		}
+
+		// GMEM code: register this gmem device using iommu_ops
+		gmem_dev_tmp = gmem_dev_add(dmar_devs[i], &intel_iommu_ops);
+		// GMEM code: revert the registration of the gmem_dev upon errors
+		// gmem_dev_remove(gmem_dev_tmp);
 	}
 }
 

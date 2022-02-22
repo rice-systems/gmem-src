@@ -72,6 +72,8 @@ __FBSDID("$FreeBSD$");
 
 #include <ddb/ddb.h>
 
+#include <sys/gmem.h>
+
 SYSCTL_NODE(_hw, OID_AUTO, bus, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
     NULL);
 SYSCTL_ROOT_NODE(OID_AUTO, dev, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
@@ -147,6 +149,8 @@ struct device {
 
 	struct sysctl_ctx_list sysctl_ctx; /**< state for sysctl variables  */
 	struct sysctl_oid *sysctl_tree;	/**< state for sysctl variables */
+
+	gmem_dev_t *gmem_dev; /* gmem device */
 };
 
 static MALLOC_DEFINE(M_BUS, "bus", "Bus data structures");
@@ -3102,6 +3106,18 @@ device_set_unit(device_t dev, int unit)
 
 	bus_data_generation_update();
 	return (0);
+}
+
+void
+device_set_gmem_dev(device_t dev, gmem_dev_t *gmem_dev)
+{
+	dev->gmem_dev = gmem_dev;
+}
+
+gmem_dev_t *
+device_get_gmem_dev(device_t dev)
+{
+	return dev->gmem_dev;
 }
 
 /*======================================*/

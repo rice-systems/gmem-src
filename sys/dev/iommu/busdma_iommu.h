@@ -43,6 +43,11 @@ struct bus_dma_tag_iommu {
 	device_t owner;
 	int map_count;
 	bus_dma_segment_t *segments;
+
+   // GMEM code: track gmem_dev in tag_dmar structure
+   // Note that gmem_dev->device is not necessarily the owner of this tag,
+   // but must be the requester device of the IOMMU.
+   gmem_dev_t *gmem_dev;
 };
 
 struct bus_dmamap_iommu {
