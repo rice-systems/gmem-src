@@ -72,10 +72,10 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	    IDX_TO_OFF(pglvl_max_pages(pgtable->pglvl)), 0, 0, NULL);
 	
 	VM_OBJECT_WLOCK(pgtable->pgtbl_obj);
-	m = dmar_pgalloc(pgtable->domain->pgtbl_obj, 0, DMAR_PGF_WAITOK |
-	    DMAR_PGF_ZERO | DMAR_PGF_OBJL);
+	m = dmar_pgalloc(pgtable->domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
+	    IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
 	/* No implicit free of the top level page table page. */
-	m->wire_count = 1;
+	m->ref_count = 1;
 	VM_OBJECT_WUNLOCK(pgtable->pgtbl_obj);
 
 	// DMAR_LOCK(domain->dmar);
