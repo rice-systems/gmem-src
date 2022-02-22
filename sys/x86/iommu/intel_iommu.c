@@ -110,9 +110,9 @@ static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
 	// VM_OBJECT_WLOCK(obj);
 	domain->pgtbl_obj = NULL;
 
-	if ((domain->iodom.flags & DMAR_DOMAIN_IDMAP) != 0) {
+	if ((domain->iodom.flags & IOMMU_DOMAIN_IDMAP) != 0) {
 		put_idmap_pgtbl(obj);
-		domain->iodom.flags &= ~DMAR_DOMAIN_IDMAP;
+		domain->iodom.flags &= ~IOMMU_DOMAIN_IDMAP;
 		return GMEM_OK;
 	}
 
