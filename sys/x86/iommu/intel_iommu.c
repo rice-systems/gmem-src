@@ -37,15 +37,15 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 #include <vm/vm_map.h>
+#include <dev/pci/pcireg.h>
 #include <machine/atomic.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
 #include <x86/include/busdma_impl.h>
+#include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
-#include <x86/iommu/busdma_dmar.h>
-#include <dev/pci/pcireg.h>
 #include <x86/iommu/intel_dmar.h>
 
 #include <sys/gmem.h>
@@ -72,10 +72,10 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	    IDX_TO_OFF(pglvl_max_pages(pgtable->pglvl)), 0, 0, NULL);
 	
 	VM_OBJECT_WLOCK(pgtable->pgtbl_obj);
-	m = dmar_pgalloc(pgtable->domain->pgtbl_obj, 0, DMAR_PGF_WAITOK |
-	    DMAR_PGF_ZERO | DMAR_PGF_OBJL);
+	m = dmar_pgalloc(pgtable->domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
+	    IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
 	/* No implicit free of the top level page table page. */
-	m->wire_count = 1;
+	m->ref_count = 1;
 	VM_OBJECT_WUNLOCK(pgtable->pgtbl_obj);
 
 	// DMAR_LOCK(domain->dmar);
@@ -99,30 +99,28 @@ static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
 
 	if (obj == NULL) {
 		KASSERT((domain->dmar->hw_ecap & DMAR_ECAP_PT) != 0 &&
-		    (domain->flags & DMAR_DOMAIN_IDMAP) != 0,
+		    (domain->iodom.flags & DMAR_DOMAIN_IDMAP) != 0,
 		    ("lost pagetable object domain %p", domain));
-		// return;
+		return GMEM_OK;
 	}
-	else
-	{
-		// We save all changes in the future after the conversion
-		// Don't call this function with a lock state issued outside
-		DMAR_DOMAIN_ASSERT_PGLOCKED(domain);
-		// VM_OBJECT_WLOCK(obj);
-		domain->pgtbl_obj = NULL;
 
-		if ((domain->flags & DMAR_DOMAIN_IDMAP) != 0) {
-			put_idmap_pgtbl(obj);
-			domain->flags &= ~DMAR_DOMAIN_IDMAP;
-			return GMEM_OK;
-		}
+	// We save all changes in the future after the conversion
+	// Don't call this function with a lock state issued outside
+	DMAR_DOMAIN_ASSERT_PGLOCKED(domain);
+	// VM_OBJECT_WLOCK(obj);
+	domain->pgtbl_obj = NULL;
 
-		/* Obliterate wire_counts */
-		for (m = vm_page_lookup(obj, 0); m != NULL; m = vm_page_next(m))
-			m->wire_count = 0;
-		VM_OBJECT_WUNLOCK(obj);
-		vm_object_deallocate(obj);
+	if ((domain->iodom.flags & IOMMU_DOMAIN_IDMAP) != 0) {
+		put_idmap_pgtbl(obj);
+		domain->iodom.flags &= ~IOMMU_DOMAIN_IDMAP;
+		return GMEM_OK;
 	}
+
+	/* Obliterate wire_counts */
+	for (m = vm_page_lookup(obj, 0); m != NULL; m = vm_page_next(m))
+		m->ref_count = 0;
+	VM_OBJECT_WUNLOCK(obj);
+	vm_object_deallocate(obj);
 	return GMEM_OK;
 }
 
