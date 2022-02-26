@@ -221,6 +221,13 @@ iommu_get_ctx_domain(struct iommu_ctx *ctx)
 	return (ctx->domain);
 }
 
+struct gmem_uvas *
+iommu_get_ctx_uvas(struct iommu_ctx *ctx)
+{
+
+	return (ctx->uvas);
+}
+
 void
 iommu_gas_init_domain(struct iommu_domain *domain)
 {
