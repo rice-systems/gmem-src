@@ -632,7 +632,7 @@ iommu_gas_map_gmembased(struct iommu_domain *domain,
 	if (error == ENOMEM) {
 		// There is no need to call iotlb inv
 		// iommu_domain_unload_entry(entry, true);
-		gmem_uvas_free_span(uvas, start, size);
+		gmem_uvas_free_span(domain->uvas, start, size);
 		return (error);
 	}
 	KASSERT(error == 0,
@@ -840,7 +840,7 @@ iommu_map(struct iommu_domain *domain,
 
 	// gmem based map function, TODO: replace iommu_gas_map
 	iommu_gas_map_gmembased(domain, common, size, offset, eflags, flags,
-	    ma)
+	    ma);
 
 	return (error);
 }
