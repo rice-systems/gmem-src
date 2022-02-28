@@ -572,11 +572,11 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		pmap->uvas = uvas;
 
 		// use mmu callback to initialize device-specific data
-		pmap->mmu_ops->mmu_pmap_create(&pmap->data, dev_data);
+		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
 		// initialize uvas
-		TAILQ_INIT(uvas->uvas_entry_header);
-		TAILQ_INIT(uvas->dev_pmap_header);
+		TAILQ_INIT(&uvas->uvas_entry_header);
+		TAILQ_INIT(&uvas->dev_pmap_header);
 
 		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
