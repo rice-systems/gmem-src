@@ -159,12 +159,12 @@ gmem_uvas_init_rbtree(struct gmem_uvas *uvas)
 	begin->start = 0;
 	begin->end = GMEM_PAGE_SIZE;
 	begin->flags = GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_UNMAPPED;
-	iommu_gas_rb_insert(uvas, begin);
+	gmem_uvas_rb_insert(uvas, begin);
 
-	end->start = uvas->end;
-	end->end = uvas->end;
+	end->start = uvas->format.maxaddr;
+	end->end = uvas->format.maxaddr;
 	end->flags = GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_UNMAPPED;
-	iommu_gas_rb_insert(uvas, end);
+	gmem_uvas_rb_insert(uvas, end);
 
 	uvas->first_place = begin;
 	uvas->last_place = end;
@@ -230,7 +230,7 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 	vm_offset_t bs, start;
 
 	a->entry->start = roundup2(beg + GMEM_PAGE_SIZE,
-	    a->uvas->format->alignment);
+	    a->uvas->format.alignment);
 	if (a->entry->start + a->size > maxaddr)
 		return (false);
 
@@ -241,7 +241,7 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 
 	/* No boundary crossing. */
 	if (gmem_test_boundary(a->entry->start + a->offset, a->size,
-	    a->uvas->format->boundary))
+	    a->uvas->format.boundary))
 		return (true);
 
 	/*
@@ -249,14 +249,14 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 	 * the boundary.  Check if there is enough space after the
 	 * next boundary after the beg.
 	 */
-	bs = rounddown2(a->entry->start + a->offset + a->uvas->format->boundary,
-	    a->uvas->format->boundary);
-	start = roundup2(bs, a->uvas->format->alignment);
+	bs = rounddown2(a->entry->start + a->offset + a->uvas->format.boundary,
+	    a->uvas->format.boundary);
+	start = roundup2(bs, a->uvas->format.alignment);
 	/* GMEM_PAGE_SIZE to create gap after new entry. */
 	if (start + a->offset + a->size + GMEM_PAGE_SIZE <= end &&
 	    start + a->offset + a->size <= maxaddr &&
 	    gmem_test_boundary(start + a->offset, a->size,
-	    a->uvas->format->boundary)) {
+	    a->uvas->format.boundary)) {
 		a->entry->start = start;
 		return (true);
 	}
@@ -302,7 +302,7 @@ static int
 gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
-	vm_offset_t maxaddr = a->uvas->format->maxaddr;
+	vm_offset_t maxaddr = a->uvas->format.maxaddr;
 
 	child = RB_RIGHT(entry, rb_entry);
 	if (child != NULL && entry->end < maxaddr &&
@@ -381,7 +381,7 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 	a.entry = entry;
 
 	/* Handle lower region. */
-	if (uvas->format->maxaddr > 0) {
+	if (uvas->format.maxaddr > 0) {
 		error = gmem_uvas_lowermatch(&a, RB_ROOT(&uvas->rb_root));
 		if (error == 0)
 			return (0);
@@ -600,8 +600,8 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 			uvas->allocator = VMEM;
 			// Currently we use no quantum cache
 			uvas->arena = vmem_create("uva", 0, 
-				rounddown(dev->vma_format->maxaddr, dev->vma_format->alignment),
-				dev->vma_format->alignment, 0, M_WAITOK);
+				rounddown(maxaddr, alignment),
+				alignment, 0, M_WAITOK);
 		}
 	}
 	else
