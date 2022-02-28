@@ -210,4 +210,9 @@ gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection);
 
 
+
+gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
+	vm_size_t size);
+gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas, 
+	vm_offset_t *start, vm_size_t size, vm_prot_t protection, u_int flags);
 #endif

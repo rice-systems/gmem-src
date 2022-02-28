@@ -578,7 +578,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		// ultimately, ctx corresponds to mm_struct
 		gmem_uvas_create(&domain1->uvas, device_get_gmem_dev(dev),
 			NULL, NULL, false, true,
-			PAGE_SIZE, 0, )
+			PAGE_SIZE, 0, 1ULL << 48);
 
 		if (domain1 == NULL) {
 			TD_PINNED_ASSERT;

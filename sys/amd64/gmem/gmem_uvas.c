@@ -623,7 +623,7 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 	return GMEM_OK;
 }
 
-static gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas, 
+gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas, 
 	vm_offset_t *start, vm_size_t size, vm_prot_t protection, u_int flags)
 {
 	gmem_uvas_entry *entry;
@@ -657,7 +657,7 @@ static gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 	return GMEM_OK;
 }
 
-static gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
+gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size)
 {
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
