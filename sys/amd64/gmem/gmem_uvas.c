@@ -636,7 +636,9 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
-		error = gmem_uvas_find_space(uvas, size, offset, flags, entry);
+		// TODO: 
+		// offset makes no sense. Upgrade it to fit page alignment in the future
+		error = gmem_uvas_find_space(uvas, size, 0, flags, entry);
 		if (error == GMEM_ENOMEM) {
 			GMEM_UVAS_UNLOCK(uvas);
 			gmem_uvas_free_entry(uvas, entry);
