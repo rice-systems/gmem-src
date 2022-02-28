@@ -599,9 +599,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		{
 			uvas->allocator = VMEM;
 			// Currently we use no quantum cache
-			uvas->arena = vmem_create("uva", 0, 
-				rounddown(maxaddr, alignment),
-				alignment, 0, M_WAITOK);
+			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), alignment, 0, M_WAITOK);
 		}
 	}
 	else
