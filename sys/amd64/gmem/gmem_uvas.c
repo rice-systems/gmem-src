@@ -367,9 +367,9 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
     int offset, u_int flags, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_match_args a;
-	int error;
+	int error = GMEM_OK;
 
-	GMME_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_ASSERT_LOCKED(uvas);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", uvas, entry));
 	KASSERT((size & GMEM_PAGE_MASK) == 0, ("size %jx", (uintmax_t)size));
 
@@ -381,13 +381,13 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 	a.entry = entry;
 
 	/* Handle lower region. */
-	if (uvas->format.maxaddr > 0) {
+	// if (uvas->format.maxaddr > 0) {
 		error = gmem_uvas_lowermatch(&a, RB_ROOT(&uvas->rb_root));
-		if (error == 0)
-			return (0);
+		// if (error == 0)
+		// 	return (0);
 		KASSERT(error == ENOMEM,
 		    ("error %d from gmem_uvas_lowermatch", error));
-	}
+	// }
 	/* Handle upper region. */
 	// if (common->highaddr >= uvas->end)
 	// 	return (ENOMEM);
@@ -404,14 +404,14 @@ gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 	struct gmem_uvas_entry *next, *prev;
 	bool found;
 
-	GMME_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_ASSERT_LOCKED(uvas);
 
 	if ((entry->start & GMEM_PAGE_MASK) != 0 ||
 	    (entry->end & GMEM_PAGE_MASK) != 0)
 		return (EINVAL);
 	if (entry->start >= entry->end)
 		return (EINVAL);
-	if (entry->end >= uvas->end)
+	if (entry->end >= uvas->format.maxaddr)
 		return (EINVAL);
 
 	next = RB_NFIND(gmem_uvas_entries_tree, &uvas->rb_root, entry);
@@ -480,11 +480,11 @@ gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 	return (0);
 }
 
-void
+static void
 gmem_uvas_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 
-	GMME_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_ASSERT_LOCKED(uvas);
 	KASSERT((entry->flags & (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_RMRR |
 	    GMEM_UVAS_ENTRY_MAP)) == GMEM_UVAS_ENTRY_MAP,
 	    ("permanent entry %p %p", uvas, entry));
@@ -497,12 +497,12 @@ gmem_uvas_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 // #endif
 }
 
-void
+static void
 gmem_uvas_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *next, *prev;
 
-	GMME_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_ASSERT_LOCKED(uvas);
 	KASSERT((entry->flags & (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_RMRR |
 	    GMEM_UVAS_ENTRY_MAP)) == GMEM_UVAS_ENTRY_RMRR,
 	    ("non-RMRR entry %p %p", uvas, entry));
@@ -561,11 +561,11 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		// allocate and create the pmap with dev->mmu_ops
 		pmap = malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		// allocate and create the uvas
-		uvas = malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
+		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 
 		// initialize pmap
 		pmap->ndevices = 1;
-		TAILQ_INIT(pmap->gmem_dev_header);
+		TAILQ_INIT(&pmap->gmem_dev_header);
 		TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
 		pmap->mmu_ops = dev->mmu_ops;
 		pmap->pmap_replica = NULL;
