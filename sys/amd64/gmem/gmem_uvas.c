@@ -624,7 +624,7 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas, 
 	vm_offset_t *start, vm_size_t size, vm_prot_t protection, u_int flags)
 {
-	gmem_uvas_entry *entry;
+	gmem_uvas_entry_t *entry;
 	int error;
 
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
@@ -633,7 +633,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 		return (GMEM_ENOMEM);
 
 	GMEM_UVAS_LOCK(uvas);
-	if (uvas->uvas_allocator == RBTREE)
+	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
 		error = gmem_uvas_find_space(uvas, size, offset, flags, entry);
@@ -646,7 +646,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 		// entry->flags |= eflags;
 		*start = entry->start;
 	}
-	else if (uvas->uvas_allocator == VMEM)
+	else if (uvas->allocator == VMEM)
 	{
 		// use vmem allocator
 		printf("VMEM Allocator not implemented!\n");
@@ -660,18 +660,18 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 {
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	GMEM_UVAS_LOCK(uvas);
-	if (uvas->uvas_allocator == RBTREE)
+	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
 		struct gmem_uvas_entry entry;
 			// = gmem_uvas_alloc_entry(uvas, 0);
-		if (entry == NULL)
-			return (GMEM_ENOMEM);
+		// if (entry == NULL)
+		// 	return (GMEM_ENOMEM);
 		entry.start = start;
 		entry.end = start + size;
 		gmem_uvas_rb_free_span(uvas, &entry);
 	}
-	else if (uvas->uvas_allocator == VMEM)
+	else if (uvas->allocator == VMEM)
 	{
 		// use vmem allocator
 	}
