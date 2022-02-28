@@ -151,7 +151,7 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 	u_int flags;
 
 	// The unified address space it points to
-	struct gmem_uvas uvas;
+	gmem_uvas_t *uvas;
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas

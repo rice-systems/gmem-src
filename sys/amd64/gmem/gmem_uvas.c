@@ -38,8 +38,8 @@
 static gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas, vm_offset_t *start, 
 	vm_size_t size, vm_prot_t protection, dev_pmap_t *pmap, 
 	gmem_uvas_entry_t *entry);
-static gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
-	vm_size_t size);
+// gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
+// 	vm_size_t size);
 
 static uma_zone_t gmem_uvas_entry_zone;
 
