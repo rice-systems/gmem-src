@@ -195,8 +195,9 @@ struct dev_pmap
 	void *data;
 };
 
-gmem_error_t gmem_uvas_create(gmem_uvas_t *uvas, vm_size_t size, gmem_dev_t *dev,
-	dev_pmap_t *pmap, void *dev_data, bool replicate, bool need_lookup);
+gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas, gmem_dev_t *dev,
+	dev_pmap_t *pmap, void *dev_data, bool replicate, bool need_lookup,
+	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size);
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page);

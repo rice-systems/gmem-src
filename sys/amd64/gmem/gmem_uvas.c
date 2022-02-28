@@ -546,14 +546,17 @@ gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 // 	1. private: pmap is NULL && replicate == false
 //  2. shared: uvas and pmap are both not NULL, replicate == false
 //  3. replicate: uvas and pmap are both not NULL, replicate == true
+//     TODO: change this mode to share CPU vma, consider the opencl case.
 //  lookup: faultable device requires looking up uvas entries 
-gmem_error_t gmem_uvas_create(gmem_uvas_t *uvas, vm_size_t size, gmem_dev_t *dev,
-	dev_pmap_t *pmap, void *dev_data, bool replicate, bool need_lookup)
+gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
+	dev_pmap_t *pmap, void *dev_data, bool replicate, bool need_lookup,
+	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
-	if (uvas == NULL)
+	gmem_uvas_t uvas;
+	if (*uvas_res == NULL)
 	{
-		KASSERT(pmap == NULL, "Creating a uvas with non-null pmap");
-		KASSERT(data == NULL, "Creating a uvas with non-null dev-specific data");
+		KASSERT(*pmap == NULL, "Creating a uvas with non-null pmap");
+		KASSERT(dev_data == NULL, "Creating a uvas with non-null dev-specific data");
 
 		// allocate and create the pmap with dev->mmu_ops
 		pmap = malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -574,8 +577,18 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t *uvas, vm_size_t size, gmem_dev_t *dev
 		// initialize uvas
 		TAILQ_INIT(uvas->uvas_entry_header);
 		TAILQ_INIT(uvas->dev_pmap_header);
+
+		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
-		uvas->format = dev->vma_format;
+
+		// insert pmap to dev pmap list
+		// I don't think that this is necessary.
+		// TODO: consider delete pmap field in gmem_dev
+
+		uvas->format.alignment = alignment;
+		uvas->format.boundary = boundary;
+		uvas->format.maxaddr = size;
+
 		if (need_lookup)
 		{
 			uvas->allocator = RBTREE;
@@ -596,6 +609,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t *uvas, vm_size_t size, gmem_dev_t *dev
 		// attach dev and pmap to the uvas
 		panic("Attaching to a uvas is not implemented");
 	}
+	*uvas_res = uvas;
 	return GMEM_OK;
 }
 

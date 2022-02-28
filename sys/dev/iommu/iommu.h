@@ -120,12 +120,12 @@ struct iommu_domain {
 
 	// uvas contains:
 	// entries_cnt, rb_root, first_place, last_place, ..
-	struct gmem_uvas uvas;
+	gmem_uvas_t *uvas;
 };
 
 struct iommu_ctx {
 	struct iommu_domain *domain;	/* (c) */
-	struct gmem_uvas *uvas;		/* (c) */
+	gmem_uvas_t *uvas;		/* (c) */
 	struct bus_dma_tag_iommu *tag;	/* (c) Root tag */
 	u_long loads;			/* atomic updates, for stat only */
 	u_long unloads;			/* same */

@@ -36,7 +36,7 @@ struct gmem_dev
 	// list of gmem devs sharing the same pmap
 	TAILQ_ENTRY(gmem_dev) gmem_dev_list;
 
-	gmem_vma_format_t vma_format;
+	// gmem_vma_format_t vma_format;
 };
 
 // global list (hashmap) of gmem devices 

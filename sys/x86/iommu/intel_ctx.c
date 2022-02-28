@@ -435,6 +435,7 @@ dmar_domain_alloc(struct dmar_unit *dmar, bool id_mapped)
 		if (error != 0)
 			goto fail;
 	}
+	domain->uvas = NULL;
 	return (domain);
 
 fail:
@@ -572,6 +573,13 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 
 		dmar_ensure_ctx_page(dmar, PCI_RID2BUS(rid));
 		domain1 = dmar_domain_alloc(dmar, id_mapped);
+
+		// TODO: put uvas under ctx instead of domain
+		// ultimately, ctx corresponds to mm_struct
+		gmem_uvas_create(&domain1->uvas, device_get_gmem_dev(dev),
+			NULL, NULL, false, true,
+			PAGE_SIZE, 0, )
+
 		if (domain1 == NULL) {
 			TD_PINNED_ASSERT;
 			return (NULL);
