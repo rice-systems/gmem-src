@@ -480,5 +480,5 @@ contrib/openzfs/module/zfs/vdev_raidz_math_ssse3.c		optional zfs compile-with "$
 #
 # GMEM support
 #
-amd64/gmem/gmem_dev.c 	optional gmem
-amd64/gmem/gmem_uvas.c 	optional gmem
+amd64/gmem/gmem_dev.c 	standard
+amd64/gmem/gmem_uvas.c 	standard
