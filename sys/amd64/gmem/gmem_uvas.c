@@ -53,7 +53,7 @@ gmem_uvas_zone_init(void)
 }
 SYSINIT(gmem_uvas, SI_SUB_DRIVERS, SI_ORDER_FIRST, gmem_uvas_zone_init, NULL);
 
-struct gmem_uvas_entry *
+static struct gmem_uvas_entry *
 gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 {
 	struct gmem_uvas_entry *res;
@@ -70,7 +70,7 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	return (res);
 }
 
-void
+static void
 gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 
@@ -144,7 +144,7 @@ gmem_uvas_rb_remove(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	RB_REMOVE(gmem_uvas_entries_tree, &uvas->rb_root, entry);
 }
 
-void
+static void
 gmem_uvas_init_rbtree(struct gmem_uvas *uvas)
 {
 	struct gmem_uvas_entry *begin, *end;
@@ -172,7 +172,7 @@ gmem_uvas_init_rbtree(struct gmem_uvas *uvas)
 	GMEM_UVAS_UNLOCK(uvas);
 }
 
-void
+static void
 gmem_uvas_fini_uvas(struct gmem_uvas *uvas)
 {
 	struct gmem_uvas_entry *entry, *entry1;
@@ -519,7 +519,7 @@ gmem_uvas_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 }
 
 // remove all rb entries covered by the given span
-void
+static void
 gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *tmp, *prev;
