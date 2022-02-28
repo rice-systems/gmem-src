@@ -603,6 +603,45 @@ iommu_gas_free_region(struct iommu_domain *domain, struct iommu_map_entry *entry
 		iommu_gas_rb_insert(domain, domain->last_place);
 }
 
+// TODO: This function should be ported as a gmem
+// API, we need to make sure not to expose gmem's data
+// structure outside.
+int
+iommu_gas_map_gmembased(struct iommu_domain *domain,
+    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+    u_int eflags, u_int flags, vm_page_t *ma)
+{
+	// struct gmem_uvas_entry *entry;
+	vm_offset_t start;
+	int error;
+
+	KASSERT((flags & ~(IOMMU_MF_CANWAIT | IOMMU_MF_CANSPLIT)) == 0,
+	    ("invalid flags 0x%x", flags));
+
+	// Missing: entry->flags |= eflags;
+	error = gmem_uvas_alloc_and_insert_span(domain->uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+		flags);
+	KASSERT(error == GMEM_OK,
+		("unexpected error %d from gmem_uvas_alloc_and_insert_span", error));
+
+	// TODO: allow actual map to happen. Before that, we simulate
+	// the allocator along with the original driver.
+	// error = domain->ops->map(domain, entry->start,
+	//     entry->end - entry->start, ma, eflags,
+	//     ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_PGF_WAITOK : 0));
+	if (error == ENOMEM) {
+		// There is no need to call iotlb inv
+		// iommu_domain_unload_entry(entry, true);
+		gmem_uvas_free_span(uvas, start, size);
+		return (error);
+	}
+	KASSERT(error == 0,
+	    ("unexpected error %d from domain_map_buf", error));
+
+	// *res = entry;
+	return (0);
+}
+
 int
 iommu_gas_map(struct iommu_domain *domain,
     const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
@@ -798,6 +837,10 @@ iommu_map(struct iommu_domain *domain,
 
 	error = iommu_gas_map(domain, common, size, offset, eflags, flags,
 	    ma, res);
+
+	// gmem based map function, TODO: replace iommu_gas_map
+	iommu_gas_map_gmembased(domain, common, size, offset, eflags, flags,
+	    ma)
 
 	return (error);
 }

@@ -873,8 +873,12 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	IOMMU_DOMAIN_LOCK(domain);
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
 		iommu_gas_free_region(domain, entry);
-	else
+	else {
 		iommu_gas_free_space(domain, entry);
+
+		// TODO: replace dmar_domain_free_entry
+		gmem_uvas_free_span(domain->uvas, entry->start, entry->size);
+	}
 	IOMMU_DOMAIN_UNLOCK(domain);
 	if (free)
 		iommu_gas_free_entry(domain, entry);

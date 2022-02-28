@@ -37,7 +37,8 @@
 #define	GMEM_UVAS_ENTRY_WRITE	0x2000	/* Write permitted */
 #define	GMEM_UVAS_ENTRY_SNOOP	0x4000	/* Snoop */
 #define	GMEM_UVAS_ENTRY_TM	0x8000	/* Transient */
-
+#define GMEM_PROT_READ 		0x0001
+#define GMEM_PROT_WRITE     0x0002
 #define GMEM_PAGE_SIZE 4096
 #define GMEM_PAGE_MASK (GMEM_PAGE_SIZE - 1)
 
@@ -80,6 +81,16 @@ enum gmem_uvas_allocator_type {
 	VMEM
 };
 
+// Canonical address space: 0~maxsize
+struct gmem_vma_format
+{
+	// vm_offset_t low_addr;
+	// vm_offset_t high_addr;
+	vm_offset_t alignment;
+	vm_offset_t boundary;
+	vm_offset_t maxaddr;
+};
+
 struct gmem_uvas // VM counterpart: struct vm_map
 {
 	struct mtx lock;
@@ -102,8 +113,11 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	// Number of entires
 	uint32_t entries_cnt;
 
-	// virtual size
-	vm_size_t size;
+	// format of uvas
+	struct gmem_uvas_format format;
+
+	// max va
+	// vm_size_t end;
 
 	// A uvas may be used by multiple pmaps (mmus)
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;

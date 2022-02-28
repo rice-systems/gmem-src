@@ -19,6 +19,7 @@ typedef struct gmem_dev gmem_dev_t;
 typedef struct gmem_devmap_info gmem_devmap_t;
 
 typedef struct gmem_mmu_ops gmem_mmu_ops_t;
+typedef struct gmem_vma_format gmem_vma_format_t;
 typedef struct gmem_uvas gmem_uvas_t;
 typedef struct gmem_uvas_entry gmem_uvas_entry_t;
 typedef struct dev_pmap_replica dev_pmap_replica_t;

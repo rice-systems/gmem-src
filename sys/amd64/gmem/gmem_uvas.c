@@ -77,7 +77,7 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	KASSERT(uvas == entry->uvas,
 	    ("mismatched free uvas %p entry %p entry->uvas %p", uvas,
 	    entry, entry->uvas));
-	atomic_subtract_int(&domain->entries_cnt, 1);
+	atomic_subtract_int(&uvas->entries_cnt, 1);
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
@@ -212,7 +212,7 @@ struct gmem_uvas_match_args {
 	struct gmem_uvas *uvas;
 	vm_offset_t size;
 	int offset;
-	const struct bus_dma_tag_common *common;
+	// const struct bus_dma_tag_common *common;
 	u_int gas_flags;
 	struct gmem_uvas_entry *entry;
 };
@@ -230,7 +230,7 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 	vm_offset_t bs, start;
 
 	a->entry->start = roundup2(beg + GMEM_PAGE_SIZE,
-	    a->common->alignment);
+	    a->uvas->format->alignment);
 	if (a->entry->start + a->size > maxaddr)
 		return (false);
 
@@ -241,7 +241,7 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 
 	/* No boundary crossing. */
 	if (gmem_test_boundary(a->entry->start + a->offset, a->size,
-	    a->common->boundary))
+	    a->uvas->format->boundary))
 		return (true);
 
 	/*
@@ -249,14 +249,14 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 	 * the boundary.  Check if there is enough space after the
 	 * next boundary after the beg.
 	 */
-	bs = rounddown2(a->entry->start + a->offset + a->common->boundary,
-	    a->common->boundary);
-	start = roundup2(bs, a->common->alignment);
+	bs = rounddown2(a->entry->start + a->offset + a->uvas->format->boundary,
+	    a->uvas->format->boundary);
+	start = roundup2(bs, a->uvas->format->alignment);
 	/* GMEM_PAGE_SIZE to create gap after new entry. */
 	if (start + a->offset + a->size + GMEM_PAGE_SIZE <= end &&
 	    start + a->offset + a->size <= maxaddr &&
 	    gmem_test_boundary(start + a->offset, a->size,
-	    a->common->boundary)) {
+	    a->uvas->format->boundary)) {
 		a->entry->start = start;
 		return (true);
 	}
@@ -302,24 +302,25 @@ static int
 gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
+	vm_offset_t maxaddr = a->uvas->format->maxaddr;
 
 	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && entry->end < a->common->lowaddr &&
+	if (child != NULL && entry->end < maxaddr &&
 	    gmem_uvas_match_one(a, entry->end, child->first,
-	    a->common->lowaddr)) {
+	    maxaddr)) {
 		gmem_uvas_match_insert(a);
 		return (0);
 	}
 	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
 		return (ENOMEM);
-	if (entry->first >= a->common->lowaddr)
+	if (entry->first >= maxaddr)
 		return (ENOMEM);
 	child = RB_LEFT(entry, rb_entry);
 	if (child != NULL && 0 == gmem_uvas_lowermatch(a, child))
 		return (0);
-	if (child != NULL && child->last < a->common->lowaddr &&
+	if (child != NULL && child->last < maxaddr &&
 	    gmem_uvas_match_one(a, child->last, entry->start,
-	    a->common->lowaddr)) {
+	    maxaddr)) {
 		gmem_uvas_match_insert(a);
 		return (0);
 	}
@@ -329,39 +330,40 @@ gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *ent
 	return (ENOMEM);
 }
 
-static int
-gmem_uvas_uppermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *entry)
-{
-	struct gmem_uvas_entry *child;
+// static int
+// gmem_uvas_uppermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *entry)
+// {
+// 	struct gmem_uvas_entry *child;
 
-	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
-		return (ENOMEM);
-	if (entry->last < a->common->highaddr)
-		return (ENOMEM);
-	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
-		return (0);
-	if (child != NULL && child->last >= a->common->highaddr &&
-	    gmem_uvas_match_one(a, child->last, entry->start,
-	    a->uvas->end)) {
-		gmem_uvas_match_insert(a);
-		return (0);
-	}
-	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && entry->end >= a->common->highaddr &&
-	    gmem_uvas_match_one(a, entry->end, child->first,
-	    a->uvas->end)) {
-		gmem_uvas_match_insert(a);
-		return (0);
-	}
-	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
-		return (0);
-	return (ENOMEM);
-}
+// 	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
+// 		return (ENOMEM);
+// 	if (entry->last < a->common->highaddr)
+// 		return (ENOMEM);
+// 	child = RB_LEFT(entry, rb_entry);
+// 	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
+// 		return (0);
+// 	if (child != NULL && child->last >= a->common->highaddr &&
+// 	    gmem_uvas_match_one(a, child->last, entry->start,
+// 	    a->uvas->end)) {
+// 		gmem_uvas_match_insert(a);
+// 		return (0);
+// 	}
+// 	child = RB_RIGHT(entry, rb_entry);
+// 	if (child != NULL && entry->end >= a->common->highaddr &&
+// 	    gmem_uvas_match_one(a, entry->end, child->first,
+// 	    a->uvas->end)) {
+// 		gmem_uvas_match_insert(a);
+// 		return (0);
+// 	}
+// 	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
+// 		return (0);
+// 	return (ENOMEM);
+// }
 
 static int
 gmem_uvas_find_space(struct gmem_uvas *uvas,
-    const struct bus_dma_tag_common *common, vm_offset_t size,
+    // const struct bus_dma_tag_common *common, 
+    vm_offset_t size,
     int offset, u_int flags, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_match_args a;
@@ -374,23 +376,22 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 	a.uvas = uvas;
 	a.size = size;
 	a.offset = offset;
-	a.common = common;
+	// a.common = common;
 	a.gas_flags = flags;
 	a.entry = entry;
 
 	/* Handle lower region. */
-	if (common->lowaddr > 0) {
-		error = gmem_uvas_lowermatch(&a,
-		    RB_ROOT(&uvas->rb_root));
+	if (uvas->format->maxaddr > 0) {
+		error = gmem_uvas_lowermatch(&a, RB_ROOT(&uvas->rb_root));
 		if (error == 0)
 			return (0);
 		KASSERT(error == ENOMEM,
 		    ("error %d from gmem_uvas_lowermatch", error));
 	}
 	/* Handle upper region. */
-	if (common->highaddr >= uvas->end)
-		return (ENOMEM);
-	error = gmem_uvas_uppermatch(&a, RB_ROOT(&uvas->rb_root));
+	// if (common->highaddr >= uvas->end)
+	// 	return (ENOMEM);
+	// error = gmem_uvas_uppermatch(&a, RB_ROOT(&uvas->rb_root));
 	KASSERT(error == ENOMEM,
 	    ("error %d from gmem_uvas_uppermatch", error));
 	return (error);
@@ -517,6 +518,30 @@ gmem_uvas_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 		gmem_uvas_rb_insert(uvas, uvas->last_place);
 }
 
+// remove all rb entries covered by the given span
+void
+gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+{
+	struct gmem_uvas_entry *tmp, *prev;
+	tmp = RB_NFIND(gmem_uvas_entries_tree, &uvas->rb_root, entry);
+	do
+	{
+		prev = RB_PREV(gmem_uvas_entries_tree, &uvas->rb_root, tmp);
+		if (prev->end <= entry->start || prev == tmp)
+			break;
+		if (entry->start <= prev->start && prev->end <= entry->end) {
+			gmem_uvas_rb_remove(uvas, prev);
+			gmem_uvas_free_entry(uvas, prev);
+		}
+	} while (1);
+
+	if (entry->start <= tmp->start && tmp->end <= entry->end)
+	{
+		gmem_uvas_rb_remove(uvas, tmp);
+		gmem_uvas_free_entry(uvas, tmp);
+	}
+}
+
 // Three modes to use uvas:
 // 	1. private: pmap is NULL && replicate == false
 //  2. shared: uvas and pmap are both not NULL, replicate == false
@@ -550,19 +575,20 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t *uvas, vm_size_t size, gmem_dev_t *dev
 		TAILQ_INIT(uvas->uvas_entry_header);
 		TAILQ_INIT(uvas->dev_pmap_header);
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
-		uvas->size = size;
+		uvas->format = dev->vma_format;
 		if (need_lookup)
 		{
 			uvas->allocator = RBTREE;
 			// TODO: RB-TREE
-			// RB_INIT(uvas->rb_root);
+			gmem_uvas_init_rbtree(uvas);
 		}
 		else
 		{
 			uvas->allocator = VMEM;
 			// Currently we use no quantum cache
-			uvas->arena = vmem_create("uva", 0, rounddown(size, PAGE_SIZE),
-				PAGE_SIZE, 0, M_WAITOK);
+			uvas->arena = vmem_create("uva", 0, 
+				rounddown(dev->vma_format->maxaddr, dev->vma_format->alignment),
+				dev->vma_format->alignment, 0, M_WAITOK);
 		}
 	}
 	else
@@ -583,19 +609,37 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 	return GMEM_OK;
 }
 
-static gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas, vm_offset_t *start, 
-	vm_size_t size, vm_prot_t protection, dev_pmap_t *pmap, 
-	gmem_uvas_entry_t *entry)
+static gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas, 
+	vm_offset_t *start, vm_size_t size, vm_prot_t protection, u_int flags)
 {
+	gmem_uvas_entry *entry;
+	int error;
+
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
+	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
+	if (entry == NULL)
+		return (GMEM_ENOMEM);
+
+	GMEM_UVAS_LOCK(uvas);
 	if (uvas->uvas_allocator == RBTREE)
 	{
 		// use rb-tree allocator
+		error = gmem_uvas_find_space(uvas, size, offset, flags, entry);
+		if (error == GMEM_ENOMEM) {
+			GMEM_UVAS_UNLOCK(uvas);
+			gmem_uvas_free_entry(uvas, entry);
+			return (error);
+		}
+		// [TODO]
+		// entry->flags |= eflags;
+		*start = entry->start;
 	}
 	else if (uvas->uvas_allocator == VMEM)
 	{
 		// use vmem allocator
+		printf("VMEM Allocator not implemented!\n");
 	}
+	GMEM_UVAS_UNLOCK(uvas);
 	return GMEM_OK;
 }
 
@@ -603,14 +647,23 @@ static gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size)
 {
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
+	GMEM_UVAS_LOCK(uvas);
 	if (uvas->uvas_allocator == RBTREE)
 	{
 		// use rb-tree allocator
+		struct gmem_uvas_entry entry;
+			// = gmem_uvas_alloc_entry(uvas, 0);
+		if (entry == NULL)
+			return (GMEM_ENOMEM);
+		entry.start = start;
+		entry.end = start + size;
+		gmem_uvas_rb_free_span(uvas, &entry);
 	}
 	else if (uvas->uvas_allocator == VMEM)
 	{
 		// use vmem allocator
 	}
+	GMEM_UVAS_UNLOCK(uvas);
 	return GMEM_OK;
 }
 
@@ -626,6 +679,7 @@ gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages)
 {
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
+
 
 	return GMEM_OK;
 }
