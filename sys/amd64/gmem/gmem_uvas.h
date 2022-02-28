@@ -114,7 +114,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	uint32_t entries_cnt;
 
 	// format of uvas
-	struct gmem_uvas_format format;
+	struct gmem_vma_format format;
 
 	// max va
 	// vm_size_t end;
