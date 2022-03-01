@@ -566,9 +566,9 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		if (!is_gmem_dev(dev))
 		{
 			// GMEM code: register this gmem device using iommu_ops
+			gmem_dev_add(dev, &intel_iommu_ops);
 			// Let's not panic, it could be normal
 			// panic("requesting device was not registered as a gmem device\n");
-			gmem_dev_add(dev, &intel_iommu_ops);
 		}
 
 		dmar_ensure_ctx_page(dmar, PCI_RID2BUS(rid));
