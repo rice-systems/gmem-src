@@ -549,17 +549,17 @@ gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 //     TODO: change this mode to share CPU vma, consider the opencl case.
 //  lookup: faultable device requires looking up uvas entries 
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
-	dev_pmap_t *pmap, void *dev_data, bool replicate, bool need_lookup,
+	dev_pmap_t *pmap_to_share, void *dev_data, bool replicate, bool need_lookup,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL)
 	{
-		KASSERT(*pmap == NULL, "Creating a uvas with non-null pmap");
+		KASSERT(pmap_to_share == NULL, "Creating a uvas with non-null pmap");
 		KASSERT(dev_data == NULL, "Creating a uvas with non-null dev-specific data");
 
 		// allocate and create the pmap with dev->mmu_ops
-		pmap = malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
+		dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		// allocate and create the uvas
 		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 
