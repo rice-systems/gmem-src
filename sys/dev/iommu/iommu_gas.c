@@ -619,6 +619,7 @@ iommu_gas_map_gmembased(struct iommu_domain *domain,
 	    ("invalid flags 0x%x", flags));
 
 	// Missing: entry->flags |= eflags;
+	printf("good 0\n");
 	error = gmem_uvas_alloc_and_insert_span(domain->uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
 		flags);
 	KASSERT(error == GMEM_OK,

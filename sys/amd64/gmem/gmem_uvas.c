@@ -572,20 +572,16 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
 
-		printf("good 0\n");
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
-		printf("good 1\n");
 		// initialize uvas
 		TAILQ_INIT(&uvas->uvas_entry_header);
 		TAILQ_INIT(&uvas->dev_pmap_header);
 
-		printf("good 2\n");
 		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
 
-		printf("good 3\n");
 		// insert pmap to dev pmap list
 		// I don't think that this is necessary.
 		// TODO: consider delete pmap field in gmem_dev
@@ -594,13 +590,11 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		uvas->format.boundary = boundary;
 		uvas->format.maxaddr = size;
 
-		printf("good 4\n");
 		if (need_lookup)
 		{
 			uvas->allocator = RBTREE;
 			// TODO: RB-TREE
 			gmem_uvas_init_rbtree(uvas);
-			printf("good 5\n");
 		}
 		else
 		{
