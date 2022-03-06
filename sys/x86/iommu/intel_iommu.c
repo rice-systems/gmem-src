@@ -65,9 +65,9 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	pgtable = pmap->data;
 	// TODO: equivalent semantic conversion first
 	pgtable->pglvl = 4;
-	pgtable->id_mapped = ((intel_iommu_pgtable_t *) dev_data)->id_mapped;
-	pgtable->dmar = ((intel_iommu_pgtable_t *) dev_data)->dmar;
-	pgtable->domain = ((intel_iommu_pgtable_t *) dev_data)->domain;
+	pgtable->id_mapped = ((intel_iommu_dev_data_t *) dev_data)->id_mapped;
+	pgtable->dmar = ((intel_iommu_dev_data_t *) dev_data)->dmar;
+	pgtable->domain = ((intel_iommu_dev_data_t *) dev_data)->domain;
 	pgtable->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
 	    IDX_TO_OFF(pglvl_max_pages(pgtable->pglvl)), 0, 0, NULL);
 	
