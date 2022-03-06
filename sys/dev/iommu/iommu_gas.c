@@ -619,7 +619,7 @@ iommu_gas_map_gmembased(struct iommu_domain *domain,
 	    ("invalid flags 0x%x", flags));
 
 	// Missing: entry->flags |= eflags;
-	printf("good 0\n");
+	printf("gmem map size: %lu\n", size);
 	if (domain->uvas == NULL)
 		printf("iommu domain does not have uvas\n");
 	else

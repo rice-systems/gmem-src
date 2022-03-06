@@ -61,17 +61,17 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	KASSERT((flags & ~(GMEM_WAITOK)) == 0,
 	    ("unsupported flags %x", flags));
 
-	printf("Trying to allocate\n");
+	// printf("Trying to allocate\n");
 	res = uma_zalloc(gmem_uvas_entry_zone, ((flags & GMEM_WAITOK) !=
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
-		printf("allocated succeeded\n");
+		// printf("allocated succeeded\n");
 		res->uvas = uvas;
 		atomic_add_int(&uvas->entries_cnt, 1);
-		printf("done\n");
+		// printf("done\n");
 	}
 	else
-		printf("NOMEM\n");
+		printf("gmem_uvas_alloc_entry NOMEM\n");
 	return (res);
 }
 
@@ -635,7 +635,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
-	printf("gmem_uvas_alloc_entry \n");
+	// printf("gmem_uvas_alloc_entry \n");
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
@@ -646,7 +646,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 		// TODO: 
 		// offset makes no sense. Upgrade it to fit page alignment in the future
 		error = gmem_uvas_find_space(uvas, size, 0, flags, entry);
-		printf("gmem_uvas_find_space \n");
+		// printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
 			GMEM_UVAS_UNLOCK(uvas);
 			gmem_uvas_free_entry(uvas, entry);
@@ -662,7 +662,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 		printf("VMEM Allocator not implemented!\n");
 	}
 	GMEM_UVAS_UNLOCK(uvas);
-	printf("done \n");
+	// printf("done \n");
 	return GMEM_OK;
 }
 
