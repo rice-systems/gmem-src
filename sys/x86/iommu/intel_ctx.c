@@ -576,13 +576,16 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 
 		// TODO: put uvas under ctx instead of domain
 		// ultimately, ctx corresponds to mm_struct
-		intel_iommu_dev_data_t dev_data;
-		dev_data.dmar = dmar;
-		dev_data.domain = domain1;
-		dev_data.id_mapped = id_mapped;
-		gmem_uvas_create(&domain1->uvas, device_get_gmem_dev(dev),
-			NULL, &dev_data, false, true,
-			PAGE_SIZE, 0, 1ULL << 48);
+		if (domain1 != NULL) {
+			intel_iommu_dev_data_t dev_data;
+			dev_data.dmar = dmar;
+			dev_data.domain = domain1;
+			dev_data.id_mapped = id_mapped;
+			gmem_uvas_create(&domain1->uvas, device_get_gmem_dev(dev),
+				NULL, &dev_data, false, true,
+				PAGE_SIZE, 0, 1ULL << 48);
+			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->uvas);
+		}
 
 		if (domain1 == NULL) {
 			TD_PINNED_ASSERT;

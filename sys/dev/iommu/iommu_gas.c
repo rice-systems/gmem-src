@@ -621,7 +621,7 @@ iommu_gas_map_gmembased(struct iommu_domain *domain,
 	// Missing: entry->flags |= eflags;
 	printf("good 0\n");
 	if (domain->uvas == NULL)
-		printf("domain does not have uvas\n");
+		printf("domain #%d does not have uvas\n", domain->domain);
 	else
 		printf("domain entry count : %d\n", domain->uvas->entries_cnt);
 	error = gmem_uvas_alloc_and_insert_span(domain->uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
