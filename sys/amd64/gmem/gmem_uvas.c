@@ -61,6 +61,7 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	KASSERT((flags & ~(GMEM_WAITOK)) == 0,
 	    ("unsupported flags %x", flags));
 
+	printf("Trying to allocate\n");
 	res = uma_zalloc(gmem_uvas_entry_zone, ((flags & GMEM_WAITOK) !=
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
