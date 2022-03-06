@@ -558,13 +558,12 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		KASSERT(pmap_to_share == NULL, "Creating a uvas with non-null pmap");
 		KASSERT(dev_data == NULL, "Creating a uvas with non-null dev-specific data");
 
-		printf("good 0\n");
 		// allocate and create the pmap with dev->mmu_ops
 		dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		// allocate and create the uvas
 		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
-		printf("good 1\n");
+
 		// initialize pmap
 		pmap->ndevices = 1;
 		TAILQ_INIT(&pmap->gmem_dev_header);
@@ -573,14 +572,16 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
 
-		printf("good 2\n");
+		printf("good 0\n");
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
+		printf("good 1\n");
 		// initialize uvas
 		TAILQ_INIT(&uvas->uvas_entry_header);
 		TAILQ_INIT(&uvas->dev_pmap_header);
 
+		printf("good 2\n");
 		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
 
