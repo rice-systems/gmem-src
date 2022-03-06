@@ -630,6 +630,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
+	printf("gmem_uvas_alloc_entry \n");
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
@@ -640,6 +641,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 		// TODO: 
 		// offset makes no sense. Upgrade it to fit page alignment in the future
 		error = gmem_uvas_find_space(uvas, size, 0, flags, entry);
+		printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
 			GMEM_UVAS_UNLOCK(uvas);
 			gmem_uvas_free_entry(uvas, entry);
@@ -655,6 +657,7 @@ gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas,
 		printf("VMEM Allocator not implemented!\n");
 	}
 	GMEM_UVAS_UNLOCK(uvas);
+	printf("done \n");
 	return GMEM_OK;
 }
 
