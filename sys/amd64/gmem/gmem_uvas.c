@@ -65,9 +65,13 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	res = uma_zalloc(gmem_uvas_entry_zone, ((flags & GMEM_WAITOK) !=
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
+		printf("allocated succeeded\n");
 		res->uvas = uvas;
 		atomic_add_int(&uvas->entries_cnt, 1);
+		printf("done\n");
 	}
+	else
+		printf("NOMEM\n");
 	return (res);
 }
 
