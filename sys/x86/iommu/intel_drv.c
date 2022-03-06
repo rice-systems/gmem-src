@@ -462,6 +462,7 @@ dmar_attach(device_t dev)
 		return (error);
 	}
 	if (DMAR_HAS_QI(unit)) {
+		printf("I have QI\n");
 		unit->intrs[DMAR_INTR_QI].name = "qi";
 		unit->intrs[DMAR_INTR_QI].irq_rid = DMAR_QI_IRQ_RID;
 		unit->intrs[DMAR_INTR_QI].handler = dmar_qi_intr;
