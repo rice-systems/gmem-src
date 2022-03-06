@@ -72,7 +72,6 @@ struct dmar_domain {
 	LIST_HEAD(, dmar_ctx) contexts;	/* (u) */
 	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
-	gmem_uvas_t *uvas;
 };
 
 struct dmar_ctx {

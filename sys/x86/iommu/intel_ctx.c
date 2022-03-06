@@ -435,7 +435,6 @@ dmar_domain_alloc(struct dmar_unit *dmar, bool id_mapped)
 		if (error != 0)
 			goto fail;
 	}
-	domain->uvas = NULL;
 	return (domain);
 
 fail:
@@ -581,7 +580,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			dev_data.dmar = dmar;
 			dev_data.domain = domain1;
 			dev_data.id_mapped = id_mapped;
-			gmem_uvas_create(&domain1->uvas, device_get_gmem_dev(dev),
+			gmem_uvas_create(&domain1->iodom.uvas, device_get_gmem_dev(dev),
 				NULL, &dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
 			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->uvas);
