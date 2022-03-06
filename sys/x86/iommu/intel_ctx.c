@@ -583,7 +583,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			gmem_uvas_create(&domain1->iodom.uvas, device_get_gmem_dev(dev),
 				NULL, &dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
-			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->uvas);
+			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
 		}
 
 		if (domain1 == NULL) {
