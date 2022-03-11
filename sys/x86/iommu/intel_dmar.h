@@ -75,7 +75,7 @@ struct dmar_domain {
 };
 
 struct dmar_ctx {
-	gmem_uvas_t *uvas;		/* (c) */
+	// gmem_uvas_t *uvas;		/* (c) */
 	struct iommu_ctx context;
 	uint64_t last_fault_rec[2];	/* Last fault reported */
 	LIST_ENTRY(dmar_ctx) link;	/* (u) Member in the domain list */

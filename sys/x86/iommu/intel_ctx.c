@@ -589,7 +589,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			if (!id_mapped) {
 				/* Disable local apic region access */
 				// replace NULL with stupid msi_entry
-				error = gmem_uvas_alloc_span_fixed(ctx->uvas, 0xfee00000,
+				error = gmem_uvas_alloc_span_fixed(ctx->context.uvas, 0xfee00000,
 				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
 			}
 		}
