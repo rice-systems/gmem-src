@@ -580,6 +580,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
 	struct iommu_map_entry *entry;
+	gmem_uvas_map_entry_t *gentry;
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
@@ -610,10 +611,18 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		if (seg + 1 < tag->common.nsegments)
 			gas_flags |= IOMMU_MF_CANSPLIT;
 
+		// TODO: remove iommu_map.
+		// Current stage: gmem_iommu_map is a shadow vm system for iommu
+		error = gmem_iommu_map(ctx->uvas, &tag->common, size, offset,
+		    IOMMU_MAP_ENTRY_READ |
+		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
+		    gas_flags, ma + idx, &gentry);
+
 		error = iommu_map(domain, &tag->common, size, offset,
 		    IOMMU_MAP_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
 		    gas_flags, ma + idx, &entry);
+
 		if (error != 0)
 			break;
 		if ((gas_flags & IOMMU_MF_CANSPLIT) != 0) {
@@ -958,6 +967,8 @@ struct bus_dma_impl bus_dma_iommu_impl = {
 
 	.map_waitok = iommu_bus_dmamap_waitok,
 	.map_complete = iommu_bus_dmamap_complete,
+
+	// effectively it is an unmap function
 	.map_unload = iommu_bus_dmamap_unload,
 	.map_sync = iommu_bus_dmamap_sync,
 };

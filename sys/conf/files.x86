@@ -172,6 +172,7 @@ amd64/gmem/gmem_dev.c 	optional gmem
 amd64/gmem/gmem_uvas.c 	optional gmem
 dev/iommu/busdma_iommu.c	optional	acpi iommu pci
 dev/iommu/iommu_gas.c		optional	acpi iommu pci
+dev/iommu/gmem_iommu_map.c  optional    acpi iommu pci
 dev/ipmi/ipmi.c			optional	ipmi
 dev/ipmi/ipmi_acpi.c		optional	ipmi acpi
 dev/ipmi/ipmi_isa.c		optional	ipmi isa

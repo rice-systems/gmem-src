@@ -120,7 +120,7 @@ struct iommu_domain {
 
 	// uvas contains:
 	// entries_cnt, rb_root, first_place, last_place, ..
-	gmem_uvas_t *uvas;
+	// gmem_uvas_t *uvas;
 };
 
 struct iommu_ctx {
@@ -199,9 +199,6 @@ void iommu_gas_free_space(struct iommu_domain *domain,
 int iommu_gas_map(struct iommu_domain *domain,
     const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
     u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res);
-int iommu_gas_map_gmembased(struct iommu_domain *domain,
-    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
-    u_int eflags, u_int flags, vm_page_t *ma);
 void iommu_gas_free_region(struct iommu_domain *domain,
     struct iommu_map_entry *entry);
 int iommu_gas_map_region(struct iommu_domain *domain,
@@ -224,7 +221,12 @@ int bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map,
 bus_dma_tag_t iommu_get_dma_tag(device_t dev, device_t child);
 struct iommu_ctx *iommu_get_dev_ctx(device_t dev);
 struct iommu_domain *iommu_get_ctx_domain(struct iommu_ctx *ctx);
-gmem_uvas_t *iommu_get_ctx_uvas(struct iommu_ctx *ctx);
+
+
+// GMEM-based functions for map/unmap
+int gmem_iommu_map(struct iommu_domain *domain,
+    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+    u_int eflags, u_int flags, vm_page_t *ma);
 
 SYSCTL_DECL(_hw_iommu);
 

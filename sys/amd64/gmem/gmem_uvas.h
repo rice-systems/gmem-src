@@ -123,6 +123,18 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;
 };
 
+// IOMMU:
+// the iommu_map_entry used to have a dmamap_link field
+// used to serve for queued invalidations as an iommu-specific 
+// data structure. 
+// We decouple this from the map_entry and create a new data
+// structure for intel_qi.c to utilize. This means that there
+// is a tax of decoupling data structure. We need to track this
+// type of cost.
+// 
+// The gmem_uvas_entry can also be used as a data sturcutre to pass
+// the specified va_span. Do not waste other data structures.
+// 
 // The definition of uvas entry fits rb-tree allocator
 // Without lookup requirement, they are not necessary.
 // split and merge may be applied if protection or vm_ops change
@@ -210,9 +222,20 @@ gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection);
 
 
-
+// Free the va span defined by [start, start + size) or defined by
+// entry, if entry != NULL
 gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
-	vm_size_t size);
-gmem_error_t gmem_uvas_alloc_and_insert_span(gmem_uvas_t *uvas, 
-	vm_offset_t *start, vm_size_t size, vm_prot_t protection, u_int flags);
+	vm_size_t size, gmem_uvas_entry_t *entry);
+
+// Allocate a VA span with a given size, *start returns the offset and *ret returns a
+// pointer to the va span
+gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas, 
+	vm_offset_t *start, vm_size_t size, vm_prot_t protection, 
+	u_int flags, gmem_uvas_entry_t **ret);
+
+// Allocate a VA span with a given start and end. The allocation could fail if overlapping
+// with exiting VA span.
+gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas, 
+	vm_offset_t start, vm_offset_t end, vm_prot_t protection, u_int flags, gmem_uvas_entry_t **ret);
+
 #endif

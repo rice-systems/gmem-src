@@ -583,7 +583,17 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			gmem_uvas_create(&domain1->iodom.uvas, device_get_gmem_dev(dev),
 				NULL, &dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
+			ctx->uvas = domain1->iodom.uvas;
 			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
+
+			if (!id_mapped) {
+				/* Disable local apic region access */
+
+				error = gmem_uvas_alloc_span_fixed(uvas, 0xfee00000,
+				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &iodom->msi_entry);
+				if (error != 0)
+					goto fail;
+			}
 		}
 
 		if (domain1 == NULL) {
@@ -891,7 +901,8 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		iommu_gas_free_space(domain, entry);
 
 		// TODO: replace dmar_domain_free_entry
-		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start);
+		// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
+		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
 	IOMMU_DOMAIN_UNLOCK(domain);
 	if (free)
