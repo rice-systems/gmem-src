@@ -125,7 +125,6 @@ struct iommu_domain {
 
 struct iommu_ctx {
 	struct iommu_domain *domain;	/* (c) */
-	gmem_uvas_t *uvas;		/* (c) */
 	struct bus_dma_tag_iommu *tag;	/* (c) Root tag */
 	u_long loads;			/* atomic updates, for stat only */
 	u_long unloads;			/* same */
