@@ -48,7 +48,7 @@ gmem_uvas_zone_init(void)
 }
 SYSINIT(gmem_uvas, SI_SUB_DRIVERS, SI_ORDER_FIRST, gmem_uvas_zone_init, NULL);
 
-static struct gmem_uvas_entry *
+struct gmem_uvas_entry *
 gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 {
 	struct gmem_uvas_entry *res;
@@ -70,7 +70,7 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	return (res);
 }
 
-static void
+void
 gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 
