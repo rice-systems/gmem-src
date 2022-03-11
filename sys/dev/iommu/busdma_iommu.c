@@ -616,10 +616,10 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		// Current stage: gmem_iommu_map is a shadow vm system for iommu
 		// The busdma layer is not doing a good job of coding.
 		// Why does it have to manipulate anything with map entries?
-		error = gmem_iommu_map(ctx->uvas, &tag->common, size, offset,
-		    IOMMU_MAP_ENTRY_READ |
-		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
-		    gas_flags, ma + idx);
+		// error = gmem_iommu_map(ctx->uvas, &tag->common, size, offset,
+		//     IOMMU_MAP_ENTRY_READ |
+		//     ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
+		//     gas_flags, ma + idx);
 
 		error = iommu_map(domain, &tag->common, size, offset,
 		    IOMMU_MAP_ENTRY_READ |
