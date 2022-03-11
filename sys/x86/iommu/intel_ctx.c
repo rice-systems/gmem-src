@@ -613,7 +613,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		}
 		ctx1 = dmar_ctx_alloc(domain1, rid);
 		if (ctx1 != NULL)
-			ctx->context.uvas = domain1->iodom.uvas;
+			ctx1->context.uvas = domain1->iodom.uvas;
 
 		ctxp = dmar_map_ctx_entry(ctx1, &sf);
 		DMAR_LOCK(dmar);
