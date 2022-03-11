@@ -584,16 +584,12 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			gmem_uvas_create(&domain1->iodom.uvas, device_get_gmem_dev(dev),
 				NULL, &dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
-			PRINTINFO;
-			ctx->context.uvas = domain1->iodom.uvas;
-			PRINTINFO;
 			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
-			PRINTINFO;
 
 			if (!id_mapped) {
 				/* Disable local apic region access */
 				// replace NULL with stupid msi_entry
-				error = gmem_uvas_alloc_span_fixed(ctx->context.uvas, 0xfee00000,
+				error = gmem_uvas_alloc_span_fixed(domain1->iodom.uvas, 0xfee00000,
 				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
 			}
 		}
@@ -615,6 +611,9 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			}
 		}
 		ctx1 = dmar_ctx_alloc(domain1, rid);
+		if (ctx1 != NULL)
+			ctx->context.uvas = domain1->iodom.uvas;
+		
 		ctxp = dmar_map_ctx_entry(ctx1, &sf);
 		DMAR_LOCK(dmar);
 
