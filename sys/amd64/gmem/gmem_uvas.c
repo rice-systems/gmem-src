@@ -207,6 +207,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
+	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
 	if (entry == NULL)
