@@ -11,6 +11,10 @@
 #ifndef _GMEM_RB_TREE_H_
 #define _GMEM_RB_TREE_H_
 
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+
 static int gmem_uvas_cmp_entries(struct gmem_uvas_entry *a, struct gmem_uvas_entry *b)
 {
 	// copied from iommu code
