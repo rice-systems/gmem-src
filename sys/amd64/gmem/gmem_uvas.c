@@ -58,7 +58,7 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 
 	// printf("Trying to allocate\n");
 	PRINTINFO;
-	PRINTF("Allowed to sleep? %d\n", flags);
+	printf("Allowed to sleep? %d\n", flags);
 	res = uma_zalloc(gmem_uvas_entry_zone, ((flags & GMEM_WAITOK) !=
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
