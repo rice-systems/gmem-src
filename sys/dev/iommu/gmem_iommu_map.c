@@ -97,10 +97,10 @@ gmem_iommu_map(gmem_uvas_t *uvas,
         printf("iommu ctx does not have a valid uvas\n");
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
-    error = gmem_uvas_alloc_and_insert_span(uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+    error = gmem_uvas_alloc_span(uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
         flags, &entry);
     KASSERT(error == GMEM_OK,
-        ("unexpected error %d from gmem_uvas_alloc_and_insert_span", error));
+        ("unexpected error %d from gmem_uvas_alloc_span", error));
 
     // TODO: allow actual map to happen. Before that, we simulate
     // the allocator along with the original driver.
