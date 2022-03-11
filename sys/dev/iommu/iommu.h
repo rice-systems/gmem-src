@@ -120,7 +120,7 @@ struct iommu_domain {
 
 	// uvas contains:
 	// entries_cnt, rb_root, first_place, last_place, ..
-	// gmem_uvas_t *uvas;
+	gmem_uvas_t *uvas;
 };
 
 struct iommu_ctx {
