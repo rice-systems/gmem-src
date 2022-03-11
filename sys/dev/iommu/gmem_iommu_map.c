@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD$");
 // API, we need to make sure not to expose gmem's data
 // structure outside.
 int
-gmem_iommu_map(gmem_uvas_entry_t *uvas,
+gmem_iommu_map(gmem_uvas_t *uvas,
     const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
     u_int eflags, u_int flags, vm_page_t *ma)
 {
