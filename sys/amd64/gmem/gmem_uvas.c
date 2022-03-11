@@ -69,6 +69,7 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	}
 	else
 		printf("gmem_uvas_alloc_entry NOMEM\n");
+	PRINTINFO;
 	return (res);
 }
 
@@ -171,13 +172,16 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
+	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
 	// printf("gmem_uvas_alloc_entry \n");
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
+	PRINTINFO;
 	GMEM_UVAS_LOCK(uvas);
+	PRINTINFO;
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
