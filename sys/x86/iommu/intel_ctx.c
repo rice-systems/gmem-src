@@ -533,6 +533,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 	int bus, slot, func, error;
 	bool enable;
 
+	PRINTINFO;
 	if (dev != NULL) {
 		bus = pci_get_bus(dev);
 		slot = pci_get_slot(dev);
@@ -613,7 +614,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		ctx1 = dmar_ctx_alloc(domain1, rid);
 		if (ctx1 != NULL)
 			ctx->context.uvas = domain1->iodom.uvas;
-		
+
 		ctxp = dmar_map_ctx_entry(ctx1, &sf);
 		DMAR_LOCK(dmar);
 
@@ -691,6 +692,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 	}
 	DMAR_UNLOCK(dmar);
 	TD_PINNED_ASSERT;
+	PRINTINFO;
 	return (ctx);
 }
 
@@ -700,10 +702,12 @@ dmar_get_ctx_for_dev(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 {
 	int dev_domain, dev_path_len, dev_busno;
 
+	PRINTINFO;
 	dev_domain = pci_get_domain(dev);
 	dev_path_len = dmar_dev_depth(dev);
 	ACPI_DMAR_PCI_PATH dev_path[dev_path_len];
 	dmar_dev_path(dev, &dev_busno, dev_path, dev_path_len);
+	PRINTINFO;
 	return (dmar_get_ctx_for_dev1(dmar, dev, rid, dev_domain, dev_busno,
 	    dev_path, dev_path_len, id_mapped, rmrr_init));
 }
