@@ -91,6 +91,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 	dev_pmap_t *pmap_to_share, void *dev_data, bool replicate, bool need_lookup,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
+	PRINTINFO;
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL)
 	{
@@ -148,6 +149,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		panic("Attaching to a uvas is not implemented");
 	}
 	*uvas_res = uvas;
+	PRINTINFO;
 	return GMEM_OK;
 }
 
