@@ -571,6 +571,8 @@ iommu_bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map1)
 	iommu_bus_dmamap_destroy(dmat, map1);
 }
 
+// I don't think the busdma layer should deal with a dmamap_link linked list for
+// map entries. This is just coupling the va allocator with higher-level functions.
 static int
 iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
     struct bus_dmamap_iommu *map, vm_page_t *ma, int offset, bus_size_t buflen,
@@ -580,7 +582,6 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
 	struct iommu_map_entry *entry;
-	gmem_uvas_entry_t *gentry;
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
@@ -613,10 +614,12 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 
 		// TODO: remove iommu_map.
 		// Current stage: gmem_iommu_map is a shadow vm system for iommu
+		// The busdma layer is not doing a good job of coding.
+		// Why does it have to manipulate anything with map entries?
 		error = gmem_iommu_map(ctx->uvas, &tag->common, size, offset,
 		    IOMMU_MAP_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
-		    gas_flags, ma + idx, &gentry);
+		    gas_flags, ma + idx);
 
 		error = iommu_map(domain, &tag->common, size, offset,
 		    IOMMU_MAP_ENTRY_READ |
