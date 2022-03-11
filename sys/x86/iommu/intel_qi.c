@@ -353,7 +353,7 @@ dmar_qi_task(void *arg, int pending __unused)
 			break;
 		TAILQ_REMOVE(&unit->tlb_flush_entries, entry, dmamap_link);
 		DMAR_UNLOCK(unit);
-		printf("[intel_qi.c] free entry\n");
+		// printf("[intel_qi.c] free entry\n");
 		dmar_domain_free_entry(entry, (entry->flags &
 		    IOMMU_MAP_ENTRY_QI_NF) == 0);
 		DMAR_LOCK(unit);

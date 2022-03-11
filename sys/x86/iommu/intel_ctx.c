@@ -959,11 +959,11 @@ dmar_domain_unload(struct dmar_domain *domain,
 	iodom = DOM2IODOM(domain);
 	unit = DOM2DMAR(domain);
 
-	printf("[intel_ctx.c 951] domain unload\n");
-	if (unit->qi_enabled)
-		printf("[intel_ctx.c 951] qi enabled\n");
-	else
-		printf("[intel_ctx.c 951] iotlb inv\n");
+	// printf("[intel_ctx.c 951] domain unload\n");
+	// if (unit->qi_enabled)
+	// 	printf("[intel_ctx.c 951] qi enabled\n");
+	// else
+	// 	printf("[intel_ctx.c 951] iotlb inv\n");
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
 		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
 		    ("not mapped entry %p %p", domain, entry));
