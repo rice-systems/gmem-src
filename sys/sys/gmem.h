@@ -30,7 +30,8 @@ typedef uint8_t gmem_error_t;
 // GMEM ERROR Code
 #define GMEM_OK			0x0
 #define GMEM_ENOMEM 	0x1
-#define GMEM_EOVERFLOW 	0x2
+#define GMEM_EOVERFLOW	0x2
+#define GMEM_EINVALIDARGS 0x3
 
 
 #define PRINTINFO  { printf("[%s] %s line #%d\n", __FILE__, __func__, __LINE__); }
