@@ -57,8 +57,8 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	    ("unsupported flags %x", flags));
 
 	// printf("Trying to allocate\n");
-	PRINTINFO;
-	printf("Allowed to sleep? %d\n", flags);
+	// PRINTINFO;
+	// printf("Allowed to sleep? %d\n", flags);
 	res = uma_zalloc(gmem_uvas_entry_zone, ((flags & GMEM_WAITOK) !=
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
@@ -69,7 +69,7 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	}
 	else
 		printf("gmem_uvas_alloc_entry NOMEM\n");
-	PRINTINFO;
+	// PRINTINFO;
 	return (res);
 }
 
@@ -172,14 +172,14 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
-	PRINTINFO;
+	// PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
 	// printf("gmem_uvas_alloc_entry \n");
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
-	PRINTINFO;
+	// PRINTINFO;
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
