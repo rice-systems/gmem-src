@@ -479,7 +479,7 @@ gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 
 
 static int
-gmem_uvas_reserve_region_locked(struct gmem_uvas *uvas,
+gmem_uvas_reserve_region(struct gmem_uvas *uvas,
     vm_offset_t start, vm_offset_t end, struct gmem_uvas_entry *entry)
 {
 	int error;

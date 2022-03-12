@@ -287,9 +287,15 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 			ma[i] = vm_page_getfake(entry->start + PAGE_SIZE * i,
 			    VM_MEMATTR_DEFAULT);
 		}
+
+		error1 = gmem_iommu_map(domain->iodom.uvas, trunc_page(start), round_page(end), 
+			0, GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
+		    GMEM_MF_CANWAIT | GMEM_MF_RMRR, ma);
+
 		error1 = iommu_gas_map_region(DOM2IODOM(domain), entry,
 		    IOMMU_MAP_ENTRY_READ | IOMMU_MAP_ENTRY_WRITE,
 		    IOMMU_MF_CANWAIT | IOMMU_MF_RMRR, ma);
+
 		/*
 		 * Non-failed RMRR entries are owned by context rb
 		 * tree.  Get rid of the failed entry, but do not stop
@@ -914,11 +920,10 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		iommu_gas_free_region(domain, entry);
 	else {
 		iommu_gas_free_space(domain, entry);
-
-		// TODO: replace dmar_domain_free_entry
-		// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
-		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
+	// TODO: replace dmar_domain_free_entry
+	// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
+	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	IOMMU_DOMAIN_UNLOCK(domain);
 	if (free)
 		iommu_gas_free_entry(domain, entry);

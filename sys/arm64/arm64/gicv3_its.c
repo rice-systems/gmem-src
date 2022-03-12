@@ -1457,7 +1457,7 @@ gicv3_iommu_init(device_t dev, device_t child, struct iommu_domain **domain)
 	ctx = iommu_get_dev_ctx(child);
 	error = iommu_map_msi(ctx, PAGE_SIZE, GITS_TRANSLATER,
 	    IOMMU_MAP_ENTRY_WRITE, IOMMU_MF_CANWAIT, &sc->ma);
-	*domain = iommu_get_ctx_domain(ctx);
+	*domain = ctx->domain;
 
 	return (error);
 }

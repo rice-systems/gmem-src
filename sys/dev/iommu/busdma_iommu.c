@@ -616,9 +616,9 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		// Current stage: gmem_iommu_map is a shadow vm system for iommu
 		// The busdma layer is not doing a good job of coding.
 		// Why does it have to manipulate anything with map entries?
-		error = gmem_iommu_map(ctx->uvas, &tag->common, size, offset,
-		    IOMMU_MAP_ENTRY_READ |
-		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
+		error = gmem_iommu_map(ctx->uvas, -1, size, offset,
+		    GMEM_UVAS_ENTRY_READ |
+		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
 		    gas_flags, ma + idx);
 
 		error = iommu_map(domain, &tag->common, size, offset,
@@ -1093,9 +1093,15 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 		ma[i] = vm_page_getfake(entry->start + PAGE_SIZE * i,
 		    VM_MEMATTR_DEFAULT);
 	}
+
+	error = gmem_iommu_map(domain->uvas, start, length, 0, GMEM_UVAS_ENTRY_READ |
+	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
+	    waitok ? GMEM_MF_CANWAIT : 0, ma);
+
 	error = iommu_map_region(domain, entry, IOMMU_MAP_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : IOMMU_MAP_ENTRY_WRITE),
 	    waitok ? IOMMU_MF_CANWAIT : 0, ma);
+
 	if (error == 0) {
 		IOMMU_DOMAIN_LOCK(domain);
 		TAILQ_INSERT_TAIL(&map->map_entries, entry, dmamap_link);

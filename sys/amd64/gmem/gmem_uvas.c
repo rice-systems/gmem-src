@@ -223,12 +223,11 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
-		error = gmem_uvas_reserve_region_locked(uvas, start, end, entry);
-		if (error != 0)
+		error = gmem_uvas_reserve_region(uvas, start, end, entry);
+		if (error != 0) {
 			gmem_uvas_free_entry(uvas, entry);
-		else if (ret != NULL)
-			*ret = entry;
-		return (error);
+			return (error);
+		}
 	}
 	else if (uvas->allocator == VMEM)
 	{

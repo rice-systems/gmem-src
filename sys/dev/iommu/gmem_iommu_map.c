@@ -80,15 +80,13 @@ __FBSDID("$FreeBSD$");
 // API, we need to make sure not to expose gmem's data
 // structure outside.
 int
-gmem_iommu_map(gmem_uvas_t *uvas,
-    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t start, vm_offset_t size, int offset,
     u_int eflags, u_int flags, vm_page_t *ma)
 {
     gmem_uvas_entry_t *entry;
-    vm_offset_t start;
     int error;
 
-    KASSERT((flags & ~(IOMMU_MF_CANWAIT | IOMMU_MF_CANSPLIT)) == 0,
+    KASSERT((flags & ~(GMEM_MF_CANWAIT | GMEM_MF_CANSPLIT)) == 0,
         ("invalid flags 0x%x", flags));
 
     // Missing: entry->flags |= eflags;
@@ -97,8 +95,14 @@ gmem_iommu_map(gmem_uvas_t *uvas,
         printf("iommu ctx does not have a valid uvas\n");
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
-    error = gmem_uvas_alloc_span(uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
-        flags, &entry);
+    if (start == -1)
+        error = gmem_uvas_alloc_span(uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+            flags, &entry);
+    else {
+        error = gmem_uvas_alloc_span_fixed(uvas, start, start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+            flags, &entry);
+    }
+
     KASSERT(error == GMEM_OK,
         ("unexpected error %d from gmem_uvas_alloc_span", error));
 
@@ -109,6 +113,7 @@ gmem_iommu_map(gmem_uvas_t *uvas,
     //     ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_PGF_WAITOK : 0));
     if (error == ENOMEM) {
         // There is no need to call iotlb inv
+        // TODO: we always free the entry when we add back this iotlb inv in the future
         // iommu_domain_unload_entry(entry, true);
         gmem_uvas_free_span(uvas, start, size, entry);
         return (error);
