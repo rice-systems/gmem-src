@@ -303,7 +303,7 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 	struct gmem_uvas_match_args a;
 	int error = GMEM_OK;
 
-	GMEM_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_LOCK(uvas);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", uvas, entry));
 	KASSERT((size & GMEM_PAGE_MASK) == 0, ("size %jx", (uintmax_t)size));
 
@@ -328,6 +328,7 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 	// error = gmem_uvas_uppermatch(&a, RB_ROOT(&uvas->rb_root));
 	KASSERT(error == ENOMEM,
 	    ("error %d from gmem_uvas_uppermatch", error));
+	GMEM_UVAS_UNLOCK(uvas);
 	return (error);
 }
 
@@ -365,14 +366,14 @@ gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 	if (prev != NULL && prev->end > entry->start &&
 	    (prev->flags & GMEM_UVAS_ENTRY_PLACE) == 0) {
 		if ((flags & GMEM_MF_RMRR) == 0 ||
-		    (prev->flags & GMEM_UVAS_ENTRY_RMRR) == 0)
+		    (prev->flags & GMEM_MF_RMRR) == 0)
 			return (EBUSY);
 		entry->start = prev->end;
 	}
 	if (next->start < entry->end &&
 	    (next->flags & GMEM_UVAS_ENTRY_PLACE) == 0) {
 		if ((flags & GMEM_MF_RMRR) == 0 ||
-		    (next->flags & GMEM_UVAS_ENTRY_RMRR) == 0)
+		    (next->flags & GMEM_MF_RMRR) == 0)
 			return (EBUSY);
 		entry->end = next->start;
 	}
@@ -393,7 +394,7 @@ gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 	KASSERT(found, ("found RMRR dup %p start %jx end %jx",
 	    uvas, (uintmax_t)entry->start, (uintmax_t)entry->end));
 	if ((flags & GMEM_MF_RMRR) != 0)
-		entry->flags = GMEM_UVAS_ENTRY_RMRR;
+		entry->flags = GMEM_MF_RMRR;
 
 // #ifdef INVARIANTS
 // 	struct gmem_uvas_entry *ip, *in;
@@ -483,11 +484,12 @@ gmem_uvas_reserve_region_locked(struct gmem_uvas *uvas,
 {
 	int error;
 
-	GMEM_UVAS_ASSERT_LOCKED(uvas);
 
 	entry->start = start;
 	entry->end = end;
-	error = gmem_uvas_alloc_region(uvas, entry, GMEM_MF_CANWAIT);
+	GMEM_UVAS_LOCK(uvas);
+	error = gmem_uvas_alloc_region(uvas, entry, GMEM_MF_RMRR);
+	GMEM_UVAS_UNLOCK(uvas);
 	if (error == 0)
 		entry->flags |= GMEM_UVAS_ENTRY_UNMAPPED;
 	return (error);

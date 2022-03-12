@@ -180,8 +180,6 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		return (GMEM_ENOMEM);
 
 	PRINTINFO;
-	GMEM_UVAS_LOCK(uvas);
-	PRINTINFO;
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
@@ -190,7 +188,6 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		error = gmem_uvas_find_space(uvas, size, 0, flags, entry);
 		// printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
-			GMEM_UVAS_UNLOCK(uvas);
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
 		}
@@ -203,7 +200,6 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// use vmem allocator
 		printf("VMEM Allocator not implemented!\n");
 	}
-	GMEM_UVAS_UNLOCK(uvas);
 	if (ret != NULL)
 		*ret = entry;
 	return GMEM_OK;
@@ -221,13 +217,10 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
-	GMEM_UVAS_LOCK(uvas);
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
-		GMEM_UVAS_LOCK(uvas);
 		error = gmem_uvas_reserve_region_locked(uvas, start, end, entry);
-		GMEM_UVAS_UNLOCK(uvas);
 		if (error != 0)
 			gmem_uvas_free_entry(uvas, entry);
 		else if (ret != NULL)
@@ -239,7 +232,6 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		// use vmem allocator
 		printf("VMEM Allocator not implemented!\n");
 	}
-	GMEM_UVAS_UNLOCK(uvas);
 	if (ret != NULL)
 		*ret = entry;
 	return GMEM_OK;
@@ -249,8 +241,8 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
-	GMEM_UVAS_LOCK(uvas);
 	if (uvas->allocator == RBTREE) {
+		GMEM_UVAS_LOCK(uvas);
 		// use rb-tree allocator
 		if (entry != NULL) {
 			gmem_uvas_rb_remove(uvas, entry);
@@ -261,11 +253,11 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			span.end = start + size;
 			gmem_uvas_rb_free_span(uvas, &span);
 		}
+		GMEM_UVAS_UNLOCK(uvas);
 	}
 	else if (uvas->allocator == VMEM) {
 		// use vmem allocator
 	}
-	GMEM_UVAS_UNLOCK(uvas);
 	return GMEM_OK;
 }
 

@@ -692,6 +692,9 @@ iommu_gas_reserve_region_locked(struct iommu_domain *domain,
 
 	entry->start = start;
 	entry->end = end;
+
+	// This is clearly a bug. The flag to input should be IOMMU_MF_RMRR not canwait,
+	// as a mutex cannot be held by a sleeping thread.
 	error = iommu_gas_alloc_region(domain, entry, IOMMU_MF_CANWAIT);
 	if (error == 0)
 		entry->flags |= IOMMU_MAP_ENTRY_UNMAPPED;
