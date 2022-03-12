@@ -370,6 +370,8 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 			limit = PCI_PPBMEMLIMIT(0,
 			    pci_read_config(root, PCIR_PMLIMITL_1, 2));
 		}
+		PRINTINFO;
+		printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 		error = iommu_gas_reserve_region_extend(iodom, base,
 		    limit + 1);
 		if (bootverbose || error != 0)
