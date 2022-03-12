@@ -902,7 +902,7 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 
 		// TODO: replace dmar_domain_free_entry
 		// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
-		// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
+		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
 	IOMMU_DOMAIN_UNLOCK(domain);
 	if (free)
