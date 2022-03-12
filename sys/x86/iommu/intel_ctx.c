@@ -348,6 +348,13 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 	/* Disable downstream memory */
 	base = PCI_PPBMEMBASE(0, pci_read_config(root, PCIR_MEMBASE_1, 2));
 	limit = PCI_PPBMEMLIMIT(0, pci_read_config(root, PCIR_MEMLIMIT_1, 2));
+	error = gmem_uvas_alloc_span_fixed(domain->iodom.uvas, base,
+	    limit + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
+	if (error != 0) {
+		PRINTINFO;
+		printf("error code from alloc_span_fixed %d\n", error);
+	}
+	printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 	error = iommu_gas_reserve_region_extend(iodom, base, limit + 1);
 	if (bootverbose || error != 0)
 		device_printf(dev, "DMAR reserve [%#jx-%#jx] (error %d)\n",
@@ -371,6 +378,12 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 			    pci_read_config(root, PCIR_PMLIMITL_1, 2));
 		}
 		PRINTINFO;
+		error = gmem_uvas_alloc_span_fixed(domain->iodom.uvas, base,
+		    limit + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
+		if (error != 0) {
+			PRINTINFO;
+			printf("error code from alloc_span_fixed %d\n", error);
+		}
 		printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 		error = iommu_gas_reserve_region_extend(iodom, base,
 		    limit + 1);
