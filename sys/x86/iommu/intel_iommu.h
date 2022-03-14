@@ -39,6 +39,8 @@ struct intel_iommu_pgtable
 	// real page table data
 	vm_object_t pgtbl_obj;
 
+	u_int flags;
+
 	// The original iommu data structure is messy -- 
 	//	domain contains both page table and address space data
 	//  dmar contains async queues

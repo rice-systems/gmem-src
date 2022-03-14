@@ -79,7 +79,7 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	VM_OBJECT_WUNLOCK(pgtable->pgtbl_obj);
 
 	// DMAR_LOCK(domain->dmar);
-	// domain->flags |= DMAR_DOMAIN_PGTBL_INITED;
+	pgtable->flags |= IOMMU_DOMAIN_PGTBL_INITED;
 	// DMAR_UNLOCK(domain->dmar);
 	return GMEM_OK;
 }
