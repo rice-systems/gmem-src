@@ -916,7 +916,6 @@ void
 dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 {
 	struct iommu_domain *domain;
-	struct gmem_uvas_entry *gentry;
 
 	domain = entry->domain;
 	IOMMU_DOMAIN_LOCK(domain);
