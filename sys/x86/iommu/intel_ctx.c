@@ -932,7 +932,7 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		// PRINTINFO;
 		// printf("start %lx, end %lx, size %lx\n", entry->start, entry->end,
 		// 	entry->end - entry->start);
-		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
+		// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
 
 	IOMMU_DOMAIN_UNLOCK(domain);
