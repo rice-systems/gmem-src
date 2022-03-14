@@ -621,7 +621,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		error = gmem_iommu_map(ctx->uvas, gstart, size, offset,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
-		    gas_flags, ma + idx);
+		    gas_flags | GMEM_UVA_ALLOC, ma + idx);
 
 		error = iommu_map(domain, &tag->common, size, offset,
 		    IOMMU_MAP_ENTRY_READ |
@@ -1098,7 +1098,7 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 
 	error = gmem_iommu_map(domain->uvas, start, length, 0, GMEM_UVAS_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
-	    waitok ? GMEM_MF_CANWAIT : 0, ma);
+	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma);
 
 	error = iommu_map_region(domain, entry, IOMMU_MAP_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : IOMMU_MAP_ENTRY_WRITE),

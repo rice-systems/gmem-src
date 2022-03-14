@@ -25,6 +25,9 @@
 #define	GMEM_MF_CANWAIT		0x0001
 #define	GMEM_MF_CANSPLIT	0x0002
 #define	GMEM_MF_RMRR		0x0004
+#define GMEM_UVA_ALLOC            0x0000
+#define GMEM_UVA_ALLOC_FIXED      0x0008
+
 
 #define	GMEM_UVAS_ENTRY_PLACE	0x0001	/* Fake entry */
 #define	GMEM_UVAS_ENTRY_RMRR	0x0002	/* Permanent, not linked by
