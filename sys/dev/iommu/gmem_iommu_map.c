@@ -95,7 +95,7 @@ gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offs
         printf("iommu ctx does not have a valid uvas\n");
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
-    if ((eflags & GMEM_UVA_ALLOC_FIXED) == 0)
+    if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
         error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
     else {
