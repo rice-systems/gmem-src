@@ -924,18 +924,14 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		iommu_gas_free_region(domain, entry);
 	else {
 		iommu_gas_free_space(domain, entry);
+		// TODO: replace dmar_domain_free_entry
+		// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
+		// TODO: replace gentry with entry.
+		// This function does not allow memory allocation at all because of the unmap_async mechanism.
+		// Temporarily allow gmem_uvas_free_span to directly free an entry without specifying it.
+		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
 	IOMMU_DOMAIN_UNLOCK(domain);
-	// TODO: replace dmar_domain_free_entry
-	// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
-	// TODO: replace gentry with entry.
-	gentry = gmem_uvas_alloc_entry(domain->uvas, 0);
-	if (gentry != NULL) {
-		gentry->start = entry->start;
-		gentry->end = entry->end;
-		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, gentry);
-	}
-	// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	if (free)
 		iommu_gas_free_entry(domain, entry);
 	else
