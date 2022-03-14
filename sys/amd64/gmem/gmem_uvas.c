@@ -8,7 +8,7 @@
  *
  */
 
-// #define	RB_AUGMENT(entry) gmem_rb_augment_entry(entry)
+#define	RB_AUGMENT(entry) gmem_rb_augment_entry(entry)
 #include <sys/tree.h>
 
 #include <sys/cdefs.h>

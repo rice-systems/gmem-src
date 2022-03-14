@@ -584,6 +584,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
+	vm_offset_t gstart;
 
 	KASSERT(offset < IOMMU_PAGE_SIZE, ("offset %d", offset));
 	if (segs == NULL)
@@ -593,6 +594,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	seg = *segp;
 	error = 0;
 	idx = 0;
+	gstart = -1;
 
 	while (buflen > 0) {
 		seg++;
@@ -616,7 +618,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		// Current stage: gmem_iommu_map is a shadow vm system for iommu
 		// The busdma layer is not doing a good job of coding.
 		// Why does it have to manipulate anything with map entries?
-		error = gmem_iommu_map(ctx->uvas, -1, size, offset,
+		error = gmem_iommu_map(ctx->uvas, gstart, size, offset,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
 		    gas_flags, ma + idx);
@@ -625,6 +627,11 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		    IOMMU_MAP_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
 		    gas_flags, ma + idx, &entry);
+
+		if (gstart != entry->start) {
+			panic("Inconsistent gmem va allocation gmem start:%lx, iommu start:%lx, size:%lx",
+				gstart, entry->start, size);
+		}
 
 		if (error != 0)
 			break;
@@ -1096,6 +1103,11 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 	error = iommu_map_region(domain, entry, IOMMU_MAP_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : IOMMU_MAP_ENTRY_WRITE),
 	    waitok ? IOMMU_MF_CANWAIT : 0, ma);
+
+	// if (start != entry->start) {
+	// 	panic("Inconsistent gmem va allocation gmem start:%lx, iommu start:%lx, size:%lx",
+	// 		start, entry->start, length);
+	// }
 
 	if (error == 0) {
 		IOMMU_DOMAIN_LOCK(domain);
