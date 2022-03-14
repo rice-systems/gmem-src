@@ -279,10 +279,10 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 {
 	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
-	if (uvas == NULL) {
-		printf("[gmem panic] uvas is null\n");
-		return -1;
-	}
+	// if (uvas == NULL) {
+	// 	printf("[gmem panic] uvas is null\n");
+	// 	return -1;
+	// }
 
 	if (uvas->allocator == RBTREE) {
 		// use rb-tree allocator
