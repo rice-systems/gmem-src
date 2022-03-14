@@ -243,7 +243,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 	struct iommu_map_entries_tailq rmrr_entries;
 	struct iommu_map_entry *entry, *entry1;
 	vm_page_t *ma;
-	iommu_gaddr_t start, end;
+	iommu_gaddr_t start, end, gstart, gend;
 	vm_pindex_t size, i;
 	int error, error1;
 
@@ -288,13 +288,20 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 			    VM_MEMATTR_DEFAULT);
 		}
 
-		error1 = gmem_iommu_map(domain->iodom.uvas, &entry->start, entry->end, 
+		gstart = entry->start;
+		gend = entry->end;
+		error1 = gmem_iommu_map(domain->iodom.uvas, &gstart, gend, 
 			0, GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma);
 
 		error1 = iommu_gas_map_region(DOM2IODOM(domain), entry,
 		    IOMMU_MAP_ENTRY_READ | IOMMU_MAP_ENTRY_WRITE,
 		    IOMMU_MF_CANWAIT | IOMMU_MF_RMRR, ma);
+
+		if (gstart != entry->start) {
+			panic("Inconsistent gmem va allocation gmem start:%lx, iommu start:%lx, size:%lx",
+				gstart, entry->start, size);
+		}
 
 		/*
 		 * Non-failed RMRR entries are owned by context rb
