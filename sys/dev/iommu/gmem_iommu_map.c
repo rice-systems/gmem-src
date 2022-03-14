@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD$");
 // API, we need to make sure not to expose gmem's data
 // structure outside.
 int
-gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t start, vm_offset_t size, int offset,
+gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offset,
     u_int eflags, u_int flags, vm_page_t *ma)
 {
     gmem_uvas_entry_t *entry;
@@ -96,10 +96,10 @@ gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t start, vm_offset_t size, int offse
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
     if ((eflags & GMEM_UVA_ALLOC_FIXED) == 0)
-        error = gmem_uvas_alloc_span(uvas, &start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+        error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
     else {
-        error = gmem_uvas_alloc_span_fixed(uvas, start, start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+        error = gmem_uvas_alloc_span_fixed(uvas, *start, *start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
     }
 
@@ -115,7 +115,7 @@ gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t start, vm_offset_t size, int offse
         // There is no need to call iotlb inv
         // TODO: we always free the entry when we add back this iotlb inv in the future
         // iommu_domain_unload_entry(entry, true);
-        gmem_uvas_free_span(uvas, start, size, entry);
+        gmem_uvas_free_span(uvas, *start, size, entry);
         return (error);
     }
     KASSERT(error == 0,

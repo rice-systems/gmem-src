@@ -288,7 +288,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 			    VM_MEMATTR_DEFAULT);
 		}
 
-		error1 = gmem_iommu_map(domain->iodom.uvas, entry->start, entry->end, 
+		error1 = gmem_iommu_map(domain->iodom.uvas, &entry->start, entry->end, 
 			0, GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma);
 
