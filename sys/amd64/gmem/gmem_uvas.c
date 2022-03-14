@@ -308,7 +308,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			printf("size %lx\n", size);
 			printf("arena %p\n", uvas->arena);
 
-			vmem_free(uvas->arena, start, size);
+			// vmem_free(uvas->arena, start, size);
 			printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
