@@ -209,7 +209,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// [TODO]
 		// entry->flags |= eflags;
 		*start = entry->start;
-		printf("start %lx, end %lx \n", *start, *start + size);
+		printf("uvas %p, start %lx, end %lx \n", uvas, *start, *start + size);
 	}
 	else if (uvas->allocator == VMEM)
 	{
@@ -251,6 +251,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
 		}
+		printf("uvas %p, start %lx, end %lx \n", uvas, start, end);
 	}
 	else if (uvas->allocator == VMEM)
 	{

@@ -629,8 +629,8 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		    gas_flags, ma + idx, &entry);
 
 		if (gstart != entry->start) {
-			panic("Inconsistent gmem va allocation gmem start:%lx, iommu start:%lx, size:%lx",
-				gstart, entry->start, size);
+			panic("Inconsistent gmem va allocation uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
+				domain->uvas, gstart, entry->start, size);
 		}
 
 		if (error != 0)
@@ -1105,8 +1105,8 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 	    waitok ? IOMMU_MF_CANWAIT : 0, ma);
 
 	if (start != entry->start) {
-		panic("Inconsistent gmem va allocation gmem start:%lx, iommu start:%lx, size:%lx",
-			start, entry->start, length);
+		panic("Inconsistent gmem va allocation, uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
+			domain->uvas, start, entry->start, length);
 	}
 
 	if (error == 0) {

@@ -299,8 +299,8 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 		    IOMMU_MF_CANWAIT | IOMMU_MF_RMRR, ma);
 
 		if (gstart != entry->start) {
-			panic("Inconsistent gmem va allocation gmem start:%lx, iommu start:%lx, size:%lx",
-				gstart, entry->start, size);
+			panic("Inconsistent gmem va allocation uvas: %p, gmem start:%lx, iommu start:%lx, size:%lx",
+				domain->iodom.uvas, gstart, entry->start, size);
 		}
 
 		/*
