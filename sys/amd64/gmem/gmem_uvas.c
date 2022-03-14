@@ -308,7 +308,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			// TODO: remove this code and panic.
 			// silently ignore
 			printf("start %lx\n", start);
-			printf("start %lx\n", size);
+			printf("size %lx\n", size);
 			printf("arena %p\n", uvas->arena);
 
 			vmem_free(uvas->arena, start, size);

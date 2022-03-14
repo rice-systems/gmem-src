@@ -929,6 +929,8 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		// TODO: replace gentry with entry.
 		// This function does not allow memory allocation at all because of the unmap_async mechanism.
 		// Temporarily allow gmem_uvas_free_span to directly free an entry without specifying it.
+		PRINTINFO;
+		printf("start %lx, end %lx\n", entry->start, entry->end);
 		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
 	IOMMU_DOMAIN_UNLOCK(domain);
