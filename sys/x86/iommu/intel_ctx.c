@@ -916,7 +916,7 @@ void
 dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 {
 	struct iommu_domain *domain;
-	// struct gmem_uvas_entry gentry;
+	struct gmem_uvas_entry *gentry;
 
 	domain = entry->domain;
 	IOMMU_DOMAIN_LOCK(domain);
@@ -925,14 +925,17 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	else {
 		iommu_gas_free_space(domain, entry);
 	}
+	IOMMU_DOMAIN_UNLOCK(domain);
 	// TODO: replace dmar_domain_free_entry
 	// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
 	// TODO: replace gentry with entry.
-	// gentry.start = entry->start;
-	// gentry.end = entry->end;
-	// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, &gentry);
-	IOMMU_DOMAIN_UNLOCK(domain);
-	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
+	gentry = gmem_uvas_alloc_entry(domain->uvas, GMEM_MF_CANWAIT);
+	if (gentry != NULL) {
+		gentry->start = entry->start;
+		gentry->end = entry->end;
+		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, gentry);
+	}
+	// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	if (free)
 		iommu_gas_free_entry(domain, entry);
 	else
