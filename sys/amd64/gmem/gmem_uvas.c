@@ -281,9 +281,9 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
+	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
-		PRINTINFO;
 		printf("[gmem panic] uvas is null\n");
 		return -1;
 	}
@@ -307,8 +307,12 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		} else {
 			// TODO: remove this code and panic.
 			// silently ignore
-			// vmem_free(uvas->arena, start, size);
-			// printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
+			printf("start %lx\n", start);
+			printf("start %lx\n", size);
+			printf("arena %p\n", uvas->arena);
+
+			vmem_free(uvas->arena, start, size);
+			printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
 	GMEM_UVAS_UNLOCK(uvas);
