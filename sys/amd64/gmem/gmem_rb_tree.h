@@ -418,14 +418,12 @@ gmem_rb_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 static void
 gmem_rb_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
-	GMEM_UVAS_LOCK(uvas);
 	KASSERT((entry->flags & (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_RMRR |
 	    GMEM_UVAS_ENTRY_MAP)) == GMEM_UVAS_ENTRY_MAP,
 	    ("permanent entry %p %p", uvas, entry));
 
 	gmem_rb_remove(uvas, entry);
 	entry->flags &= ~GMEM_UVAS_ENTRY_MAP;
-	GMEM_UVAS_UNLOCK(uvas);
 // #ifdef INVARIANTS
 // 	if (iommu_check_free)
 // 		gmem_uvas_check_free(uvas);

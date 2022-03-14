@@ -8,7 +8,7 @@
  *
  */
 
-#define	RB_AUGMENT(entry) gmem_rb_augment_entry(entry)
+// #define	RB_AUGMENT(entry) gmem_rb_augment_entry(entry)
 #include <sys/tree.h>
 
 #include <sys/cdefs.h>
@@ -297,9 +297,9 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			span.start = start;
 			span.end = start + size;
 			// TODO: use gmem_rb_free_span as a general operation.
-			gmem_rb_remove(uvas, entry);
-			gmem_uvas_free_entry(uvas, entry);
-			// gmem_rb_free_span(uvas, &span);
+			// gmem_rb_remove(uvas, entry);
+			// gmem_uvas_free_entry(uvas, entry);
+			gmem_rb_free_span(uvas, &span);
 		}
 		GMEM_UVAS_UNLOCK(uvas);
 	}
