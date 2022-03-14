@@ -692,7 +692,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		 * revert all work done.
 		 */
 		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_FOREACH_REVERSE_SAFE(entry, &map->map_entries, iommu_map_entries_tailq
+		TAILQ_FOREACH_REVERSE_SAFE(entry, &map->map_entries, iommu_map_entries_tailq,
 			dmamap_link, entry1) {
 			/*
 			 * No entries other than what we have created
