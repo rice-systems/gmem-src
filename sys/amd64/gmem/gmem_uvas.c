@@ -25,7 +25,6 @@
 #include <sys/buf.h>
 #include <sys/vmem.h>
 #include <sys/vmmeter.h>
-#include <sys/tree.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
