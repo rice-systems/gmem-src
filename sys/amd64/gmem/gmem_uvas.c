@@ -209,7 +209,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	else if (uvas->allocator == VMEM)
 	{
 		// use vmem allocator
-		error = vmem_alloc(uvas->arena, size, M_FIRSTFIT | | ((flags & GMEM_MF_CANWAIT) != 0 ?
+		error = vmem_alloc(uvas->arena, size, M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ?
 			M_WAITOK : M_NOWAIT), start);
 		if (error != 0)
 			return error;
@@ -251,7 +251,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	{
 		vm_offset_t new_start;
 		// use vmem allocator
-		error = vmem_xalloc(uvas->arena, size, 0, 0, 0, start, end, 
+		error = vmem_xalloc(uvas->arena, end - start, 0, 0, 0, start, end, 
 			M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ? M_WAITOK : M_NOWAIT), &new_start);
 		if (start != new_start) {
 			printf("VMEM xalloc failed with start %lx, end %lx, newstart %lx\n", start, end, new_start);
@@ -260,7 +260,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			return error;
 		else {
 			entry->start = start;
-			entry->end = start + size;
+			entry->end = end;
 		}
 	}
 	if (ret != NULL)
@@ -276,19 +276,19 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		GMEM_UVAS_LOCK(uvas);
 		// use rb-tree allocator
 		if (entry != NULL) {
-			gmem_uvas_rb_remove(uvas, entry);
+			gmem_rb_remove(uvas, entry);
 			gmem_uvas_free_entry(uvas, entry);
 		} else {
 			gmem_uvas_entry_t span;
 			span.start = start;
 			span.end = start + size;
-			gmem_uvas_rb_free_span(uvas, &span);
+			gmem_rb_free_span(uvas, &span);
 		}
 		GMEM_UVAS_UNLOCK(uvas);
 	}
 	else if (uvas->allocator == VMEM) {
 		if (entry != NULL) {
-			vmem_free(domain->iova_arena, entry->start, entry->end - entry->start);
+			vmem_free(uvas->arena, entry->start, entry->end - entry->start);
 		} else {
 			printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}

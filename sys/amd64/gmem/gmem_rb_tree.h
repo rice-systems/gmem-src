@@ -459,7 +459,7 @@ gmem_rb_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 
 // remove all rb entries covered by the given span
 static void
-gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+gmem_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *tmp, *prev;
 	tmp = RB_NFIND(gmem_uvas_entries_tree, &uvas->rb_root, entry);
