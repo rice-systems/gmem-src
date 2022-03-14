@@ -209,6 +209,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// [TODO]
 		// entry->flags |= eflags;
 		*start = entry->start;
+		printf("start %lx, end %lx \n", *start, *start + size);
 	}
 	else if (uvas->allocator == VMEM)
 	{
@@ -278,6 +279,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
 	PRINTINFO;
+	printf("start %lx, end %lx \n", start, start + size);
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
 		panic("[gmem panic] uvas is null\n");
@@ -294,7 +296,10 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			gmem_uvas_entry_t span;
 			span.start = start;
 			span.end = start + size;
-			gmem_rb_free_span(uvas, &span);
+			// TODO: use gmem_rb_free_span as a general operation.
+			gmem_rb_remove(uvas, entry);
+			gmem_uvas_free_entry(uvas, entry);
+			// gmem_rb_free_span(uvas, &span);
 		}
 		GMEM_UVAS_UNLOCK(uvas);
 	}
