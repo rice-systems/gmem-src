@@ -605,7 +605,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			dev_data.domain = domain1;
 			dev_data.id_mapped = id_mapped;
 			gmem_uvas_create(&domain1->iodom.uvas, device_get_gmem_dev(dev),
-				NULL, &dev_data, false, false,
+				NULL, &dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
 			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
 
@@ -929,9 +929,9 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		// TODO: replace gentry with entry.
 		// This function does not allow memory allocation at all because of the unmap_async mechanism.
 		// Temporarily allow gmem_uvas_free_span to directly free an entry without specifying it.
-		PRINTINFO;
-		printf("start %lx, end %lx, size %lx\n", entry->start, entry->end,
-			entry->end - entry->start);
+		// PRINTINFO;
+		// printf("start %lx, end %lx, size %lx\n", entry->start, entry->end,
+		// 	entry->end - entry->start);
 		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	}
 	IOMMU_DOMAIN_UNLOCK(domain);

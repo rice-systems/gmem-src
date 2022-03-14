@@ -279,10 +279,10 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 {
 	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
-	// if (uvas == NULL) {
-	// 	printf("[gmem panic] uvas is null\n");
-	// 	return -1;
-	// }
+	if (uvas == NULL) {
+		panic("[gmem panic] uvas is null\n");
+		return -1;
+	}
 
 	if (uvas->allocator == RBTREE) {
 		// use rb-tree allocator
@@ -303,13 +303,14 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			vmem_free(uvas->arena, entry->start, entry->end - entry->start);
 		} else {
 			// TODO: remove this code and panic.
-			// silently ignore
-			printf("start %lx\n", start);
-			printf("size %lx\n", size);
-			printf("arena %p\n", uvas->arena);
+			// We should explode here, because the iommu rb-allocator is not going to allocate the
+			// same address as what vmem allocated.
+			// printf("start %lx\n", start);
+			// printf("size %lx\n", size);
+			// printf("arena %p\n", uvas->arena);
 
 			vmem_free(uvas->arena, start, size);
-			printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
+			// printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
 
