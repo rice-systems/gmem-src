@@ -580,7 +580,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 {
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-	struct iommu_map_entry *entry, entry1;
+	struct iommu_map_entry *entry, *entry1;
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
