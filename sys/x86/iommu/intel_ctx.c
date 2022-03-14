@@ -921,6 +921,7 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	IOMMU_DOMAIN_LOCK(domain);
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
 		iommu_gas_free_region(domain, entry);
+		// TODO: distinguish vmem_xfree
 	else {
 		iommu_gas_free_space(domain, entry);
 		// TODO: replace dmar_domain_free_entry
