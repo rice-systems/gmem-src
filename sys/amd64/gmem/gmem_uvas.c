@@ -8,6 +8,9 @@
  *
  */
 
+#define	RB_AUGMENT(entry) gmem_rb_augment_entry(entry)
+#include <sys/tree.h>
+
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/domainset.h>
@@ -31,9 +34,9 @@
 #include <vm/vm_page.h>
 
 #include <sys/gmem.h>
-#include <amd64/gmem/gmem_rb_tree.h>
 #include <amd64/gmem/gmem_dev.h>
 #include <amd64/gmem/gmem_uvas.h>
+#include <amd64/gmem/gmem_rb_tree.h>
 
 static uma_zone_t gmem_uvas_entry_zone;
 
