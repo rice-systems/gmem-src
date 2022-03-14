@@ -702,6 +702,7 @@ iommu_gas_reserve_region(struct iommu_domain *domain, iommu_gaddr_t start,
 	int error;
 
 	PRINTINFO;
+	printf("[iommu_gas] reserving start %lx, end %lx\n", start, end);
 	entry = iommu_gas_alloc_entry(domain, IOMMU_PGF_WAITOK);
 	IOMMU_DOMAIN_LOCK(domain);
 	error = iommu_gas_reserve_region_locked(domain, start, end, entry);
