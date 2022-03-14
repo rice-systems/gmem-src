@@ -923,7 +923,6 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		iommu_gas_free_region(domain, entry);
 		// TODO: distinguish vmem_xfree
 	else {
-		iommu_gas_free_space(domain, entry);
 		// TODO: replace dmar_domain_free_entry
 		// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
 		// TODO: replace gentry with entry.
@@ -932,7 +931,9 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		// PRINTINFO;
 		// printf("start %lx, end %lx, size %lx\n", entry->start, entry->end,
 		// 	entry->end - entry->start);
-		// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
+		gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
+		
+		iommu_gas_free_space(domain, entry);
 	}
 
 	IOMMU_DOMAIN_UNLOCK(domain);

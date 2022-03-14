@@ -187,7 +187,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
-	// PRINTINFO;
+	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
 	// printf("gmem_uvas_alloc_entry \n");
@@ -277,7 +277,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
-	// PRINTINFO;
+	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
 		panic("[gmem panic] uvas is null\n");
