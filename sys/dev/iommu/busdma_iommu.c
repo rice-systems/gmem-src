@@ -576,12 +576,11 @@ iommu_bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map1)
 static int
 iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
     struct bus_dmamap_iommu *map, vm_page_t *ma, int offset, bus_size_t buflen,
-    int flags, bus_dma_segment_t *segs, int *segp,
-    struct iommu_map_entries_tailq *unroll_list)
+    int flags, bus_dma_segment_t *segs, int *segp)
 {
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-	struct iommu_map_entry *entry;
+	struct iommu_map_entry *entry, entry1;
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
@@ -594,6 +593,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	seg = *segp;
 	error = 0;
 	idx = 0;
+
 	while (buflen > 0) {
 		seg++;
 		if (seg >= tag->common.nsegments) {
@@ -674,7 +674,6 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		TAILQ_INSERT_TAIL(&map->map_entries, entry, dmamap_link);
 		entry->flags |= IOMMU_MAP_ENTRY_MAP;
 		IOMMU_DOMAIN_UNLOCK(domain);
-		TAILQ_INSERT_TAIL(unroll_list, entry, unroll_link);
 
 		segs[seg].ds_addr = entry->start + offset;
 		segs[seg].ds_len = buflen1;
@@ -686,6 +685,29 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	}
 	if (error == 0)
 		*segp = seg;
+	else {
+		/*
+		 * The busdma interface does not allow us to report
+		 * partial buffer load, so unfortunately we have to
+		 * revert all work done.
+		 */
+		IOMMU_DOMAIN_LOCK(domain);
+		TAILQ_FOREACH_REVERSE_SAFE(entry, &map->map_entries, iommu_map_entries_tailq
+			dmamap_link, entry1) {
+			/*
+			 * No entries other than what we have created
+			 * during the failed run might have been
+			 * inserted there in between, since we own ctx
+			 * pglock.
+			 */
+			TAILQ_REMOVE(&map->map_entries, entry, dmamap_link);
+			TAILQ_INSERT_TAIL(&domain->unload_entries, entry,
+			    dmamap_link);
+		}
+		IOMMU_DOMAIN_UNLOCK(domain);
+		taskqueue_enqueue(domain->iommu->delayed_taskqueue,
+		    &domain->unload_task);
+	}
 	return (error);
 }
 
@@ -697,40 +719,14 @@ iommu_bus_dmamap_load_something(struct bus_dma_tag_iommu *tag,
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
 	struct iommu_map_entry *entry, *entry1;
-	struct iommu_map_entries_tailq unroll_list;
 	int error;
 
 	ctx = tag->ctx;
 	domain = ctx->domain;
 	atomic_add_long(&ctx->loads, 1);
 
-	TAILQ_INIT(&unroll_list);
 	error = iommu_bus_dmamap_load_something1(tag, map, ma, offset,
-	    buflen, flags, segs, segp, &unroll_list);
-	if (error != 0) {
-		/*
-		 * The busdma interface does not allow us to report
-		 * partial buffer load, so unfortunately we have to
-		 * revert all work done.
-		 */
-		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_FOREACH_SAFE(entry, &unroll_list, unroll_link,
-		    entry1) {
-			/*
-			 * No entries other than what we have created
-			 * during the failed run might have been
-			 * inserted there in between, since we own ctx
-			 * pglock.
-			 */
-			TAILQ_REMOVE(&map->map_entries, entry, dmamap_link);
-			TAILQ_REMOVE(&unroll_list, entry, unroll_link);
-			TAILQ_INSERT_TAIL(&domain->unload_entries, entry,
-			    dmamap_link);
-		}
-		IOMMU_DOMAIN_UNLOCK(domain);
-		taskqueue_enqueue(domain->iommu->delayed_taskqueue,
-		    &domain->unload_task);
-	}
+	    buflen, flags, segs, segp);
 
 	if (error == ENOMEM && (flags & BUS_DMA_NOWAIT) == 0 &&
 	    !map->cansleep)
