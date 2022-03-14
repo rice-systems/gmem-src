@@ -137,7 +137,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		{
 			uvas->allocator = RBTREE;
 			// TODO: RB-TREE
-			gmem_uvas_init_rbtree(uvas);
+			gmem_rb_init(uvas);
 		}
 		else
 		{
@@ -161,7 +161,18 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 	KASSERT(uvas != NULL, "The uvas to be deleted is NULL!");
 
 	// traverse all pmaps of the uvas and delete them
+	if (uvas != NULL) {
+		// delete all mappings first
+		// domain_free_pgtbl(domain);
 
+		// delete all va allocations
+		if (uvas->allocator == RBTREE) {
+			gmem_rb_destroy(uvas);
+		} else if (uvas->allocator == VMEM) {
+			vmem_destroy(uvas->arena);
+			uvas->arena = NULL;
+		}
+	}
 	// free the uvas
 	return GMEM_OK;
 }
@@ -185,7 +196,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// use rb-tree allocator
 		// TODO: 
 		// offset makes no sense. Upgrade it to fit page alignment in the future
-		error = gmem_uvas_find_space(uvas, size, 0, flags, entry);
+		error = gmem_rb_find_space(uvas, size, 0, flags, entry);
 		// printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
 			gmem_uvas_free_entry(uvas, entry);
@@ -198,7 +209,14 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	else if (uvas->allocator == VMEM)
 	{
 		// use vmem allocator
-		printf("VMEM Allocator not implemented!\n");
+		error = vmem_alloc(uvas->arena, size, M_FIRSTFIT | | ((flags & DMAR_GM_CANWAIT) != 0 ?
+			M_WAITOK : M_NOWAIT), start);
+		if (error != 0)
+			return error;
+		else {
+			entry->start = *start;
+			entry->end = *start + size;
+		}
 	}
 	if (ret != NULL)
 		*ret = entry;
@@ -223,7 +241,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
-		error = gmem_uvas_reserve_region(uvas, start, end, entry);
+		error = gmem_rb_reserve_region(uvas, start, end, entry);
 		if (error != 0) {
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
@@ -231,8 +249,19 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	}
 	else if (uvas->allocator == VMEM)
 	{
+		vm_offset_t new_start;
 		// use vmem allocator
-		printf("VMEM Allocator not implemented!\n");
+		error = vmem_xalloc(uvas->arena, size, 0, 0, 0, start, end, M_FIRSTFIT | ((flags & DMAR_GM_CANWAIT) != 0 ?
+			M_WAITOK : M_NOWAIT), &new_start);
+		if (start != new_start) {
+			printf("VMEM xalloc failed with start %lx, end %lx, newstart %lx\n", start, end, new_start);
+		}
+		if (error != 0)
+			return error;
+		else {
+			entry->start = start;
+			entry->end = start + size;
+		}
 	}
 	if (ret != NULL)
 		*ret = entry;
@@ -258,7 +287,11 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		GMEM_UVAS_UNLOCK(uvas);
 	}
 	else if (uvas->allocator == VMEM) {
-		// use vmem allocator
+		if (entry != NULL) {
+			vmem_free(domain->iova_arena, entry->start, entry->end - entry->start);
+		} else {
+			printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
+		}
 	}
 	return GMEM_OK;
 }

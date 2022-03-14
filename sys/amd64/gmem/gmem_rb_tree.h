@@ -15,7 +15,9 @@
 #include <amd64/gmem/gmem_dev.h>
 #include <amd64/gmem/gmem_uvas.h>
 
-static int gmem_uvas_cmp_entries(struct gmem_uvas_entry *a, struct gmem_uvas_entry *b)
+#define	RB_AUGMENT(entry) gmem_rb_augment_entry(entry)
+
+static int gmem_rb_cmp_entries(struct gmem_uvas_entry *a, struct gmem_uvas_entry *b)
 {
 	// copied from iommu code
 	KASSERT(a->start <= a->end, ("inverted entry %p (%jx, %jx)",
@@ -36,7 +38,7 @@ static int gmem_uvas_cmp_entries(struct gmem_uvas_entry *a, struct gmem_uvas_ent
 }
 
 static void
-gmem_uvas_augment_entry(struct gmem_uvas_entry *entry)
+gmem_rb_augment_entry(struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
 	vm_size_t free_down;
@@ -59,10 +61,10 @@ gmem_uvas_augment_entry(struct gmem_uvas_entry *entry)
 }
 
 RB_GENERATE(gmem_uvas_entries_tree, gmem_uvas_entry, rb_entry,
-    gmem_uvas_cmp_entries);
+    gmem_rb_cmp_entries);
 
 static bool
-gmem_uvas_rb_insert(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+gmem_rb_insert(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *found;
 
@@ -72,14 +74,14 @@ gmem_uvas_rb_insert(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 }
 
 static void
-gmem_uvas_rb_remove(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+gmem_rb_remove(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 
 	RB_REMOVE(gmem_uvas_entries_tree, &uvas->rb_root, entry);
 }
 
 static void
-gmem_uvas_init_rbtree(struct gmem_uvas *uvas)
+gmem_rb_init(struct gmem_uvas *uvas)
 {
 	struct gmem_uvas_entry *begin, *end;
 
@@ -93,12 +95,12 @@ gmem_uvas_init_rbtree(struct gmem_uvas *uvas)
 	begin->start = 0;
 	begin->end = GMEM_PAGE_SIZE;
 	begin->flags = GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_UNMAPPED;
-	gmem_uvas_rb_insert(uvas, begin);
+	gmem_rb_insert(uvas, begin);
 
 	end->start = uvas->format.maxaddr;
 	end->end = uvas->format.maxaddr;
 	end->flags = GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_UNMAPPED;
-	gmem_uvas_rb_insert(uvas, end);
+	gmem_rb_insert(uvas, end);
 
 	uvas->first_place = begin;
 	uvas->last_place = end;
@@ -107,11 +109,11 @@ gmem_uvas_init_rbtree(struct gmem_uvas *uvas)
 }
 
 static void
-gmem_uvas_fini_uvas(struct gmem_uvas *uvas)
+gmem_rb_destroy(struct gmem_uvas *uvas)
 {
 	struct gmem_uvas_entry *entry, *entry1;
 
-	GMEM_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_LOCK(uvas);
 	KASSERT(uvas->entries_cnt == 2,
 	    ("uvas still in use %p", uvas));
 
@@ -141,8 +143,10 @@ gmem_uvas_fini_uvas(struct gmem_uvas *uvas)
 		    entry);
 		gmem_uvas_free_entry(uvas, entry);
 	}
+	GMEM_UVAS_UNLOCK(uvas);
 }
-struct gmem_uvas_match_args {
+
+struct gmem_rb_match_args {
 	struct gmem_uvas *uvas;
 	vm_offset_t size;
 	int offset;
@@ -158,7 +162,7 @@ struct gmem_uvas_match_args {
  * by a, and return 'true' if and only if the allocation attempt succeeds.
  */
 static bool
-gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
+gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
     vm_offset_t end, vm_offset_t maxaddr)
 {
 	vm_offset_t bs, start;
@@ -212,7 +216,7 @@ gmem_uvas_match_one(struct gmem_uvas_match_args *a, vm_offset_t beg,
 }
 
 static void
-gmem_uvas_match_insert(struct gmem_uvas_match_args *a)
+gmem_rb_match_insert(struct gmem_rb_match_args *a)
 {
 	bool found;
 
@@ -226,23 +230,23 @@ gmem_uvas_match_insert(struct gmem_uvas_match_args *a)
 	 */
 	a->entry->end = a->entry->start + a->size;
 
-	found = gmem_uvas_rb_insert(a->uvas, a->entry);
+	found = gmem_rb_insert(a->uvas, a->entry);
 	KASSERT(found, ("found dup %p start %jx size %jx",
 	    a->uvas, (uintmax_t)a->entry->start, (uintmax_t)a->size));
 	a->entry->flags = GMEM_UVAS_ENTRY_MAP;
 }
 
 static int
-gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *entry)
+gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
 
 	child = RB_RIGHT(entry, rb_entry);
 	if (child != NULL && entry->end < maxaddr &&
-	    gmem_uvas_match_one(a, entry->end, child->first,
+	    gmem_rb_match_one(a, entry->end, child->first,
 	    maxaddr)) {
-		gmem_uvas_match_insert(a);
+		gmem_rb_match_insert(a);
 		return (0);
 	}
 	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
@@ -250,22 +254,22 @@ gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *ent
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
 	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_uvas_lowermatch(a, child))
+	if (child != NULL && 0 == gmem_rb_lowermatch(a, child))
 		return (0);
 	if (child != NULL && child->last < maxaddr &&
-	    gmem_uvas_match_one(a, child->last, entry->start,
+	    gmem_rb_match_one(a, child->last, entry->start,
 	    maxaddr)) {
-		gmem_uvas_match_insert(a);
+		gmem_rb_match_insert(a);
 		return (0);
 	}
 	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_uvas_lowermatch(a, child))
+	if (child != NULL && 0 == gmem_rb_lowermatch(a, child))
 		return (0);
 	return (ENOMEM);
 }
 
 // static int
-// gmem_uvas_uppermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *entry)
+// gmem_uvas_uppermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 // {
 // 	struct gmem_uvas_entry *child;
 
@@ -277,16 +281,16 @@ gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *ent
 // 	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
 // 		return (0);
 // 	if (child != NULL && child->last >= a->common->highaddr &&
-// 	    gmem_uvas_match_one(a, child->last, entry->start,
+// 	    gmem_rb_match_one(a, child->last, entry->start,
 // 	    a->uvas->end)) {
-// 		gmem_uvas_match_insert(a);
+// 		gmem_rb_match_insert(a);
 // 		return (0);
 // 	}
 // 	child = RB_RIGHT(entry, rb_entry);
 // 	if (child != NULL && entry->end >= a->common->highaddr &&
-// 	    gmem_uvas_match_one(a, entry->end, child->first,
+// 	    gmem_rb_match_one(a, entry->end, child->first,
 // 	    a->uvas->end)) {
-// 		gmem_uvas_match_insert(a);
+// 		gmem_rb_match_insert(a);
 // 		return (0);
 // 	}
 // 	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
@@ -295,12 +299,12 @@ gmem_uvas_lowermatch(struct gmem_uvas_match_args *a, struct gmem_uvas_entry *ent
 // }
 
 static int
-gmem_uvas_find_space(struct gmem_uvas *uvas,
+gmem_rb_find_space(struct gmem_uvas *uvas,
     // const struct bus_dma_tag_common *common, 
     vm_offset_t size,
     int offset, u_int flags, struct gmem_uvas_entry *entry)
 {
-	struct gmem_uvas_match_args a;
+	struct gmem_rb_match_args a;
 	int error = GMEM_OK;
 
 	GMEM_UVAS_LOCK(uvas);
@@ -316,11 +320,11 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 
 	/* Handle lower region. */
 	// if (uvas->format.maxaddr > 0) {
-		error = gmem_uvas_lowermatch(&a, RB_ROOT(&uvas->rb_root));
+		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
 		// if (error == 0)
 		// 	return (0);
 		KASSERT(error == ENOMEM,
-		    ("error %d from gmem_uvas_lowermatch", error));
+		    ("error %d from gmem_rb_lowermatch", error));
 	// }
 	/* Handle upper region. */
 	// if (common->highaddr >= uvas->end)
@@ -333,7 +337,7 @@ gmem_uvas_find_space(struct gmem_uvas *uvas,
 }
 
 static int
-gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
+gmem_rb_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
     u_int flags)
 {
 	struct gmem_uvas_entry *next, *prev;
@@ -382,15 +386,15 @@ gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 
 	if (prev != NULL && prev->end > entry->start) {
 		/* This assumes that prev is the placeholder entry. */
-		gmem_uvas_rb_remove(uvas, prev);
+		gmem_rb_remove(uvas, prev);
 		prev = NULL;
 	}
 	if (next->start < entry->end) {
-		gmem_uvas_rb_remove(uvas, next);
+		gmem_rb_remove(uvas, next);
 		next = NULL;
 	}
 
-	found = gmem_uvas_rb_insert(uvas, entry);
+	found = gmem_rb_insert(uvas, entry);
 	KASSERT(found, ("found RMRR dup %p start %jx end %jx",
 	    uvas, (uintmax_t)entry->start, (uintmax_t)entry->end));
 	if ((flags & GMEM_MF_RMRR) != 0)
@@ -416,16 +420,16 @@ gmem_uvas_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 }
 
 static void
-gmem_uvas_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+gmem_rb_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
-
-	GMEM_UVAS_ASSERT_LOCKED(uvas);
+	GMEM_UVAS_LOCK(uvas);
 	KASSERT((entry->flags & (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_RMRR |
 	    GMEM_UVAS_ENTRY_MAP)) == GMEM_UVAS_ENTRY_MAP,
 	    ("permanent entry %p %p", uvas, entry));
 
-	gmem_uvas_rb_remove(uvas, entry);
+	gmem_rb_remove(uvas, entry);
 	entry->flags &= ~GMEM_UVAS_ENTRY_MAP;
+	GMEM_UVAS_UNLOCK(uvas);
 // #ifdef INVARIANTS
 // 	if (iommu_check_free)
 // 		gmem_uvas_check_free(uvas);
@@ -433,7 +437,7 @@ gmem_uvas_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 }
 
 static void
-gmem_uvas_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+gmem_rb_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *next, *prev;
 
@@ -444,13 +448,13 @@ gmem_uvas_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 
 	prev = RB_PREV(gmem_uvas_entries_tree, &uvas->rb_root, entry);
 	next = RB_NEXT(gmem_uvas_entries_tree, &uvas->rb_root, entry);
-	gmem_uvas_rb_remove(uvas, entry);
+	gmem_rb_remove(uvas, entry);
 	entry->flags &= ~GMEM_UVAS_ENTRY_RMRR;
 
 	if (prev == NULL)
-		gmem_uvas_rb_insert(uvas, uvas->first_place);
+		gmem_rb_insert(uvas, uvas->first_place);
 	if (next == NULL)
-		gmem_uvas_rb_insert(uvas, uvas->last_place);
+		gmem_rb_insert(uvas, uvas->last_place);
 }
 
 // remove all rb entries covered by the given span
@@ -465,21 +469,21 @@ gmem_uvas_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 		if (prev->end <= entry->start || prev == tmp)
 			break;
 		if (entry->start <= prev->start && prev->end <= entry->end) {
-			gmem_uvas_rb_remove(uvas, prev);
+			gmem_rb_remove(uvas, prev);
 			gmem_uvas_free_entry(uvas, prev);
 		}
 	} while (1);
 
 	if (entry->start <= tmp->start && tmp->end <= entry->end)
 	{
-		gmem_uvas_rb_remove(uvas, tmp);
+		gmem_rb_remove(uvas, tmp);
 		gmem_uvas_free_entry(uvas, tmp);
 	}
 }
 
 
 static int
-gmem_uvas_reserve_region(struct gmem_uvas *uvas,
+gmem_rb_reserve_region(struct gmem_uvas *uvas,
     vm_offset_t start, vm_offset_t end, struct gmem_uvas_entry *entry)
 {
 	int error;
@@ -488,7 +492,7 @@ gmem_uvas_reserve_region(struct gmem_uvas *uvas,
 	entry->start = start;
 	entry->end = end;
 	GMEM_UVAS_LOCK(uvas);
-	error = gmem_uvas_alloc_region(uvas, entry, GMEM_MF_RMRR);
+	error = gmem_rb_alloc_region(uvas, entry, GMEM_MF_RMRR);
 	GMEM_UVAS_UNLOCK(uvas);
 	if (error == 0)
 		entry->flags |= GMEM_UVAS_ENTRY_UNMAPPED;
