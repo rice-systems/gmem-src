@@ -259,6 +259,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		// use vmem allocator
 		GMEM_UVAS_LOCK(uvas);
 		printf("VMEM xalloc with start %lx, end %lx\n", start, end);
+		error = 0;
 		// error = vmem_xalloc(uvas->arena, end - start, 0, 0, 0, start, end, 
 		// 	M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ? M_WAITOK : M_NOWAIT), &new_start);
 		GMEM_UVAS_UNLOCK(uvas);
