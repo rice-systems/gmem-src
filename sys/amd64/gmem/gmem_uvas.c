@@ -31,9 +31,9 @@
 #include <vm/vm_page.h>
 
 #include <sys/gmem.h>
+#include <amd64/gmem/gmem_rb_tree.h>
 #include <amd64/gmem/gmem_dev.h>
 #include <amd64/gmem/gmem_uvas.h>
-#include <amd64/gmem/gmem_rb_tree.h>
 
 static uma_zone_t gmem_uvas_entry_zone;
 
