@@ -162,6 +162,7 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 {
 	KASSERT(uvas != NULL, "The uvas to be deleted is NULL!");
 
+	GMEM_UVAS_LOCK(uvas);
 	// traverse all pmaps of the uvas and delete them
 	if (uvas != NULL) {
 		// delete all mappings first
@@ -175,6 +176,7 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 			uvas->arena = NULL;
 		}
 	}
+	GMEM_UVAS_UNLOCK(uvas);
 	// free the uvas
 	return GMEM_OK;
 }
@@ -211,8 +213,10 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	else if (uvas->allocator == VMEM)
 	{
 		// use vmem allocator
+		GMEM_UVAS_LOCK(uvas);
 		error = vmem_alloc(uvas->arena, size, M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ?
 			M_WAITOK : M_NOWAIT), start);
+		GMEM_UVAS_UNLOCK(uvas);
 		if (error != 0)
 			return error;
 		else {
@@ -279,8 +283,9 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		printf("[gmem panic] uvas is null\n");
 		return -1;
 	}
+
+	GMEM_UVAS_LOCK(uvas);
 	if (uvas->allocator == RBTREE) {
-		GMEM_UVAS_LOCK(uvas);
 		// use rb-tree allocator
 		if (entry != NULL) {
 			gmem_rb_remove(uvas, entry);
@@ -291,7 +296,6 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			span.end = start + size;
 			gmem_rb_free_span(uvas, &span);
 		}
-		GMEM_UVAS_UNLOCK(uvas);
 	}
 	else if (uvas->allocator == VMEM) {
 		if (entry != NULL) {
@@ -300,6 +304,8 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
+	GMEM_UVAS_UNLOCK(uvas);
+
 	return GMEM_OK;
 }
 

@@ -111,7 +111,6 @@ gmem_rb_destroy(struct gmem_uvas *uvas)
 {
 	struct gmem_uvas_entry *entry, *entry1;
 
-	GMEM_UVAS_LOCK(uvas);
 	KASSERT(uvas->entries_cnt == 2,
 	    ("uvas still in use %p", uvas));
 
@@ -141,7 +140,6 @@ gmem_rb_destroy(struct gmem_uvas *uvas)
 		    entry);
 		gmem_uvas_free_entry(uvas, entry);
 	}
-	GMEM_UVAS_UNLOCK(uvas);
 }
 
 struct gmem_rb_match_args {

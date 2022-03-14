@@ -536,7 +536,7 @@ dmar_domain_destroy(struct dmar_domain *domain)
 		domain_free_pgtbl(domain);
 	}
 	// TODO: replace the above two if-statements
-	gmem_uvas_delete(iodom->uvas);
+	// gmem_uvas_delete(iodom->uvas);
 
 	iommu_domain_fini(iodom);
 	dmar = DOM2DMAR(domain);
@@ -931,8 +931,8 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	// gentry.start = entry->start;
 	// gentry.end = entry->end;
 	// gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, &gentry);
-	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	IOMMU_DOMAIN_UNLOCK(domain);
+	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 	if (free)
 		iommu_gas_free_entry(domain, entry);
 	else
