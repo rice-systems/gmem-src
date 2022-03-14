@@ -86,9 +86,6 @@ gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offs
     gmem_uvas_entry_t *entry;
     int error;
 
-    KASSERT((flags & ~(GMEM_MF_CANWAIT | GMEM_MF_CANSPLIT)) == 0,
-        ("invalid flags 0x%x", flags));
-
     // Missing: entry->flags |= eflags;
     // printf("gmem map size: %lu\n", size);
     if (uvas == NULL)
