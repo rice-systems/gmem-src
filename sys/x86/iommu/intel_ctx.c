@@ -929,7 +929,7 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	// TODO: replace dmar_domain_free_entry
 	// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
 	// TODO: replace gentry with entry.
-	gentry = gmem_uvas_alloc_entry(domain->uvas, GMEM_MF_CANWAIT);
+	gentry = gmem_uvas_alloc_entry(domain->uvas, 0);
 	if (gentry != NULL) {
 		gentry->start = entry->start;
 		gentry->end = entry->end;
