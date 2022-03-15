@@ -36,7 +36,7 @@
 
 #include <dev/iommu/iommu_types.h>
 #include <sys/gmem.h>
-#include <sys/amd64/gmem/gmem_uvas.h>
+#include <amd64/gmem/gmem_uvas.h>
 
 struct bus_dma_tag_common;
 // struct gmem_uvas_entry;
