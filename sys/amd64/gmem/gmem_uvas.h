@@ -11,6 +11,10 @@
 #ifndef _GMEM_UVAS_H_
 #define	_GMEM_UVAS_H_
 
+#include <vm/vm.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page.h>
+
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_ASSERT_LOCKED(dom)	mtx_assert(&(dom)->lock, MA_OWNED)
