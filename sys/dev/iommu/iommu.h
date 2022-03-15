@@ -46,11 +46,6 @@ struct bus_dma_tag_common;
 // RB_PROTOTYPE(iommu_gas_entries_tree, gmem_uvas_entry, rb_entry,
 //     iommu_gas_cmp_entries);
 
-struct iommu_qi_genseq {
-	u_int gen;
-	uint32_t seq;
-};
-
 // struct gmem_uvas_entry {
 // 	iommu_gaddr_t start;
 // 	iommu_gaddr_t end;

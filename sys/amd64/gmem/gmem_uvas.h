@@ -11,6 +11,7 @@
 #ifndef _GMEM_UVAS_H_
 #define	_GMEM_UVAS_H_
 
+#include <sys/vmem.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
@@ -130,8 +131,12 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;
 };
 
-// TODO: delete this shit.
+// TODO: delete the following shit.
 TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
+struct iommu_qi_genseq {
+	u_int gen;
+	uint32_t seq;
+};
 
 // IOMMU:
 // the iommu_map_entry used to have a dmamap_link field
