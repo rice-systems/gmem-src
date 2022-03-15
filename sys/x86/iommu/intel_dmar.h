@@ -181,7 +181,7 @@ struct dmar_unit {
 	vmem_t *irtids;
 
 	/* Delayed freeing of map entries queue processing */
-	struct iommu_map_entries_tailq tlb_flush_entries;
+	struct gmem_uvas_entries_tailq tlb_flush_entries;
 	struct task qi_task;
 	struct taskqueue *qi_taskqueue;
 };
@@ -279,14 +279,14 @@ int dmar_move_ctx_to_domain(struct dmar_domain *domain, struct dmar_ctx *ctx);
 void dmar_free_ctx_locked(struct dmar_unit *dmar, struct dmar_ctx *ctx);
 void dmar_free_ctx(struct dmar_ctx *ctx);
 struct dmar_ctx *dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid);
-void dmar_domain_unload_entry(struct iommu_map_entry *entry, bool free);
+void dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free);
 void dmar_domain_unload(struct dmar_domain *domain,
-    struct iommu_map_entries_tailq *entries, bool cansleep);
-void dmar_domain_free_entry(struct iommu_map_entry *entry, bool free);
+    struct gmem_uvas_entries_tailq *entries, bool cansleep);
+void dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free);
 
 void dmar_dev_parse_rmrr(struct dmar_domain *domain, int dev_domain,
     int dev_busno, const void *dev_path, int dev_path_len,
-    struct iommu_map_entries_tailq *rmrr_entries);
+    struct gmem_uvas_entries_tailq *rmrr_entries);
 int dmar_instantiate_rmrr_ctxs(struct iommu_unit *dmar);
 
 void dmar_quirks_post_ident(struct dmar_unit *dmar);

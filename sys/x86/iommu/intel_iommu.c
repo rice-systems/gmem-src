@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD$");
 #include <amd64/gmem/gmem_uvas.h>
 #include <x86/iommu/intel_iommu.h>
 
+// dmar_domain_alloc ?
 static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 {
 	intel_iommu_pgtable_t *pgtable;
@@ -68,19 +69,29 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	pgtable->id_mapped = ((intel_iommu_dev_data_t *) dev_data)->id_mapped;
 	pgtable->dmar = ((intel_iommu_dev_data_t *) dev_data)->dmar;
 	pgtable->domain = ((intel_iommu_dev_data_t *) dev_data)->domain;
-	pgtable->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
-	    IDX_TO_OFF(pglvl_max_pages(pgtable->pglvl)), 0, 0, NULL);
-	
-	VM_OBJECT_WLOCK(pgtable->pgtbl_obj);
-	m = dmar_pgalloc(pgtable->domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
-	    IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
-	/* No implicit free of the top level page table page. */
-	m->ref_count = 1;
-	VM_OBJECT_WUNLOCK(pgtable->pgtbl_obj);
 
-	// DMAR_LOCK(domain->dmar);
-	pgtable->flags |= IOMMU_DOMAIN_PGTBL_INITED;
-	// DMAR_UNLOCK(domain->dmar);
+	if (pgtable->id_mapped) {
+		if ((pgtable->dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
+			pgtable->domain->pgtbl_obj = domain_get_idmap_pgtbl(pgtable->domain,
+			    pgtable->domain->iodom.end);
+		}
+		domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
+	} else {
+		// domain_alloc_pgtbl
+		pgtable->domain->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
+		    IDX_TO_OFF(pglvl_max_pages(pgtable->pglvl)), 0, 0, NULL);
+		
+		VM_OBJECT_WLOCK(pgtable->domain->pgtbl_obj);
+		m = dmar_pgalloc(pgtable->domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
+		    IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
+		/* No implicit free of the top level page table page. */
+		m->ref_count = 1;
+		VM_OBJECT_WUNLOCK(pgtable->domain->pgtbl_obj);
+
+		DMAR_LOCK(pgtable->dmar);
+		pgtable->flags |= IOMMU_DOMAIN_PGTBL_INITED;
+		DMAR_UNLOCK(pgtable->dmar);
+	}
 	return GMEM_OK;
 }
 

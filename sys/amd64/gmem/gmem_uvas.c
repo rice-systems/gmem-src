@@ -92,7 +92,7 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 //  3. replicate: uvas and pmap are both not NULL, replicate == true
 //     TODO: change this mode to share CPU vma, consider the opencl case.
 //  lookup: faultable device requires looking up uvas entries 
-gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
+gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
 	dev_pmap_t *pmap_to_share, void *dev_data, bool replicate, bool need_lookup,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
@@ -154,6 +154,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, gmem_dev_t *dev,
 		panic("Attaching to a uvas is not implemented");
 	}
 	*uvas_res = uvas;
+	*pmap_res = pmap;
 	PRINTINFO;
 	return GMEM_OK;
 }

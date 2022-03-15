@@ -126,6 +126,9 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;
 };
 
+// TODO: delete this shit.
+TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
+
 // IOMMU:
 // the iommu_map_entry used to have a dmamap_link field
 // used to serve for queued invalidations as an iommu-specific 
@@ -167,6 +170,10 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 
 	// The unified address space it points to
 	gmem_uvas_t *uvas;
+
+	// TODO: remove the shit below
+	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
+	struct iommu_qi_genseq gseq;
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
@@ -212,7 +219,7 @@ struct dev_pmap
 
 struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags);
 void gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry);
-gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas, gmem_dev_t *dev,
+gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas, dev_pmap_t **pmap, gmem_dev_t *dev,
 	dev_pmap_t *pmap, void *dev_data, bool replicate, bool need_lookup,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size);
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);

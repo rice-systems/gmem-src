@@ -899,7 +899,7 @@ struct rmrr_iter_args {
 	int dev_busno;
 	const ACPI_DMAR_PCI_PATH *dev_path;
 	int dev_path_len;
-	struct iommu_map_entries_tailq *rmrr_entries;
+	struct gmem_uvas_entries_tailq *rmrr_entries;
 };
 
 static int
@@ -908,7 +908,7 @@ dmar_rmrr_iter(ACPI_DMAR_HEADER *dmarh, void *arg)
 	struct rmrr_iter_args *ria;
 	ACPI_DMAR_RESERVED_MEMORY *resmem;
 	ACPI_DMAR_DEVICE_SCOPE *devscope;
-	struct iommu_map_entry *entry;
+	struct gmem_uvas_entry *entry;
 	char *ptr, *ptrend;
 	int match;
 
@@ -930,7 +930,7 @@ dmar_rmrr_iter(ACPI_DMAR_HEADER *dmarh, void *arg)
 		match = dmar_match_devscope(devscope, ria->dev_busno,
 		    ria->dev_path, ria->dev_path_len);
 		if (match == 1) {
-			entry = iommu_gas_alloc_entry(DOM2IODOM(ria->domain),
+			entry = gmem_uvas_alloc_entry(DOM2IODOM(ria->domain)->uvas,
 			    IOMMU_PGF_WAITOK);
 			entry->start = resmem->BaseAddress;
 			/* The RMRR entry end address is inclusive. */
@@ -946,7 +946,7 @@ dmar_rmrr_iter(ACPI_DMAR_HEADER *dmarh, void *arg)
 void
 dmar_dev_parse_rmrr(struct dmar_domain *domain, int dev_domain, int dev_busno,
     const void *dev_path, int dev_path_len,
-    struct iommu_map_entries_tailq *rmrr_entries)
+    struct gmem_uvas_entries_tailq *rmrr_entries)
 {
 	struct rmrr_iter_args ria;
 
@@ -1098,29 +1098,29 @@ dmar_instantiate_rmrr_ctxs(struct iommu_unit *unit)
 #include <ddb/ddb.h>
 #include <ddb/db_lex.h>
 
-static void
-dmar_print_domain_entry(const struct iommu_map_entry *entry)
-{
-	struct iommu_map_entry *l, *r;
+// static void
+// dmar_print_domain_entry(const struct iommu_map_entry *entry)
+// {
+// 	struct iommu_map_entry *l, *r;
 
-	db_printf(
-	    "    start %jx end %jx first %jx last %jx free_down %jx flags %x ",
-	    entry->start, entry->end, entry->first, entry->last,
-	    entry->free_down, entry->flags);
-	db_printf("left ");
-	l = RB_LEFT(entry, rb_entry);
-	if (l == NULL)
-		db_printf("NULL ");
-	else
-		db_printf("%jx ", l->start);
-	db_printf("right ");
-	r = RB_RIGHT(entry, rb_entry);
-	if (r == NULL)
-		db_printf("NULL");
-	else
-		db_printf("%jx", r->start);
-	db_printf("\n");
-}
+// 	db_printf(
+// 	    "    start %jx end %jx first %jx last %jx free_down %jx flags %x ",
+// 	    entry->start, entry->end, entry->first, entry->last,
+// 	    entry->free_down, entry->flags);
+// 	db_printf("left ");
+// 	l = RB_LEFT(entry, rb_entry);
+// 	if (l == NULL)
+// 		db_printf("NULL ");
+// 	else
+// 		db_printf("%jx ", l->start);
+// 	db_printf("right ");
+// 	r = RB_RIGHT(entry, rb_entry);
+// 	if (r == NULL)
+// 		db_printf("NULL");
+// 	else
+// 		db_printf("%jx", r->start);
+// 	db_printf("\n");
+// }
 
 static void
 dmar_print_ctx(struct dmar_ctx *ctx)
@@ -1134,43 +1134,43 @@ dmar_print_ctx(struct dmar_ctx *ctx)
 	    ctx->context.flags, ctx->context.loads, ctx->context.unloads);
 }
 
-static void
-dmar_print_domain(struct dmar_domain *domain, bool show_mappings)
-{
-	struct iommu_domain *iodom;
-	struct iommu_map_entry *entry;
-	struct dmar_ctx *ctx;
+// static void
+// dmar_print_domain(struct dmar_domain *domain, bool show_mappings)
+// {
+// 	struct iommu_domain *iodom;
+// 	struct iommu_map_entry *entry;
+// 	struct dmar_ctx *ctx;
 
-	iodom = DOM2IODOM(domain);
+// 	iodom = DOM2IODOM(domain);
 
-	db_printf(
-	    "  @%p dom %d mgaw %d agaw %d pglvl %d end %jx refs %d\n"
-	    "   ctx_cnt %d flags %x pgobj %p map_ents %u\n",
-	    domain, domain->domain, domain->mgaw, domain->agaw, domain->pglvl,
-	    (uintmax_t)domain->iodom.end, domain->refs, domain->ctx_cnt,
-	    domain->iodom.flags, domain->pgtbl_obj, domain->iodom.entries_cnt);
-	if (!LIST_EMPTY(&domain->contexts)) {
-		db_printf("  Contexts:\n");
-		LIST_FOREACH(ctx, &domain->contexts, link)
-			dmar_print_ctx(ctx);
-	}
-	if (!show_mappings)
-		return;
-	db_printf("    mapped:\n");
-	RB_FOREACH(entry, iommu_gas_entries_tree, &iodom->rb_root) {
-		dmar_print_domain_entry(entry);
-		if (db_pager_quit)
-			break;
-	}
-	if (db_pager_quit)
-		return;
-	db_printf("    unloading:\n");
-	TAILQ_FOREACH(entry, &domain->iodom.unload_entries, dmamap_link) {
-		dmar_print_domain_entry(entry);
-		if (db_pager_quit)
-			break;
-	}
-}
+// 	db_printf(
+// 	    "  @%p dom %d mgaw %d agaw %d pglvl %d end %jx refs %d\n"
+// 	    "   ctx_cnt %d flags %x pgobj %p map_ents %u\n",
+// 	    domain, domain->domain, domain->mgaw, domain->agaw, domain->pglvl,
+// 	    (uintmax_t)domain->iodom.end, domain->refs, domain->ctx_cnt,
+// 	    domain->iodom.flags, domain->pgtbl_obj, domain->iodom.entries_cnt);
+// 	if (!LIST_EMPTY(&domain->contexts)) {
+// 		db_printf("  Contexts:\n");
+// 		LIST_FOREACH(ctx, &domain->contexts, link)
+// 			dmar_print_ctx(ctx);
+// 	}
+// 	if (!show_mappings)
+// 		return;
+// 	db_printf("    mapped:\n");
+// 	RB_FOREACH(entry, iommu_gas_entries_tree, &iodom->rb_root) {
+// 		dmar_print_domain_entry(entry);
+// 		if (db_pager_quit)
+// 			break;
+// 	}
+// 	if (db_pager_quit)
+// 		return;
+// 	db_printf("    unloading:\n");
+// 	TAILQ_FOREACH(entry, &domain->iodom.unload_entries, dmamap_link) {
+// 		dmar_print_domain_entry(entry);
+// 		if (db_pager_quit)
+// 			break;
+// 	}
+// }
 
 DB_FUNC(dmar_domain, db_dmar_print_domain, db_show_table, CS_OWN, NULL)
 {

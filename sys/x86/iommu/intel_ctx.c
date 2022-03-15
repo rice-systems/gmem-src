@@ -240,8 +240,8 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
     int slot, int func, int dev_domain, int dev_busno,
     const void *dev_path, int dev_path_len)
 {
-	struct iommu_map_entries_tailq rmrr_entries;
-	struct iommu_map_entry *entry, *entry1;
+	struct gmem_uvas_entries_tailq rmrr_entries;
+	struct gmem_uvas_entry *entry, *entry1;
 	vm_page_t *ma;
 	iommu_gaddr_t start, end, gstart, gend;
 	vm_pindex_t size, i;
@@ -290,18 +290,18 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 
 		gstart = entry->start;
 		gend = entry->end;
-		error1 = gmem_iommu_map(domain->iodom.uvas, &gstart, gend, 
+		error1 = gmem_iommu_map(domain, domain->iodom.uvas, &gstart, gend, 
 			0, GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
-		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma);
+		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 
-		error1 = iommu_gas_map_region(DOM2IODOM(domain), entry,
-		    IOMMU_MAP_ENTRY_READ | IOMMU_MAP_ENTRY_WRITE,
-		    IOMMU_MF_CANWAIT | IOMMU_MF_RMRR, ma);
+		// error1 = iommu_gas_map_region(DOM2IODOM(domain), entry,
+		//     IOMMU_MAP_ENTRY_READ | IOMMU_MAP_ENTRY_WRITE,
+		//     IOMMU_MF_CANWAIT | IOMMU_MF_RMRR, ma);
 
-		if (gstart != entry->start) {
-			panic("Inconsistent gmem va allocation uvas: %p, gmem start:%lx, iommu start:%lx, size:%lx",
-				domain->iodom.uvas, gstart, entry->start, size);
-		}
+		// if (gstart != entry->start) {
+		// 	panic("Inconsistent gmem va allocation uvas: %p, gmem start:%lx, iommu start:%lx, size:%lx",
+		// 		domain->iodom.uvas, gstart, entry->start, size);
+		// }
 
 		/*
 		 * Non-failed RMRR entries are owned by context rb
@@ -326,7 +326,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 				error = error1;
 			}
 			TAILQ_REMOVE(&rmrr_entries, entry, dmamap_link);
-			iommu_gas_free_entry(DOM2IODOM(domain), entry);
+			gmem_uvas_free_entry(DOM2IODOM(domain)->uvas, entry);
 		}
 		for (i = 0; i < size; i++)
 			vm_page_putfake(ma[i]);
@@ -368,7 +368,7 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 		printf("error code from alloc_span_fixed %d\n", error);
 	}
 	printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
-	error = iommu_gas_reserve_region_extend(iodom, base, limit + 1);
+	// error = iommu_gas_reserve_region_extend(iodom, base, limit + 1);
 	if (bootverbose || error != 0)
 		device_printf(dev, "DMAR reserve [%#jx-%#jx] (error %d)\n",
 		    base, limit + 1, error);
@@ -398,8 +398,8 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 			printf("error code from alloc_span_fixed %d\n", error);
 		}
 		printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
-		error = iommu_gas_reserve_region_extend(iodom, base,
-		    limit + 1);
+		// error = iommu_gas_reserve_region_extend(iodom, base,
+		//     limit + 1);
 		if (bootverbose || error != 0)
 			device_printf(dev, "DMAR reserve [%#jx-%#jx] "
 			    "(error %d)\n", base, limit + 1, error);
@@ -445,24 +445,26 @@ dmar_domain_alloc(struct dmar_unit *dmar, bool id_mapped)
 		/* Use all supported address space for remapping. */
 		domain->iodom.end = 1ULL << (domain->agaw - 1);
 
-	iommu_gas_init_domain(DOM2IODOM(domain));
+	// covered by uvas_create
+	// iommu_gas_init_domain(DOM2IODOM(domain));
 
-	if (id_mapped) {
-		if ((dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
-			domain->pgtbl_obj = domain_get_idmap_pgtbl(domain,
-			    domain->iodom.end);
-		}
-		domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
-	} else {
-		error = domain_alloc_pgtbl(domain);
-		if (error != 0)
-			goto fail;
-		/* Disable local apic region access */
-		error = iommu_gas_reserve_region(iodom, 0xfee00000,
-		    0xfeefffff + 1, &iodom->msi_entry);
-		if (error != 0)
-			goto fail;
-	}
+	// moved to intel_iommu_pmap_create()
+	// if (id_mapped) {
+	// 	if ((dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
+	// 		domain->pgtbl_obj = domain_get_idmap_pgtbl(domain,
+	// 		    domain->iodom.end);
+	// 	}
+	// 	domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
+	// } else {
+	// 	error = domain_alloc_pgtbl(domain);
+	// 	if (error != 0)
+	// 		goto fail;
+	// 	/* Disable local apic region access */
+	// 	error = iommu_gas_reserve_region(iodom, 0xfee00000,
+	// 	    0xfeefffff + 1, &iodom->msi_entry);
+	// 	if (error != 0)
+	// 		goto fail;
+	// }
 	return (domain);
 
 fail:
@@ -533,17 +535,17 @@ dmar_domain_destroy(struct dmar_domain *domain)
 	KASSERT(domain->refs == 0,
 	    ("destroying dom %p with refs %d", domain, domain->refs));
 	if ((domain->iodom.flags & IOMMU_DOMAIN_GAS_INITED) != 0) {
-		DMAR_DOMAIN_LOCK(domain);
-		iommu_gas_fini_domain(iodom);
-		DMAR_DOMAIN_UNLOCK(domain);
+		// DMAR_DOMAIN_LOCK(domain);
+		// iommu_gas_fini_domain(iodom);
+		// TODO: replace domain_free_pgtbl with the same function
+		gmem_uvas_delete(iodom->uvas);
+		// DMAR_DOMAIN_UNLOCK(domain);
 	}
 	if ((domain->iodom.flags & IOMMU_DOMAIN_PGTBL_INITED) != 0) {
 		if (domain->pgtbl_obj != NULL)
 			DMAR_DOMAIN_PGLOCK(domain);
 		domain_free_pgtbl(domain);
 	}
-	// TODO: replace the above two if-statements
-	// gmem_uvas_delete(iodom->uvas);
 
 	iommu_domain_fini(iodom);
 	dmar = DOM2DMAR(domain);
@@ -611,7 +613,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			dev_data.dmar = dmar;
 			dev_data.domain = domain1;
 			dev_data.id_mapped = id_mapped;
-			gmem_uvas_create(&domain1->iodom.uvas, device_get_gmem_dev(dev),
+			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev),
 				NULL, &dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
 			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
@@ -620,7 +622,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 				/* Disable local apic region access */
 				// replace NULL with stupid msi_entry
 				error = gmem_uvas_alloc_span_fixed(domain1->iodom.uvas, 0xfee00000,
-				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
+				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &iodom->msi_entry);
 			}
 		}
 
@@ -920,17 +922,14 @@ dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid)
 }
 
 void
-dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
+dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free)
 {
-	struct iommu_domain *domain;
-
-	domain = entry->domain;
-	IOMMU_DOMAIN_LOCK(domain);
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
-		iommu_gas_free_region(domain, entry);
+		// iommu_gas_free_region(domain, entry);
+		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
 		// TODO: distinguish vmem_xfree
 	else {
-		iommu_gas_free_space(domain, entry);
+		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
 	}
 	// TODO: replace dmar_domain_free_entry
 	// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
@@ -940,17 +939,16 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	// PRINTINFO;
 	// printf("start %lx, end %lx, size %lx\n", entry->start, entry->end,
 	// 	entry->end - entry->start);
-	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, NULL);
 
-	IOMMU_DOMAIN_UNLOCK(domain);
-	if (free)
-		iommu_gas_free_entry(domain, entry);
-	else
-		entry->flags = 0;
+	// we always free.
+	// if (free)
+	// 	iommu_gas_free_entry(domain, entry);
+	// else
+	// 	entry->flags = 0;
 }
 
 void
-dmar_domain_unload_entry(struct iommu_map_entry *entry, bool free)
+dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 {
 	struct dmar_domain *domain;
 	struct dmar_unit *unit;
@@ -977,7 +975,7 @@ dmar_domain_unload_entry(struct iommu_map_entry *entry, bool free)
 
 static bool
 dmar_domain_unload_emit_wait(struct dmar_domain *domain,
-    struct iommu_map_entry *entry)
+    struct gmem_uvas_entry *entry)
 {
 
 	if (TAILQ_NEXT(entry, dmamap_link) == NULL)
@@ -987,11 +985,11 @@ dmar_domain_unload_emit_wait(struct dmar_domain *domain,
 
 void
 dmar_domain_unload(struct dmar_domain *domain,
-    struct iommu_map_entries_tailq *entries, bool cansleep)
+    struct gmem_uvas_entries_tailq *entries, bool cansleep)
 {
 	struct dmar_unit *unit;
 	struct iommu_domain *iodom;
-	struct iommu_map_entry *entry, *entry1;
+	struct gmem_uvas_entry *entry, *entry1;
 	int error;
 
 	iodom = DOM2IODOM(domain);
@@ -1066,7 +1064,7 @@ iommu_free_ctx(struct iommu_ctx *context)
 }
 
 void
-iommu_domain_unload_entry(struct iommu_map_entry *entry, bool free)
+iommu_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 {
 
 	dmar_domain_unload_entry(entry, free);
@@ -1074,7 +1072,7 @@ iommu_domain_unload_entry(struct iommu_map_entry *entry, bool free)
 
 void
 iommu_domain_unload(struct iommu_domain *iodom,
-    struct iommu_map_entries_tailq *entries, bool cansleep)
+    struct gmem_uvas_entries_tailq *entries, bool cansleep)
 {
 	struct dmar_domain *domain;
 

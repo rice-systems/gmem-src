@@ -339,7 +339,7 @@ static void
 dmar_qi_task(void *arg, int pending __unused)
 {
 	struct dmar_unit *unit;
-	struct iommu_map_entry *entry;
+	struct gmem_uvas_entry *entry;
 	uint32_t ics;
 
 	unit = arg;

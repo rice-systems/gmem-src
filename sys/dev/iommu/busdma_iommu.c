@@ -580,7 +580,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 {
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-	struct iommu_map_entry *entry, *entry1;
+	struct gmem_uvas_entry *entry, *entry1;
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
@@ -618,20 +618,20 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		// Current stage: gmem_iommu_map is a shadow vm system for iommu
 		// The busdma layer is not doing a good job of coding.
 		// Why does it have to manipulate anything with map entries?
-		error = gmem_iommu_map(ctx->uvas, &gstart, size, offset,
+		error = gmem_iommu_map(domain, domain->uvas, &gstart, size, offset,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
-		    gas_flags | GMEM_UVA_ALLOC, ma + idx);
+		    gas_flags | GMEM_UVA_ALLOC, ma + idx, &entry);
 
-		error = iommu_map(domain, &tag->common, size, offset,
-		    IOMMU_MAP_ENTRY_READ |
-		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
-		    gas_flags, ma + idx, &entry);
+		// error = iommu_map(domain, &tag->common, size, offset,
+		//     IOMMU_MAP_ENTRY_READ |
+		//     ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),
+		//     gas_flags, ma + idx, &entry);
 
-		if (gstart != entry->start) {
-			panic("Inconsistent gmem va allocation uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
-				domain->uvas, gstart, entry->start, size);
-		}
+		// if (gstart != entry->start) {
+		// 	panic("Inconsistent gmem va allocation uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
+		// 		domain->uvas, gstart, entry->start, size);
+		// }
 
 		if (error != 0)
 			break;
@@ -1058,7 +1058,7 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 	struct bus_dmamap_iommu *map;
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-	struct iommu_map_entry *entry;
+	struct gmem_uvas_entry *entry;
 	vm_page_t *ma;
 	vm_size_t i;
 	int error;
@@ -1080,15 +1080,15 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 	map = (struct bus_dmamap_iommu *)map1;
 	waitok = (flags & BUS_DMA_NOWAIT) != 0;
 
-	entry = iommu_map_alloc_entry(domain, waitok ? 0 : IOMMU_PGF_WAITOK);
-	if (entry == NULL)
-		return (ENOMEM);
-	entry->start = start;
-	entry->end = start + length;
+	// entry = iommu_map_alloc_entry(domain, waitok ? 0 : IOMMU_PGF_WAITOK);
+	// if (entry == NULL)
+	// 	return (ENOMEM);
+	// entry->start = start;
+	// entry->end = start + length;
 	ma = malloc(sizeof(vm_page_t) * atop(length), M_TEMP, waitok ?
 	    M_WAITOK : M_NOWAIT);
 	if (ma == NULL) {
-		iommu_map_free_entry(domain, entry);
+		// iommu_map_free_entry(domain, entry);
 		return (ENOMEM);
 	}
 	for (i = 0; i < atop(length); i++) {
@@ -1096,18 +1096,18 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 		    VM_MEMATTR_DEFAULT);
 	}
 
-	error = gmem_iommu_map(domain->uvas, &start, length, 0, GMEM_UVAS_ENTRY_READ |
+	error = gmem_iommu_map(domain, domain->uvas, &start, length, 0, GMEM_UVAS_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
-	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma);
+	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 
-	error = iommu_map_region(domain, entry, IOMMU_MAP_ENTRY_READ |
-	    ((flags & BUS_DMA_NOWRITE) ? 0 : IOMMU_MAP_ENTRY_WRITE),
-	    waitok ? IOMMU_MF_CANWAIT : 0, ma);
+	// error = iommu_map_region(domain, entry, IOMMU_MAP_ENTRY_READ |
+	//     ((flags & BUS_DMA_NOWRITE) ? 0 : IOMMU_MAP_ENTRY_WRITE),
+	//     waitok ? IOMMU_MF_CANWAIT : 0, ma);
 
-	if (start != entry->start) {
-		panic("Inconsistent gmem va allocation, uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
-			domain->uvas, start, entry->start, length);
-	}
+	// if (start != entry->start) {
+	// 	panic("Inconsistent gmem va allocation, uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
+	// 		domain->uvas, start, entry->start, length);
+	// }
 
 	if (error == 0) {
 		IOMMU_DOMAIN_LOCK(domain);
@@ -1135,7 +1135,7 @@ iommu_domain_unload_task(void *arg, int pending)
 	for (;;) {
 		IOMMU_DOMAIN_LOCK(domain);
 		TAILQ_SWAP(&domain->unload_entries, &entries,
-		    iommu_map_entry, dmamap_link);
+		    gmem_uvas_entry, dmamap_link);
 		IOMMU_DOMAIN_UNLOCK(domain);
 		if (TAILQ_EMPTY(&entries))
 			break;

@@ -80,8 +80,8 @@ __FBSDID("$FreeBSD$");
 // API, we need to make sure not to expose gmem's data
 // structure outside.
 int
-gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offset,
-    u_int eflags, u_int flags, vm_page_t *ma)
+gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offset_t size, int offset,
+    u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **entry_ret)
 {
     gmem_uvas_entry_t *entry;
     int error;
@@ -103,14 +103,17 @@ gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offs
     KASSERT(error == GMEM_OK,
         ("unexpected error %d from gmem_uvas_alloc_span", error));
 
-    // TODO: allow actual map to happen. Before that, we simulate
-    // the allocator along with the original driver.
-    // error = domain->ops->map(domain, entry->start,
-    //     entry->end - entry->start, ma, eflags,
-    //     ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_PGF_WAITOK : 0));
+    // The uvas may allow a single pmap, multiple pmaps sharing the same, pmaps holding exclusive mappings
+    // right now only consider the single pmap case.
+    // TODO: use pmap->mmu_ops
+    error = domain->ops->map(domain, entry->start,
+        entry->end - entry->start, ma, eflags,
+        ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_PGF_WAITOK : 0));
+
     if (error == ENOMEM) {
         // There is no need to call iotlb inv
         // TODO: we always free the entry when we add back this iotlb inv in the future
+        // TODO: replace with unload_entry, as the map function could fail in the middle.
         // iommu_domain_unload_entry(entry, true);
         gmem_uvas_free_span(uvas, *start, size, entry);
         return (error);
@@ -118,6 +121,6 @@ gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offs
     KASSERT(error == 0,
         ("unexpected error %d from domain_map_buf", error));
 
-    // *res = entry;
+    *entry_ret = entry;
     return (0);
 }

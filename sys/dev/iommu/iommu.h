@@ -38,31 +38,31 @@
 #include <sys/gmem.h>
 
 struct bus_dma_tag_common;
-struct iommu_map_entry;
-TAILQ_HEAD(iommu_map_entries_tailq, iommu_map_entry);
+// struct gmem_uvas_entry;
+// TAILQ_HEAD(iommu_map_entries_tailq, gmem_uvas_entry);
 
-RB_HEAD(iommu_gas_entries_tree, iommu_map_entry);
-RB_PROTOTYPE(iommu_gas_entries_tree, iommu_map_entry, rb_entry,
-    iommu_gas_cmp_entries);
+// RB_HEAD(iommu_gas_entries_tree, gmem_uvas_entry);
+// RB_PROTOTYPE(iommu_gas_entries_tree, gmem_uvas_entry, rb_entry,
+//     iommu_gas_cmp_entries);
 
 struct iommu_qi_genseq {
 	u_int gen;
 	uint32_t seq;
 };
 
-struct iommu_map_entry {
-	iommu_gaddr_t start;
-	iommu_gaddr_t end;
-	iommu_gaddr_t first;		/* Least start in subtree */
-	iommu_gaddr_t last;		/* Greatest end in subtree */
-	iommu_gaddr_t free_down;	/* Max free space below the
-					   current R/B tree node */
-	u_int flags;
-	TAILQ_ENTRY(iommu_map_entry) dmamap_link; /* Link for dmamap entries */
-	RB_ENTRY(iommu_map_entry) rb_entry;	 /* Links for domain entries */
-	struct iommu_domain *domain;
-	struct iommu_qi_genseq gseq;
-};
+// struct gmem_uvas_entry {
+// 	iommu_gaddr_t start;
+// 	iommu_gaddr_t end;
+// 	iommu_gaddr_t first;		/* Least start in subtree */
+// 	iommu_gaddr_t last;		/* Greatest end in subtree */
+// 	iommu_gaddr_t free_down;	/* Max free space below the
+// 					   current R/B tree node */
+// 	u_int flags;
+// 	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
+// 	RB_ENTRY(gmem_uvas_entry) rb_entry;	 /* Links for domain entries */
+// 	struct iommu_domain *domain;
+// 	struct iommu_qi_genseq gseq;
+// };
 
 struct iommu_unit {
 	struct mtx lock;
@@ -105,13 +105,13 @@ struct iommu_domain {
 	struct mtx lock;		/* (c) */
 	struct task unload_task;	/* (c) */
 	u_int entries_cnt;		/* (d) */
-	struct iommu_map_entries_tailq unload_entries; /* (d) Entries to
+	struct gmem_uvas_entries_tailq unload_entries; /* (d) Entries to
 							 unload */
-	struct iommu_gas_entries_tree rb_root; /* (d) */
+	// struct iommu_gas_entries_tree rb_root; /* (d) */
 	iommu_gaddr_t end;		/* (c) Highest address + 1 in
 					   the guest AS */
-	struct iommu_map_entry *first_place, *last_place; /* (d) */
-	struct iommu_map_entry *msi_entry; /* (d) Arch-specific */
+	// struct gmem_uvas_entry *first_place, *last_place; /* (d) */
+	struct gmem_uvas_entry *msi_entry; /* (d) Arch-specific */
 	iommu_gaddr_t msi_base;		/* (d) Arch-specific */
 	vm_paddr_t msi_phys;		/* (d) Arch-specific */
 	u_int flags;			/* (u) */
@@ -119,6 +119,7 @@ struct iommu_domain {
 	// uvas contains:
 	// entries_cnt, rb_root, first_place, last_place, ..
 	gmem_uvas_t *uvas;
+	dev_pmap_t *pmap;
 };
 
 struct iommu_ctx {
@@ -168,41 +169,41 @@ void iommu_free_ctx_locked(struct iommu_unit *iommu, struct iommu_ctx *ctx);
 struct iommu_ctx *iommu_get_ctx(struct iommu_unit *, device_t dev,
     uint16_t rid, bool id_mapped, bool rmrr_init);
 struct iommu_unit *iommu_find(device_t dev, bool verbose);
-void iommu_domain_unload_entry(struct iommu_map_entry *entry, bool free);
+void iommu_domain_unload_entry(struct gmem_uvas_entry *entry, bool free);
 void iommu_domain_unload(struct iommu_domain *domain,
-    struct iommu_map_entries_tailq *entries, bool cansleep);
+    struct gmem_uvas_entries_tailq *entries, bool cansleep);
 
 struct iommu_ctx *iommu_instantiate_ctx(struct iommu_unit *iommu,
     device_t dev, bool rmrr);
 device_t iommu_get_requester(device_t dev, uint16_t *rid);
 int iommu_init_busdma(struct iommu_unit *unit);
 void iommu_fini_busdma(struct iommu_unit *unit);
-struct iommu_map_entry *iommu_map_alloc_entry(struct iommu_domain *iodom,
+struct gmem_uvas_entry *iommu_map_alloc_entry(struct iommu_domain *iodom,
     u_int flags);
-void iommu_map_free_entry(struct iommu_domain *, struct iommu_map_entry *);
+void iommu_map_free_entry(struct iommu_domain *, struct gmem_uvas_entry *);
 int iommu_map(struct iommu_domain *iodom,
     const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
-    u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res);
+    u_int eflags, u_int flags, vm_page_t *ma, struct gmem_uvas_entry **res);
 int iommu_map_region(struct iommu_domain *domain,
-    struct iommu_map_entry *entry, u_int eflags, u_int flags, vm_page_t *ma);
+    struct gmem_uvas_entry *entry, u_int eflags, u_int flags, vm_page_t *ma);
 
 void iommu_gas_init_domain(struct iommu_domain *domain);
 void iommu_gas_fini_domain(struct iommu_domain *domain);
-struct iommu_map_entry *iommu_gas_alloc_entry(struct iommu_domain *domain,
+struct gmem_uvas_entry *iommu_gas_alloc_entry(struct iommu_domain *domain,
     u_int flags);
 void iommu_gas_free_entry(struct iommu_domain *domain,
-    struct iommu_map_entry *entry);
+    struct gmem_uvas_entry *entry);
 void iommu_gas_free_space(struct iommu_domain *domain,
-    struct iommu_map_entry *entry);
+    struct gmem_uvas_entry *entry);
 int iommu_gas_map(struct iommu_domain *domain,
     const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
-    u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res);
+    u_int eflags, u_int flags, vm_page_t *ma, struct gmem_uvas_entry **res);
 void iommu_gas_free_region(struct iommu_domain *domain,
-    struct iommu_map_entry *entry);
+    struct gmem_uvas_entry *entry);
 int iommu_gas_map_region(struct iommu_domain *domain,
-    struct iommu_map_entry *entry, u_int eflags, u_int flags, vm_page_t *ma);
+    struct gmem_uvas_entry *entry, u_int eflags, u_int flags, vm_page_t *ma);
 int iommu_gas_reserve_region(struct iommu_domain *domain, iommu_gaddr_t start,
-    iommu_gaddr_t end, struct iommu_map_entry **entry0);
+    iommu_gaddr_t end, struct gmem_uvas_entry **entry0);
 int iommu_gas_reserve_region_extend(struct iommu_domain *domain,
     iommu_gaddr_t start, iommu_gaddr_t end);
 
@@ -221,7 +222,7 @@ struct iommu_ctx *iommu_get_dev_ctx(device_t dev);
 
 
 // GMEM-based functions for map/unmap
-int gmem_iommu_map(gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offset,
+int gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, vm_offset_t *start, vm_offset_t size, int offset,
     u_int eflags, u_int flags, vm_page_t *ma);
 
 SYSCTL_DECL(_hw_iommu);
