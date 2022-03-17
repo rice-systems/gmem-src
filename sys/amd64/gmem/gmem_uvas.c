@@ -239,8 +239,10 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	int error;
 
 	PRINTINFO;
-	if (start >= end)
+	if (start >= end) {
+		printf("Trying to allocate an invalid va span, start %lx end %lx\n", start, end);
 		return GMEM_EINVALIDARGS;
+	}
 	
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
