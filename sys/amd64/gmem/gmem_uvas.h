@@ -19,6 +19,8 @@
 // debugging switch
 // #define PRINTINFO  { printf("[%s] %s line #%d\n", __FILE__, __func__, __LINE__); }
 #define PRINTINFO  { }
+// #define debug_printf(...) { printf(...); }
+#define debug_printf(...) { }
 
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)

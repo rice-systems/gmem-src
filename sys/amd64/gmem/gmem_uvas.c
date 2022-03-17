@@ -255,13 +255,13 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
 		}
-		printf("uvas %p, start %lx, end %lx \n", uvas, start, end);
+		debug_printf("uvas %p, start %lx, end %lx \n", uvas, start, end);
 	}
 	else if (uvas->allocator == VMEM)
 	{
 		// vm_offset_t new_start;
 		// use vmem allocator
-		printf("VMEM xalloc with start %lx, end %lx\n", start, end);
+		debug_printf("VMEM xalloc with start %lx, end %lx\n", start, end);
 		error = 0;
 		// error = vmem_xalloc(uvas->arena, end - start, 0, 0, 0, start, end, 
 		// 	M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ? M_WAITOK : M_NOWAIT), &new_start);
@@ -284,7 +284,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
 	PRINTINFO;
-	printf("start %lx, end %lx \n", start, start + size);
+	debug_printf("start %lx, end %lx \n", start, start + size);
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
 		panic("[gmem panic] uvas is null\n");

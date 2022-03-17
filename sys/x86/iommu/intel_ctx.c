@@ -368,7 +368,7 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 		PRINTINFO;
 		printf("error code from alloc_span_fixed %d\n", error);
 	}
-	printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
+	debug_printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 	// error = iommu_gas_reserve_region_extend(iodom, base, limit + 1);
 	if (bootverbose || error != 0)
 		device_printf(dev, "DMAR reserve [%#jx-%#jx] (error %d)\n",
@@ -398,7 +398,7 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 			PRINTINFO;
 			printf("error code from alloc_span_fixed %d\n", error);
 		}
-		printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
+		debug_printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 		// error = iommu_gas_reserve_region_extend(iodom, base,
 		//     limit + 1);
 		if (bootverbose || error != 0)
@@ -618,7 +618,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev),
 				NULL, dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
-			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
+			debug_printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
 
 			if (!id_mapped) {
 				/* Disable local apic region access */

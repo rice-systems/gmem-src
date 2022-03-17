@@ -89,7 +89,7 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
     // Missing: entry->flags |= eflags;
     // printf("gmem map size: %lu\n", size);
     if (uvas == NULL)
-        printf("iommu ctx does not have a valid uvas\n");
+        debug_printf("iommu ctx does not have a valid uvas\n");
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
     if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
@@ -108,7 +108,7 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
     // right now only consider the single pmap case.
     // TODO: use pmap->mmu_ops
     PRINTINFO;
-    printf("MAP VA %lx %lx\n", entry->start, entry->end);
+    debug_printf("MAP VA %lx %lx\n", entry->start, entry->end);
     error = domain->ops->map(domain, entry->start,
         entry->end - entry->start, ma, eflags,
         ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_WAITOK : 0));
