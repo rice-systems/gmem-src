@@ -75,7 +75,7 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 			pgtable->domain->pgtbl_obj = domain_get_idmap_pgtbl(pgtable->domain,
 			    pgtable->domain->iodom.end);
 		}
-		domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
+		pgtable->domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
 	} else {
 		// domain_alloc_pgtbl
 		pgtable->domain->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
