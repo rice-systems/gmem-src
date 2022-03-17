@@ -261,7 +261,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	}
 	else if (uvas->allocator == VMEM)
 	{
-		// vm_offset_t new_start;
+		vm_offset_t new_start;
 		// use vmem allocator
 		debug_printf("VMEM xalloc with start %lx, end %lx\n", start, end);
 		error = 0;
