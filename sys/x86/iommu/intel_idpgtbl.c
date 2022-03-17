@@ -564,9 +564,9 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 	if (error != 0)
 		return (error);
 
+	PRINTINFO;
 	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
 		domain_flush_iotlb_sync(domain, base, size);
-	PRINTINFO;
 	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
 		/* See 11.1 Write Buffer Flushing. */
 		DMAR_LOCK(unit);
