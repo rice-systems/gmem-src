@@ -838,7 +838,8 @@ iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size, int offset,
 	IOMMU_DOMAIN_UNLOCK(domain);
 
 	if (entry == NULL) {
-		error = gmem_iommu_map(domain, domain->uvas, &start, size, offset,
+        // TODO: use dev_pmap_t *pmap
+		error = gmem_iommu_map(domain, domain->uvas, NULL, &start, size, offset,
 		    eflags, flags | GMEM_UVA_ALLOC, ma, &entry);
 
 		IOMMU_DOMAIN_LOCK(domain);

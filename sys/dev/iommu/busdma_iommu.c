@@ -614,11 +614,11 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		if (seg + 1 < tag->common.nsegments)
 			gas_flags |= IOMMU_MF_CANSPLIT;
 
-		// TODO: remove iommu_map.
+		// TODO: remove iommu_map. use dev_pmap_t
 		// Current stage: gmem_iommu_map is a shadow vm system for iommu
 		// The busdma layer is not doing a good job of coding.
 		// Why does it have to manipulate anything with map entries?
-		error = gmem_iommu_map(domain, domain->uvas, &gstart, size, offset,
+		error = gmem_iommu_map(domain, domain->uvas, NULL, &gstart, size, offset,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
 		    gas_flags | GMEM_UVA_ALLOC, ma + idx, &entry);
@@ -1096,7 +1096,8 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 		    VM_MEMATTR_DEFAULT);
 	}
 
-	error = gmem_iommu_map(domain, domain->uvas, &start, length, 0, GMEM_UVAS_ENTRY_READ |
+	// TODO: use dev_pmap_t *pmap
+	error = gmem_iommu_map(domain, domain->uvas, NULL, &start, length, 0, GMEM_UVAS_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
 	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 
