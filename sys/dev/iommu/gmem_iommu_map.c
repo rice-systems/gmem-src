@@ -108,6 +108,7 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
     // right now only consider the single pmap case.
     // TODO: use pmap->mmu_ops
     PRINTINFO;
+    printf("MAP VA %lx %lx\n", entry->start, entry->end);
     error = domain->ops->map(domain, entry->start,
         entry->end - entry->start, ma, eflags,
         ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_WAITOK : 0));

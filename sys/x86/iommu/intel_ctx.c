@@ -283,6 +283,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 		}
 		size = OFF_TO_IDX(entry->end - entry->start);
 		ma = malloc(sizeof(vm_page_t) * size, M_TEMP, M_WAITOK);
+		printf("VA %lx %lx\n", entry->start, entry->end);
 		for (i = 0; i < size; i++) {
 			ma[i] = vm_page_getfake(entry->start + PAGE_SIZE * i,
 			    VM_MEMATTR_DEFAULT);
