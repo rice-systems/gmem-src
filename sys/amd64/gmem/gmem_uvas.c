@@ -150,14 +150,14 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 			// Currently we use no quantum cache
 			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), alignment, 0, M_WAITOK);
 		}
+		*uvas_res = uvas;
+		*pmap_res = pmap;
 	}
 	else
 	{
 		// attach dev and pmap to the uvas
 		panic("Attaching to a uvas is not implemented");
 	}
-	*uvas_res = uvas;
-	*pmap_res = pmap;
 	PRINTINFO;
 	return GMEM_OK;
 }
