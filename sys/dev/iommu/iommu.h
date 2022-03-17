@@ -81,13 +81,6 @@ struct iommu_unit {
 	uint32_t buswide_ctxs[(PCI_BUSMAX + 1) / NBBY / sizeof(uint32_t)];
 };
 
-struct iommu_domain_map_ops {
-	int (*map)(struct iommu_domain *domain, iommu_gaddr_t base,
-	    iommu_gaddr_t size, vm_page_t *ma, uint64_t pflags, int flags);
-	int (*unmap)(struct iommu_domain *domain, iommu_gaddr_t base,
-	    iommu_gaddr_t size, int flags);
-};
-
 /*
  * Locking annotations:
  * (u) - Protected by iommu unit lock
@@ -116,6 +109,13 @@ struct iommu_domain {
 	// entries_cnt, rb_root, first_place, last_place, ..
 	gmem_uvas_t *uvas;
 	dev_pmap_t *pmap;
+};
+
+struct iommu_domain_map_ops {
+	int (*map)(struct iommu_domain *domain, iommu_gaddr_t base,
+	    iommu_gaddr_t size, vm_page_t *ma, uint64_t pflags, int flags);
+	int (*unmap)(struct iommu_domain *domain, iommu_gaddr_t base,
+	    iommu_gaddr_t size, int flags);
 };
 
 struct iommu_ctx {
