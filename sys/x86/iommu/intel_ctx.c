@@ -627,7 +627,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &domain1->iodom.msi_entry);
 				if (error != 0) {
 					PRINTINFO;
-					printf("error code from alloc_span_fixed %d, start %lx, end %lx\n", error, 0xfee00000, 0xfeefffff + 1);
+					printf("error code from alloc_span_fixed %d, start %x, end %x\n", error, 0xfee00000, 0xfeefffff + 1);
 				}
 			}
 		}
