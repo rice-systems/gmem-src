@@ -129,6 +129,10 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 	// A uvas may be used by multiple pmaps (mmus)
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;
+	
+	// TODO: remove this. use what you have in pmap.
+	// Otherwise we are coupling the uvas with a specific device.
+	void *data;
 };
 
 // TODO: delete the following shit.
@@ -183,6 +187,7 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 	// TODO: remove the shit below
 	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
 	struct iommu_qi_genseq gseq;
+	// struct iommu_domain *domain;
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas

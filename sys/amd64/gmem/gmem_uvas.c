@@ -120,6 +120,9 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
+		// TODO: remove this. Do not couple dev_data with uvas.
+		uvas->dev_data = dev_data;
+
 		// initialize uvas
 		TAILQ_INIT(&uvas->uvas_entry_header);
 		TAILQ_INIT(&uvas->dev_pmap_header);

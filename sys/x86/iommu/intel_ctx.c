@@ -290,7 +290,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 
 		gstart = entry->start;
 		gend = entry->end;
-		error1 = gmem_iommu_map(domain, domain->iodom.uvas, &gstart, gend, 
+		error1 = gmem_iommu_map(domain, domain->iodom.uvas, NULL, &gstart, gend, 
 			0, GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 
@@ -326,7 +326,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 				error = error1;
 			}
 			TAILQ_REMOVE(&rmrr_entries, entry, dmamap_link);
-			gmem_uvas_free_entry(DOM2IODOM(domain)->uvas, entry);
+			gmem_uvas_free_entry((DOM2IODOM(domain))->uvas, entry);
 		}
 		for (i = 0; i < size; i++)
 			vm_page_putfake(ma[i]);
@@ -609,12 +609,13 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		// TODO: put uvas under ctx instead of domain
 		// ultimately, ctx corresponds to mm_struct
 		if (domain1 != NULL) {
-			intel_iommu_dev_data_t dev_data;
-			dev_data.dmar = dmar;
-			dev_data.domain = domain1;
-			dev_data.id_mapped = id_mapped;
+			intel_iommu_dev_data_t *dev_data;
+			dev_data = malloc(sizeof(*intel_iommu_dev_data_t), M_DMAR_CTX, M_WAITOK | M_ZERO);
+			dev_data->dmar = dmar;
+			dev_data->domain = domain1;
+			dev_data->id_mapped = id_mapped;
 			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev),
-				NULL, &dev_data, false, true,
+				NULL, dev_data, false, true,
 				PAGE_SIZE, 0, 1ULL << 48);
 			printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
 
@@ -622,7 +623,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 				/* Disable local apic region access */
 				// replace NULL with stupid msi_entry
 				error = gmem_uvas_alloc_span_fixed(domain1->iodom.uvas, 0xfee00000,
-				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &iodom->msi_entry);
+				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &domain1->iodom.msi_entry);
 			}
 		}
 
@@ -947,18 +948,22 @@ dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free)
 	// 	entry->flags = 0;
 }
 
+// TODO: let gmem perform unload, extract all data from pmap not from uvas.
+// This is just an iommu-specific unload.
 void
 dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 {
 	struct dmar_domain *domain;
 	struct dmar_unit *unit;
 
-	domain = IODOM2DOM(entry->domain);
+	intel_iommu_dev_data_t *dev_data = entry->uvas->dev_data;
+
+	domain = IODOM2DOM(dev_data->domain);
 	unit = DOM2DMAR(domain);
 	if (unit->qi_enabled) {
 		printf("[intel_ctx.c] performing quick invalidations\n");
 		DMAR_LOCK(unit);
-		dmar_qi_invalidate_locked(IODOM2DOM(entry->domain),
+		dmar_qi_invalidate_locked(domain,
 		    entry->start, entry->end - entry->start, &entry->gseq,
 		    true);
 		if (!free)
@@ -967,7 +972,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 		DMAR_UNLOCK(unit);
 	} else {
 		printf("[intel_ctx.c] performing iotlb sync inv\n");
-		domain_flush_iotlb_sync(IODOM2DOM(entry->domain),
+		domain_flush_iotlb_sync(domain,
 		    entry->start, entry->end - entry->start);
 		dmar_domain_free_entry(entry, free);
 	}
