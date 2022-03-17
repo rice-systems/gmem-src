@@ -364,11 +364,11 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 	limit = PCI_PPBMEMLIMIT(0, pci_read_config(root, PCIR_MEMLIMIT_1, 2));
 	error = gmem_uvas_alloc_span_fixed(domain->iodom.uvas, base,
 	    limit + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
-	if (error != 0) {
-		PRINTINFO;
-		printf("error code from alloc_span_fixed %d, start %lx, end %lx\n", error, base, limit + 1);
-	}
-	debug_printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
+	// if (error != 0) {
+	// 	PRINTINFO;
+	// 	printf("error code from alloc_span_fixed %d, start %lx, end %lx\n", error, base, limit + 1);
+	// } else
+	// 	debug_printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 	// error = iommu_gas_reserve_region_extend(iodom, base, limit + 1);
 	if (bootverbose || error != 0)
 		device_printf(dev, "DMAR reserve [%#jx-%#jx] (error %d)\n",
@@ -394,11 +394,12 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 		PRINTINFO;
 		error = gmem_uvas_alloc_span_fixed(domain->iodom.uvas, base,
 		    limit + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, NULL);
-		if (error != 0) {
-			PRINTINFO;
-		printf("error code from alloc_span_fixed %d, start %lx, end %lx\n", error, base, limit + 1);
-		}
-		debug_printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
+		// if (error != 0) {
+		// 	PRINTINFO;
+		// 	printf("error code from alloc_span_fixed %d, start %lx, end %lx\n", error, base, limit + 1);
+		// }
+		// else
+		// 	debug_printf("reserve memory aparture: [%lx, %lx)\n", base, limit + 1);
 		// error = iommu_gas_reserve_region_extend(iodom, base,
 		//     limit + 1);
 		if (bootverbose || error != 0)
@@ -625,10 +626,10 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 				// replace NULL with stupid msi_entry
 				error = gmem_uvas_alloc_span_fixed(domain1->iodom.uvas, 0xfee00000,
 				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &domain1->iodom.msi_entry);
-				if (error != 0) {
-					PRINTINFO;
-					printf("error code from alloc_span_fixed %d, start %x, end %x\n", error, 0xfee00000, 0xfeefffff + 1);
-				}
+				// if (error != 0) {
+				// 	PRINTINFO;
+				// 	printf("error code from alloc_span_fixed %d, start %x, end %x\n", error, 0xfee00000, 0xfeefffff + 1);
+				// }
 			}
 		}
 
