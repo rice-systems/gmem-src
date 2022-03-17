@@ -956,7 +956,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 	struct dmar_domain *domain;
 	struct dmar_unit *unit;
 
-	intel_iommu_dev_data_t *dev_data = entry->uvas->dev_data;
+	intel_iommu_dev_data_t *dev_data = (intel_iommu_dev_data_t *) entry->uvas->dev_data;
 
 	domain = IODOM2DOM(dev_data->domain);
 	unit = DOM2DMAR(domain);
