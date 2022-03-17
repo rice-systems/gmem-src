@@ -610,7 +610,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		// ultimately, ctx corresponds to mm_struct
 		if (domain1 != NULL) {
 			intel_iommu_dev_data_t *dev_data;
-			dev_data = malloc(sizeof(*intel_iommu_dev_data_t), M_DMAR_CTX, M_WAITOK | M_ZERO);
+			dev_data = malloc(sizeof(intel_iommu_dev_data_t), M_DMAR_CTX, M_WAITOK | M_ZERO);
 			dev_data->dmar = dmar;
 			dev_data->domain = domain1;
 			dev_data->id_mapped = id_mapped;
@@ -958,7 +958,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 
 	intel_iommu_dev_data_t *dev_data = (intel_iommu_dev_data_t *) entry->uvas->dev_data;
 
-	domain = IODOM2DOM(dev_data->domain);
+	domain = dev_data->domain;
 	unit = DOM2DMAR(domain);
 	if (unit->qi_enabled) {
 		printf("[intel_ctx.c] performing quick invalidations\n");
