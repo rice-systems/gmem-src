@@ -930,7 +930,7 @@ dmar_rmrr_iter(ACPI_DMAR_HEADER *dmarh, void *arg)
 		match = dmar_match_devscope(devscope, ria->dev_busno,
 		    ria->dev_path, ria->dev_path_len);
 		if (match == 1) {
-			entry = gmem_uvas_alloc_entry(DOM2IODOM(ria->domain)->uvas,
+			entry = gmem_uvas_alloc_entry(DOM2IODOM(ria->domain).uvas,
 			    IOMMU_PGF_WAITOK);
 			entry->start = resmem->BaseAddress;
 			/* The RMRR entry end address is inclusive. */
