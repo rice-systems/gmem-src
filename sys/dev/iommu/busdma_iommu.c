@@ -699,7 +699,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		 * revert all work done.
 		 */
 		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_FOREACH_REVERSE_SAFE(entry, &map->map_entries, iommu_map_entries_tailq,
+		TAILQ_FOREACH_REVERSE_SAFE(entry, &map->map_entries, gmem_uvas_entries_tailq,
 			dmamap_link, entry1) {
 			/*
 			 * No entries other than what we have created
@@ -920,7 +920,7 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
 #ifndef IOMMU_DOMAIN_UNLOAD_SLEEP
-	struct iommu_map_entries_tailq entries;
+	struct gmem_uvas_entries_tailq entries;
 #endif
 
 	tag = (struct bus_dma_tag_iommu *)dmat;
@@ -1128,7 +1128,7 @@ static void
 iommu_domain_unload_task(void *arg, int pending)
 {
 	struct iommu_domain *domain;
-	struct iommu_map_entries_tailq entries;
+	struct gmem_uvas_entries_tailq entries;
 
 	domain = arg;
 	TAILQ_INIT(&entries);
