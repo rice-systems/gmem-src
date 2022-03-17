@@ -1092,7 +1092,7 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 		return (ENOMEM);
 	}
 	for (i = 0; i < atop(length); i++) {
-		ma[i] = vm_page_getfake(entry->start + PAGE_SIZE * i,
+		ma[i] = vm_page_getfake(start + PAGE_SIZE * i,
 		    VM_MEMATTR_DEFAULT);
 	}
 
@@ -1153,7 +1153,7 @@ iommu_domain_init(struct iommu_unit *unit, struct iommu_domain *domain,
 	domain->iommu = unit;
 
 	TASK_INIT(&domain->unload_task, 0, iommu_domain_unload_task, domain);
-	RB_INIT(&domain->rb_root);
+	// RB_INIT(&domain->rb_root);
 	TAILQ_INIT(&domain->unload_entries);
 	mtx_init(&domain->lock, "iodom", NULL, MTX_DEF);
 }
