@@ -213,7 +213,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// [TODO]
 		// entry->flags |= eflags;
 		*start = entry->start;
-		printf("uvas %p, start %lx, end %lx \n", uvas, *start, *start + size);
+		debug_printf("uvas %p, start %lx, end %lx \n", uvas, *start, *start + size);
 	}
 	else if (uvas->allocator == VMEM)
 	{
