@@ -16,6 +16,10 @@
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 
+// debugging switch
+// #define PRINTINFO  { printf("[%s] %s line #%d\n", __FILE__, __func__, __LINE__); }
+#define PRINTINFO  { }
+
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_ASSERT_LOCKED(dom)	mtx_assert(&(dom)->lock, MA_OWNED)
