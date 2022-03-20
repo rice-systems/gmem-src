@@ -931,6 +931,7 @@ dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid)
 void
 dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free)
 {
+	printf("Free Span start %lx end %lx\n", entry->start, entry->end);
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
 		// iommu_gas_free_region(domain, entry);
 		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);

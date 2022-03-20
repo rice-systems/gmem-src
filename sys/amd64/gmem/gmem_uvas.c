@@ -286,6 +286,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
 	PRINTINFO;
+	printf("GMEM Free Span start %lx end %lx\n", entry->start, entry->end);
 	debug_printf("start %lx, end %lx \n", start, start + size);
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
