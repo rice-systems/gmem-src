@@ -52,7 +52,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 
 #define FINISH_STATS(typeId,pgcnt)                              \
 	if (instrument) {											\
-		printf("FINISH STATS %d\n", typeId);
+		printf("FINISH STATS %d\n", typeId); \
 		delta = rdtscp() - delta;                                         \
 		atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
 		atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
