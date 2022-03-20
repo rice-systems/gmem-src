@@ -92,9 +92,6 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
         debug_printf("iommu ctx does not have a valid uvas\n");
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
-
-    // REMOVE THIS SHIT AFTERWARDS
-    IOMMU_DOMAIN_LOCK(domain);
     if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
         error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
@@ -102,7 +99,6 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
         error = gmem_uvas_alloc_span_fixed(uvas, *start, *start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
     }
-    IOMMU_DOMAIN_UNLOCK(domain);
     PRINTINFO;
 
     KASSERT(error == GMEM_OK,
@@ -123,10 +119,7 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
         // TODO: we always free the entry when we add back this iotlb inv in the future
         // TODO: replace with unload_entry, as the map function could fail in the middle.
         // iommu_domain_unload_entry(entry, true);
-        // REMOVE THIS SHIT AFTERWARDS
-        IOMMU_DOMAIN_LOCK(domain);
         gmem_uvas_free_span(uvas, *start, size, entry);
-        IOMMU_DOMAIN_UNLOCK(domain);
         return (error);
     }
     KASSERT(error == 0,
