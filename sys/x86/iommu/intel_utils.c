@@ -740,9 +740,7 @@ sysctl_iommu_reset(SYSCTL_HANDLER_ARGS)
 }
 
 
-SYSCTL_OID(_hw_dmar, OID_AUTO, print_iommu_hist, CTLTYPE_STRING | CTLFLAG_RD, NULL, 0,
+SYSCTL_OID(_hw_iommu_dmar, OID_AUTO, print_iommu_hist, CTLTYPE_STRING | CTLFLAG_RD, NULL, 0,
     sysctl_iommu_hist, "A", "print iommu histogram");
-SYSCTL_PROC(_hw_dmar, OID_AUTO, reset_iommu_hist, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
+SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, reset_iommu_hist, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
     sysctl_iommu_reset, "I", "reset iommu hist");
-
-#endif
