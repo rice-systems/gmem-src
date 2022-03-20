@@ -967,7 +967,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 	domain = dev_data->domain;
 	unit = DOM2DMAR(domain);
 	if (unit->qi_enabled) {
-		printf("[intel_ctx.c] performing quick invalidations\n");
+		debug_printf("[intel_ctx.c] performing quick invalidations\n");
 		DMAR_LOCK(unit);
 		dmar_qi_invalidate_locked(domain,
 		    entry->start, entry->end - entry->start, &entry->gseq,
@@ -977,7 +977,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 		TAILQ_INSERT_TAIL(&unit->tlb_flush_entries, entry, dmamap_link);
 		DMAR_UNLOCK(unit);
 	} else {
-		printf("[intel_ctx.c] performing iotlb sync inv\n");
+		debug_printf("[intel_ctx.c] performing iotlb sync inv\n");
 		domain_flush_iotlb_sync(domain,
 		    entry->start, entry->end - entry->start);
 		dmar_domain_free_entry(entry, free);
@@ -1021,7 +1021,11 @@ dmar_domain_unload(struct dmar_domain *domain,
 			domain_flush_iotlb_sync(domain, entry->start,
 			    entry->end - entry->start);
 			TAILQ_REMOVE(entries, entry, dmamap_link);
+
+			// TODO: remove this shit.
+			IOMMU_DOMAIN_LOCK(iodom);
 			dmar_domain_free_entry(entry, true);
+			IOMMU_DOMAIN_UNLOCK(iodom);
 		}
 	}
 	if (TAILQ_EMPTY(entries))
