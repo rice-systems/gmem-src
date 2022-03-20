@@ -247,11 +247,14 @@ extern struct hist iommu_hist[IOMMU_MAXPGCNT];
 	uint64_t delta; \
 	if (instrument) delta = rdtscp(); 
 
+#define RESET_STATS \
+	if (instrument) delta = rdtscp();
+
 #define FINISH_STATS(typeId,pgcnt)                              \
 	if (instrument) {											\
 		delta = rdtscp() - delta;                                   \
-		atomic_add_64(&iommu_hist[pgcnt].latency[typeId], delta);   \
-		atomic_add_int(&iommu_hist[pgcnt].count[typeId], 1);        \
+		atomic_add_64(&(iommu_hist[pgcnt].latency[typeId]), delta);   \
+		atomic_add_int(&(iommu_hist[pgcnt].count[typeId]), 1);        \
 	}
 
 #endif /* !_DEV_IOMMU_IOMMU_H_ */
