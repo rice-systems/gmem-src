@@ -45,10 +45,10 @@ extern struct hist instrument_hist[MAXPGCNT];
 
 #define START_STATS \
 	uint64_t delta; \
-	if (instrument) delta = rdtscp(); 
+	if (instrument) delta = rdtscp();  \
 
 #define RESET_STATS \
-	if (instrument) delta = rdtscp();
+	if (instrument) delta = rdtscp(); \
 
 #define FINISH_STATS(typeId,pgcnt)                              \
 	if (instrument) {											\
@@ -56,7 +56,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 		delta = rdtscp() - delta;                                         \
 		atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
 		atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
-	}
+	} \
 
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)
