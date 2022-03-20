@@ -38,6 +38,8 @@
 #include <amd64/gmem/gmem_uvas.h>
 #include <amd64/gmem/gmem_rb_tree.h>
 
+#include <dev/iommu/iommu.h>
+
 static uma_zone_t gmem_uvas_entry_zone;
 
 static void
