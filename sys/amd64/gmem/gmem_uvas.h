@@ -52,10 +52,11 @@ extern struct hist instrument_hist[MAXPGCNT];
 
 #define FINISH_STATS(typeId,pgcnt)                              \
 	if (instrument) {											\
-		printf("FINISH STATS %d\n", typeId); \
 		delta = rdtscp() - delta;                                         \
-		atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
-		atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
+		if (pgcnt < MAXPGCNT && typeId < STAT_COUNT) { \
+			atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
+			atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
+		}
 	} \
 
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
