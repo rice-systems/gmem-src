@@ -280,7 +280,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			entry->end = end;
 		}
 	}
-    FINISH_STATS(VA_ALLOC, size >> 12);
+    FINISH_STATS(VA_ALLOC, (end - start) >> 12);
 
 	if (ret != NULL)
 		*ret = entry;
