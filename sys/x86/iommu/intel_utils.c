@@ -695,8 +695,9 @@ static int
 sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 {
 	struct sbuf sbuf;
-	int error, i;
-
+	int error;
+	// int i;
+	
 	error = sysctl_wire_old_buffer(req, 0);
 	if (error != 0)
 		return (error);
