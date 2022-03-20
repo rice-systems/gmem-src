@@ -686,9 +686,6 @@ iommu_hist_reset()
 static void
 iommu_hist_init()
 {
-	for (int i = 0; i < MAXPGCNT; i ++) {
-		mtx_init(&iommu_hist[i].lock, "dmarhist", NULL, MTX_DEF);
-	}
 	iommu_hist_reset();
 }
 SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, iommu_hist_init, NULL);
