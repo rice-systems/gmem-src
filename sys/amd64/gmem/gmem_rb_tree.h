@@ -328,9 +328,9 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 	// error = gmem_uvas_uppermatch(&a, RB_ROOT(&uvas->rb_root));
 	KASSERT(error == ENOMEM,
 	    ("error %d from gmem_uvas_uppermatch", error));
-	if (error != 0)
-		printf("gmem rb-allocator failed to find a space to insert, start : %lx, end : %lx, size: %lx\n",
-			entry->start, entry->end, size);
+	// if (error != 0)
+	// 	printf("gmem rb-allocator failed to find a space to insert, start : %lx, end : %lx, size: %lx\n",
+	// 		entry->start, entry->end, size);
 	GMEM_UVAS_UNLOCK(uvas);
 	return (error);
 }
