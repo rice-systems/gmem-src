@@ -69,6 +69,10 @@ __FBSDID("$FreeBSD$");
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
 
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+
 u_int
 dmar_nd2mask(u_int nd)
 {
@@ -672,23 +676,18 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
 #include <sys/mutex.h>
 #include <sys/malloc.h>
 
-struct hist iommu_hist[MAXPGCNT];
+struct hist instrument_hist[MAXPGCNT];
 
 static void
-iommu_hist_reset()
+hist_init()
 {
 	for (int i = 0; i < MAXPGCNT; i ++) {
-		memset(iommu_hist[i].latency, 0, IOMMU_STAT_COUNT * sizeof(uint64_t));
-		memset(iommu_hist[i].count, 0, IOMMU_STAT_COUNT * sizeof(uint64_t));
+		memset(instrument_hist[i].latency, 0, STAT_COUNT * sizeof(uint64_t));
+		memset(instrument_hist[i].count, 0, STAT_COUNT * sizeof(uint64_t));
 	}
 }
 
-static void
-iommu_hist_init()
-{
-	iommu_hist_reset();
-}
-SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, iommu_hist_init, NULL);
+SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, hist_init, NULL);
 
 /*
  * Prints iommu hist
@@ -705,9 +704,9 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 	for (i = 0; i < MAXPGCNT; i ++) {
-		for (int k = 0; k < IOMMU_STAT_COUNT; k ++) {
+		for (int k = 0; k < STAT_COUNT; k ++) {
 			sbuf_printf(&sbuf, "%ld, %ld, ",
-				iommu_hist[i].latency[k], iommu_hist[i].count[k]
+				instrument_hist[i].latency[k], instrument_hist[i].count[k]
 				);
 		}
 		sbuf_printf(&sbuf, "\n");
@@ -730,7 +729,7 @@ sysctl_iommu_reset(SYSCTL_HANDLER_ARGS)
 	if (error)
 		return (error);
 	if (i != 0)
-		iommu_hist_reset();
+		hist_init();
 	return (0);
 }
 

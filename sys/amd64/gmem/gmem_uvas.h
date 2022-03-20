@@ -22,6 +22,41 @@
 // #define debug_printf(...) { printf(...); }
 #define debug_printf(...) { }
 
+#include <machine/atomic.h>
+#include <sys/systm.h>
+#define instrument true
+#define MAP           0
+#define UNMAP         1 
+#define VA_ALLOC      2
+#define VA_FREE       3
+#define TLB_INV       4
+#define STAT_COUNT    5
+#define MAXPGCNT      512
+
+// indexed by buffer size / 4KB
+// 0: buffer size >= 2MB
+struct hist
+{
+	uint64_t latency[STAT_COUNT];
+	uint64_t count[STAT_COUNT];
+};
+
+extern struct hist instrument_hist[MAXPGCNT];
+
+#define START_STATS \
+	uint64_t delta; \
+	if (instrument) delta = rdtscp(); 
+
+#define RESET_STATS \
+	if (instrument) delta = rdtscp();
+
+#define FINISH_STATS(typeId,pgcnt)                              \
+	if (instrument) {											\
+		delta = rdtscp() - delta;                                         \
+		atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
+		atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
+	}
+
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_ASSERT_LOCKED(dom)	mtx_assert(&(dom)->lock, MA_OWNED)

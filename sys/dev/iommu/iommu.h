@@ -222,39 +222,5 @@ int gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *p
 	vm_offset_t size, int offset, u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **ret);
 
 SYSCTL_DECL(_hw_iommu);
-#include <machine/atomic.h>
-#include <sys/systm.h>
-#define instrument true
-#define IOMMU_MAP           0
-#define IOMMU_UNMAP         1 
-#define IOMMU_VA_ALLOC      2
-#define IOMMU_VA_FREE       3
-#define IOMMU_TLB_INV       4
-#define IOMMU_STAT_COUNT    5
-#define MAXPGCNT      512
-
-// indexed by buffer size / 4KB
-// 0: buffer size >= 2MB
-struct hist
-{
-	uint64_t latency[IOMMU_STAT_COUNT];
-	uint64_t count[IOMMU_STAT_COUNT];
-};
-
-extern struct hist iommu_hist[MAXPGCNT];
-
-#define START_STATS \
-	uint64_t delta; \
-	if (instrument) delta = rdtscp(); 
-
-#define RESET_STATS \
-	if (instrument) delta = rdtscp();
-
-#define FINISH_STATS(typeId,pgcnt)                              \
-	if (instrument) {											\
-		delta = rdtscp() - delta;                                   \
-		atomic_add_64(&(iommu_hist[pgcnt].latency[typeId]), delta);   \
-		atomic_add_64(&(iommu_hist[pgcnt].count[typeId]), 1);        \
-	}
 
 #endif /* !_DEV_IOMMU_IOMMU_H_ */

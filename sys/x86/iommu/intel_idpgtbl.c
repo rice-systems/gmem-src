@@ -515,6 +515,7 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 	uint64_t pflags;
 	int error;
 
+	START_STATS;
 	pflags = ((eflags & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
 	    ((eflags & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
 	    ((eflags & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
@@ -573,6 +574,7 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 		dmar_flush_write_bufs(unit);
 		DMAR_UNLOCK(unit);
 	}
+    FINISH_STATS(MAP, size >> 12);
 	PRINTINFO;
 	return (0);
 }
@@ -702,11 +704,13 @@ domain_unmap_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 	struct dmar_domain *domain;
 	int error;
 
+	START_STATS;
 	domain = IODOM2DOM(iodom);
 
 	DMAR_DOMAIN_PGLOCK(domain);
 	error = domain_unmap_buf_locked(domain, base, size, flags);
 	DMAR_DOMAIN_PGUNLOCK(domain);
+    FINISH_STATS(UNMAP, size >> 12);
 	return (error);
 }
 

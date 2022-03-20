@@ -38,8 +38,6 @@
 #include <amd64/gmem/gmem_uvas.h>
 #include <amd64/gmem/gmem_rb_tree.h>
 
-#include <dev/iommu/iommu.h>
-
 static uma_zone_t gmem_uvas_entry_zone;
 
 static void
@@ -328,7 +326,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			// printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
-	FINISH_STATS(IOMMU_VA_FREE, size);
+	FINISH_STATS(VA_FREE, size);
 	return GMEM_OK;
 }
 
