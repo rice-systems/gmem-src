@@ -254,7 +254,7 @@ extern struct hist iommu_hist[IOMMU_MAXPGCNT];
 	if (instrument) {											\
 		delta = rdtscp() - delta;                                   \
 		atomic_add_64(&(iommu_hist[pgcnt].latency[typeId]), delta);   \
-		atomic_add_int(&(iommu_hist[pgcnt].count[typeId]), 1);        \
+		atomic_add_64(&(iommu_hist[pgcnt].count[typeId]), 1);        \
 	}
 
 #endif /* !_DEV_IOMMU_IOMMU_H_ */
