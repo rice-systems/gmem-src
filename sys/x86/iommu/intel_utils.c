@@ -697,7 +697,7 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	struct sbuf sbuf;
 	int error;
 	// int i;
-	
+
 	error = sysctl_wire_old_buffer(req, 0);
 	if (error != 0)
 		return (error);
@@ -705,16 +705,16 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 
 	sbuf_printf(&sbuf, "MAP: %ld, %ld\n",
-		instrument_hist[1].latency[0], instrument_hist[1].count[0]
+		instrument_hist[1].latency[MAP], instrument_hist[1].count[MAP]
 		);
 	sbuf_printf(&sbuf, "UNMAP: %ld, %ld\n",
-		instrument_hist[1].latency[1], instrument_hist[1].count[1]
+		instrument_hist[1].latency[UNMAP], instrument_hist[1].count[UNMAP]
 		);
 	sbuf_printf(&sbuf, "VA_ALLOC: %ld, %ld\n",
-		instrument_hist[1].latency[2], instrument_hist[1].count[2]
+		instrument_hist[1].latency[VA_ALLOC], instrument_hist[1].count[VA_ALLOC]
 		);
 	sbuf_printf(&sbuf, "VA_FREE: %ld, %ld\n",
-		instrument_hist[1].latency[3], instrument_hist[1].count[3]
+		instrument_hist[1].latency[VA_FREE], instrument_hist[1].count[VA_FREE]
 		);
 	// for (i = 1; i < MAXPGCNT; i ++) {
 	// 	for (int k = 0; k < STAT_COUNT; k ++) {
