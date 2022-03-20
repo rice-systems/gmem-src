@@ -198,7 +198,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
-	// PRINTINFO;
+	START_STATS;
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
@@ -227,6 +227,8 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 			entry->end = *start + size;
 		}
 	}
+    FINISH_STATS(VA_ALLOC, size >> 12);
+
 	if (ret != NULL)
 		*ret = entry;
 	return GMEM_OK;
@@ -249,6 +251,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
+	START_STATS;
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
@@ -277,6 +280,8 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			entry->end = end;
 		}
 	}
+    FINISH_STATS(VA_ALLOC, size >> 12);
+
 	if (ret != NULL)
 		*ret = entry;
 	return GMEM_OK;
@@ -299,6 +304,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		GMEM_UVAS_LOCK(uvas);
 		if (entry != NULL) {
 			gmem_rb_remove(uvas, entry);
+			FINISH_STATS(VA_FREE, size >> 12);
 			gmem_uvas_free_entry(uvas, entry);
 		} else {
 			gmem_uvas_entry_t span;
@@ -308,6 +314,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			// gmem_rb_remove(uvas, entry);
 			// gmem_uvas_free_entry(uvas, entry);
 			gmem_rb_free_span(uvas, &span);
+			FINISH_STATS(VA_FREE, size >> 12);
 		}
 		GMEM_UVAS_UNLOCK(uvas);
 	}
@@ -325,8 +332,8 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			vmem_free(uvas->arena, start, size);
 			// printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
+		FINISH_STATS(VA_FREE, size >> 12);
 	}
-	FINISH_STATS(VA_FREE, size >> 12);
 	return GMEM_OK;
 }
 
