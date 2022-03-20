@@ -293,6 +293,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		return -1;
 	}
 
+    START_STATS;
 	if (uvas->allocator == RBTREE) {
 		// use rb-tree allocator
 		GMEM_UVAS_LOCK(uvas);
@@ -325,7 +326,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			// printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
-
+	FINISH_STATS(IOMMU_VA_FREE, size);
 	return GMEM_OK;
 }
 

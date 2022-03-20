@@ -667,3 +667,82 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
     CTLTYPE_U64 | CTLFLAG_RW | CTLFLAG_MPSAFE, 0, 0,
     dmar_timeout_sysctl, "QU",
     "Timeout for command wait, in nanoseconds");
+
+#include <sys/sbuf.h>
+#include <sys/mutex.h>
+#include <sys/malloc.h>
+
+struct hist iommu_hist[MAXPGCNT];
+
+static void
+iommu_hist_reset()
+{
+	for (int i = 0; i < MAXPGCNT; i ++) {
+		memset(iommu_hist[i].latency, 0, IOMMU_STAT_COUNT * sizeof(uint64_t));
+		memset(iommu_hist[i].count, 0, IOMMU_STAT_COUNT * sizeof(uint64_t));
+	}
+}
+
+static void
+iommu_hist_init()
+{
+	for (int i = 0; i < MAXPGCNT; i ++) {
+		mtx_init(&iommu_hist[i].lock, "dmarhist", NULL, MTX_DEF);
+	}
+	iommu_hist_reset();
+}
+SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, iommu_hist_init, NULL);
+
+/*
+ * Prints iommu hist
+ */
+static int
+sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
+{
+	struct sbuf sbuf;
+	int error, i;
+
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error != 0)
+		return (error);
+	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
+	sbuf_printf(&sbuf, "\niommu histogram\n\n");
+	for (i = 0; i < MAXPGCNT; i ++) {
+		HIST_LOCK(iommu_hist[i]);
+		for (int k = 0; k < IOMMU_STAT_COUNT; k ++) {
+			sbuf_printf(&sbuf, "%ld, %ld, ",
+				iommu_hist[i].latency[k], iommu_hist[i].count[k]
+				);
+		}
+		sbuf_printf(&sbuf, "\n");
+		HIST_UNLOCK(iommu_hist[i]);
+	}
+	error = sbuf_finish(&sbuf);
+	sbuf_delete(&sbuf);
+	return (error);
+}
+
+/*
+ * Error triggered resetting
+ */
+static int
+sysctl_iommu_reset(SYSCTL_HANDLER_ARGS)
+{
+	int error, i;
+
+	i = 0;
+	error = sysctl_handle_int(oidp, &i, 0, req);
+	if (error)
+		return (error);
+	if (i != 0)
+		iommu_hist_reset();
+	return (0);
+}
+
+
+SYSCTL_OID(_hw_dmar, OID_AUTO, print_iommu_hist, CTLTYPE_STRING | CTLFLAG_RD, NULL, 0,
+    sysctl_iommu_hist, "A", "print iommu histogram");
+SYSCTL_PROC(_hw_dmar, OID_AUTO, reset_iommu_hist, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
+    sysctl_iommu_reset, "I", "reset iommu hist");
+
+#endif

@@ -92,6 +92,7 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
         debug_printf("iommu ctx does not have a valid uvas\n");
     // else
     //  printf("domain entry count : %d\n", domain->uvas->entries_cnt);
+    START_STATS;
     if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
         error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
@@ -99,6 +100,7 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
         error = gmem_uvas_alloc_span_fixed(uvas, *start, *start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
     }
+    FINISH_STATS(IOMMU_VA_ALLOC, size >> 12);
     PRINTINFO;
 
     KASSERT(error == GMEM_OK,
@@ -109,9 +111,11 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
     // TODO: use pmap->mmu_ops
     PRINTINFO;
     debug_printf("MAP VA %lx %lx\n", entry->start, entry->end);
+    START_STATS;
     error = domain->ops->map(domain, entry->start,
         entry->end - entry->start, ma, eflags,
         ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_WAITOK : 0));
+    FINISH_STATS(IOMMU_MAP, size >> 12);
 
     PRINTINFO;
     if (error == ENOMEM) {
