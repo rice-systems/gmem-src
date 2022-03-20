@@ -56,7 +56,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 		if (pgcnt < MAXPGCNT && typeId < STAT_COUNT) { \
 			atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
 			atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
-		}
+		} \
 	} \
 
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
