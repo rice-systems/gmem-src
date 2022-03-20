@@ -231,7 +231,7 @@ SYSCTL_DECL(_hw_iommu);
 #define IOMMU_VA_FREE       3
 #define IOMMU_TLB_INV       4
 #define IOMMU_STAT_COUNT    5
-#define IOMMU_MAXPGCNT      512
+#define MAXPGCNT      512
 
 // indexed by buffer size / 4KB
 // 0: buffer size >= 2MB
@@ -241,7 +241,7 @@ struct hist
 	uint64_t count[IOMMU_STAT_COUNT];
 };
 
-extern struct hist iommu_hist[IOMMU_MAXPGCNT];
+extern struct hist iommu_hist[MAXPGCNT];
 
 #define START_STATS \
 	uint64_t delta; \

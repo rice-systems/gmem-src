@@ -708,14 +708,12 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 	for (i = 0; i < MAXPGCNT; i ++) {
-		HIST_LOCK(iommu_hist[i]);
 		for (int k = 0; k < IOMMU_STAT_COUNT; k ++) {
 			sbuf_printf(&sbuf, "%ld, %ld, ",
 				iommu_hist[i].latency[k], iommu_hist[i].count[k]
 				);
 		}
 		sbuf_printf(&sbuf, "\n");
-		HIST_UNLOCK(iommu_hist[i]);
 	}
 	error = sbuf_finish(&sbuf);
 	sbuf_delete(&sbuf);
