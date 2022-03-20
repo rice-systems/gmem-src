@@ -283,7 +283,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 		}
 		size = OFF_TO_IDX(entry->end - entry->start);
 		ma = malloc(sizeof(vm_page_t) * size, M_TEMP, M_WAITOK);
-		printf("VA %lx %lx\n", entry->start, entry->end);
+		debug_printf("VA %lx %lx\n", entry->start, entry->end);
 		for (i = 0; i < size; i++) {
 			ma[i] = vm_page_getfake(entry->start + PAGE_SIZE * i,
 			    VM_MEMATTR_DEFAULT);
@@ -967,7 +967,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 	domain = dev_data->domain;
 	unit = DOM2DMAR(domain);
 	if (unit->qi_enabled) {
-		printf("[intel_ctx.c] performing quick invalidations\n");
+		debug_printf("[intel_ctx.c] performing quick invalidations\n");
 		DMAR_LOCK(unit);
 		dmar_qi_invalidate_locked(domain,
 		    entry->start, entry->end - entry->start, &entry->gseq,
@@ -977,7 +977,7 @@ dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
 		TAILQ_INSERT_TAIL(&unit->tlb_flush_entries, entry, dmamap_link);
 		DMAR_UNLOCK(unit);
 	} else {
-		printf("[intel_ctx.c] performing iotlb sync inv\n");
+		debug_printf("[intel_ctx.c] performing iotlb sync inv\n");
 		domain_flush_iotlb_sync(domain,
 		    entry->start, entry->end - entry->start);
 		dmar_domain_free_entry(entry, free);
