@@ -704,17 +704,17 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 
-	sbuf_printf(&sbuf, "MAP: %ld, %ld\n",
-		instrument_hist[1].latency[MAP], instrument_hist[1].count[MAP]
+	sbuf_printf(&sbuf, "MAP: %ld\n",
+		instrument_hist[1].latency[MAP] / instrument_hist[1].count[MAP]
 		);
-	sbuf_printf(&sbuf, "UNMAP: %ld, %ld\n",
-		instrument_hist[1].latency[UNMAP], instrument_hist[1].count[UNMAP]
+	sbuf_printf(&sbuf, "UNMAP: %ld\n",
+		instrument_hist[1].latency[UNMAP] / instrument_hist[1].count[UNMAP]
 		);
-	sbuf_printf(&sbuf, "VA_ALLOC: %ld, %ld\n",
-		instrument_hist[1].latency[VA_ALLOC], instrument_hist[1].count[VA_ALLOC]
+	sbuf_printf(&sbuf, "VA_ALLOC: %ld\n",
+		instrument_hist[1].latency[VA_ALLOC] / instrument_hist[1].count[VA_ALLOC]
 		);
-	sbuf_printf(&sbuf, "VA_FREE: %ld, %ld\n",
-		instrument_hist[1].latency[VA_FREE], instrument_hist[1].count[VA_FREE]
+	sbuf_printf(&sbuf, "VA_FREE: %ld\n",
+		instrument_hist[1].latency[VA_FREE] / instrument_hist[1].count[VA_FREE]
 		);
 	// for (i = 1; i < MAXPGCNT; i ++) {
 	// 	for (int k = 0; k < STAT_COUNT; k ++) {
