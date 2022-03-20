@@ -702,14 +702,27 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 		return (error);
 	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
-	for (i = 0; i < MAXPGCNT; i ++) {
-		for (int k = 0; k < STAT_COUNT; k ++) {
-			sbuf_printf(&sbuf, "%ld, %ld, ",
-				instrument_hist[i].latency[k], instrument_hist[i].count[k]
-				);
-		}
-		sbuf_printf(&sbuf, "\n");
-	}
+
+	sbuf_printf(&sbuf, "MAP: %ld, %ld\n",
+		instrument_hist[1].latency[0], instrument_hist[1].count[0]
+		);
+	sbuf_printf(&sbuf, "UNMAP: %ld, %ld\n",
+		instrument_hist[1].latency[1], instrument_hist[1].count[1]
+		);
+	sbuf_printf(&sbuf, "VA_ALLOC: %ld, %ld\n",
+		instrument_hist[1].latency[2], instrument_hist[1].count[2]
+		);
+	sbuf_printf(&sbuf, "VA_FREE: %ld, %ld\n",
+		instrument_hist[1].latency[3], instrument_hist[1].count[3]
+		);
+	// for (i = 1; i < MAXPGCNT; i ++) {
+	// 	for (int k = 0; k < STAT_COUNT; k ++) {
+	// 		sbuf_printf(&sbuf, "%ld, %ld, ",
+	// 			instrument_hist[i].latency[k], instrument_hist[i].count[k]
+	// 			);
+	// 	}
+	// 	sbuf_printf(&sbuf, "\n");
+	// }
 	error = sbuf_finish(&sbuf);
 	sbuf_delete(&sbuf);
 	return (error);
