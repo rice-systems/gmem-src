@@ -241,7 +241,7 @@ struct hist
 	uint64_t count[IOMMU_STAT_COUNT];
 };
 
-extern struct hist iommu_hist[MAXPGCNT];
+extern struct hist iommu_hist[IOMMU_MAXPGCNT];
 
 #define START_STATS \
 	uint64_t delta; \
