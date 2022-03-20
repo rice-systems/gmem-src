@@ -24,7 +24,7 @@
 
 #include <machine/atomic.h>
 #include <sys/systm.h>
-#define instrument false
+#define instrument true
 #define MAP           0
 #define UNMAP         1 
 #define VA_ALLOC      2

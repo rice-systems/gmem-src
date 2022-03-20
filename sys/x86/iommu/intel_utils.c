@@ -673,7 +673,6 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
     "Timeout for command wait, in nanoseconds");
 
 #include <sys/sbuf.h>
-#include <sys/mutex.h>
 #include <sys/malloc.h>
 
 struct hist instrument_hist[MAXPGCNT];
@@ -687,7 +686,7 @@ hist_init()
 	}
 }
 
-SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, hist_init, NULL);
+// SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, hist_init, NULL);
 
 /*
  * Prints iommu hist
