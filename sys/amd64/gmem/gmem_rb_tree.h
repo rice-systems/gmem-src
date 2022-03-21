@@ -292,7 +292,7 @@ gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry,
 		return (0);
 	}
 	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_lowermatch(a, child, call))
+	if (child != NULL && 0 == gmem_rb_lowermatch2(a, child, call))
 		return (0);
 	return (ENOMEM);
 }
