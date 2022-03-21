@@ -676,6 +676,7 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
 #include <sys/malloc.h>
 
 struct hist instrument_hist[MAXPGCNT];
+uint64_t rb_calls, rb_cnts;
 
 static void
 hist_init()
@@ -684,6 +685,8 @@ hist_init()
 		memset(instrument_hist[i].latency, 0, STAT_COUNT * sizeof(uint64_t));
 		memset(instrument_hist[i].count, 0, STAT_COUNT * sizeof(uint64_t));
 	}
+	rb_calls = 0;
+	rb_cnts = 0;
 }
 
 // SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, hist_init, NULL);
@@ -704,10 +707,13 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 
-
+	// Avoid div 0
 	for (i = 0; i < STAT_COUNT; i ++)
 		if (instrument_hist[1].count[i] == 0)
 			instrument_hist[1].count[i] = 1;
+	if (rb_cnts == 0)
+		rb_cnts = 1;
+
 	sbuf_printf(&sbuf, "MAP: %ld\n",
 		instrument_hist[1].latency[MAP] / instrument_hist[1].count[MAP]
 		);
@@ -725,6 +731,9 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 		);
 	sbuf_printf(&sbuf, "RB_HM: %ld\n",
 		instrument_hist[1].latency[RB_HM] / instrument_hist[1].count[RB_HM]
+		);
+	sbuf_printf(&sbuf, "RB_CALL: %ld\n",
+		rb_calls / rb_cnts
 		);
 	// for (i = 1; i < MAXPGCNT; i ++) {
 	// 	for (int k = 0; k < STAT_COUNT; k ++) {

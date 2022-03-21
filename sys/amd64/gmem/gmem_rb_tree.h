@@ -352,8 +352,13 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 	/* Handle lower region. */
 	START_STATS;
 	// if (uvas->format.maxaddr > 0) {
+	if (instrument) {
 		error = gmem_rb_lowermatch2(&a, RB_ROOT(&uvas->rb_root), &call);
-		printf("lowermatch %d\n", call);
+		LOGRB(call);
+	} else
+		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
+		
+		// printf("lowermatch %d\n", call);
 		// if (error == 0)
 		// 	return (0);
 		KASSERT(error == ENOMEM,

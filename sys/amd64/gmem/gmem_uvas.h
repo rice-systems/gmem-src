@@ -61,6 +61,13 @@ extern struct hist instrument_hist[MAXPGCNT];
 		} \
 	} \
 
+extern uint64_t rb_calls, rb_cnts;
+#define LOGRB(x) \
+	if (instrument) { \
+		atomic_add_64(&rb_calls, x); \
+		atomic_add_64(&rb_cnts, 1); \
+	} \
+
 // #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)
 // #define	IOMMU_DOMAIN_ASSERT_LOCKED(dom)	mtx_assert(&(dom)->lock, MA_OWNED)
