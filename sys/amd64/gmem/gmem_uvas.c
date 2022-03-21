@@ -205,7 +205,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// TODO: 
 		// offset makes no sense. Upgrade it to fit page alignment in the future
 		error = gmem_rb_find_space(uvas, size, 0, flags, entry);
-		printf("rb alloc: start %lx, size %lx\n", entry->start, size);
+		// printf("rb alloc: start %lx, size %lx\n", entry->start, size);
 		// printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
 			gmem_uvas_free_entry(uvas, entry);
@@ -302,9 +302,9 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
     START_STATS;
 	if (uvas->allocator == RBTREE) {
 		// use rb-tree allocator
+		// printf("rb free: start %lx, size %lx\n", entry->start, size);
 		GMEM_UVAS_LOCK(uvas);
 		if (entry != NULL) {
-			printf("rb free: start %lx, size %lx\n", entry->start, size);
 			gmem_rb_remove(uvas, entry);
 			gmem_uvas_free_entry(uvas, entry);
 		} else {

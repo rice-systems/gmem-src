@@ -264,6 +264,39 @@ gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	return (ENOMEM);
 }
 
+static int
+gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry, int *call)
+{
+	struct gmem_uvas_entry *child;
+	vm_offset_t maxaddr = a->uvas->format.maxaddr;
+
+	*call ++;
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && entry->end < maxaddr &&
+	    gmem_rb_match_one(a, entry->end, child->first,
+	    maxaddr)) {
+		gmem_rb_match_insert(a);
+		return (0);
+	}
+	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
+		return (ENOMEM);
+	if (entry->first >= maxaddr)
+		return (ENOMEM);
+	child = RB_LEFT(entry, rb_entry);
+	if (child != NULL && 0 == gmem_rb_lowermatch2(a, child, call))
+		return (0);
+	if (child != NULL && child->last < maxaddr &&
+	    gmem_rb_match_one(a, child->last, entry->start,
+	    maxaddr)) {
+		gmem_rb_match_insert(a);
+		return (0);
+	}
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && 0 == gmem_rb_lowermatch(a, child, call))
+		return (0);
+	return (ENOMEM);
+}
+
 // static int
 // gmem_uvas_uppermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 // {
@@ -302,6 +335,7 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 {
 	struct gmem_rb_match_args a;
 	int error = GMEM_OK;
+	int call;
 
 	GMEM_UVAS_LOCK(uvas);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", uvas, entry));
@@ -317,7 +351,8 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 	/* Handle lower region. */
 	START_STATS;
 	// if (uvas->format.maxaddr > 0) {
-		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
+		error = gmem_rb_lowermatch2(&a, RB_ROOT(&uvas->rb_root), &call);
+		printf("lowermatch %d\n", call);
 		// if (error == 0)
 		// 	return (0);
 		KASSERT(error == ENOMEM,
