@@ -696,7 +696,7 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 {
 	struct sbuf sbuf;
 	int error;
-	// int i;
+	int i;
 
 	error = sysctl_wire_old_buffer(req, 0);
 	if (error != 0)
@@ -704,6 +704,10 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_new_for_sysctl(&sbuf, NULL, 16384, req);
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 
+
+	for (i = 0; i < STAT_COUNT; i ++)
+		if (instrument_hist[1].count[i] == 0)
+			instrument_hist[1].count[i] = 1;
 	sbuf_printf(&sbuf, "MAP: %ld\n",
 		instrument_hist[1].latency[MAP] / instrument_hist[1].count[MAP]
 		);
