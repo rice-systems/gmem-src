@@ -270,7 +270,7 @@ gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry,
 	struct gmem_uvas_entry *child;
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
 
-	*call ++;
+	*call = *call + 1;
 	child = RB_RIGHT(entry, rb_entry);
 	if (child != NULL && entry->end < maxaddr &&
 	    gmem_rb_match_one(a, entry->end, child->first,
