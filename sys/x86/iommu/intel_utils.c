@@ -716,6 +716,12 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_printf(&sbuf, "VA_FREE: %ld\n",
 		instrument_hist[1].latency[VA_FREE] / instrument_hist[1].count[VA_FREE]
 		);
+	sbuf_printf(&sbuf, "RB_LM: %ld\n",
+		instrument_hist[1].latency[RB_LM] / instrument_hist[1].count[RB_LM]
+		);
+	sbuf_printf(&sbuf, "RB_HM: %ld\n",
+		instrument_hist[1].latency[RB_HM] / instrument_hist[1].count[RB_HM]
+		);
 	// for (i = 1; i < MAXPGCNT; i ++) {
 	// 	for (int k = 0; k < STAT_COUNT; k ++) {
 	// 		sbuf_printf(&sbuf, "%ld, %ld, ",

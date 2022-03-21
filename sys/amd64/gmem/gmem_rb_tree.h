@@ -315,6 +315,7 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 	a.entry = entry;
 
 	/* Handle lower region. */
+	START_STATS;
 	// if (uvas->format.maxaddr > 0) {
 		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
 		// if (error == 0)
@@ -322,6 +323,8 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 		KASSERT(error == ENOMEM,
 		    ("error %d from gmem_rb_lowermatch", error));
 	// }
+	FINISH_STATS(RB_LM, size >> 12);
+
 	/* Handle upper region. */
 	// if (common->highaddr >= uvas->end)
 	// 	return (ENOMEM);
