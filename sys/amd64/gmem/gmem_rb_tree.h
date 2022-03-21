@@ -271,6 +271,7 @@ gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry,
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
 
 	*call ++;
+	if (*call);
 	child = RB_RIGHT(entry, rb_entry);
 	if (child != NULL && entry->end < maxaddr &&
 	    gmem_rb_match_one(a, entry->end, child->first,
@@ -335,7 +336,7 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 {
 	struct gmem_rb_match_args a;
 	int error = GMEM_OK;
-	int call;
+	int call = 0;
 
 	GMEM_UVAS_LOCK(uvas);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", uvas, entry));
