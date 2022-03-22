@@ -172,7 +172,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	struct gmem_uvas_entry *first_place, *last_place;
 
 	// Number of entires
-	uint64_t entries_cnt;
+	uint32_t entries_cnt;
 	uint64_t rb_entries;
 
 	// format of uvas
