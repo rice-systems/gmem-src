@@ -676,7 +676,7 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
 #include <sys/malloc.h>
 
 struct hist instrument_hist[MAXPGCNT];
-uint64_t rb_calls, rb_cnts;
+uint64_t rb_calls, rb_cnts, rb_entries;
 
 static void
 hist_init()
@@ -687,6 +687,7 @@ hist_init()
 	}
 	rb_calls = 0;
 	rb_cnts = 0;
+	rb_entries = 0;
 }
 
 // SYSINIT(intel_iommu_hist, SI_SUB_DRIVERS, SI_ORDER_FIRST, hist_init, NULL);
@@ -734,6 +735,9 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 		);
 	sbuf_printf(&sbuf, "RB_CALL: %ld\n",
 		rb_calls / rb_cnts
+		);
+	sbuf_printf(&sbuf, "RB_ENTRY: %ld\n",
+		rb_entries / rb_cnts
 		);
 	// for (i = 1; i < MAXPGCNT; i ++) {
 	// 	for (int k = 0; k < STAT_COUNT; k ++) {

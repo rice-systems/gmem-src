@@ -66,6 +66,7 @@ gmem_rb_insert(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *found;
 
+	uvas->rb_entries ++;
 	found = RB_INSERT(gmem_uvas_entries_tree,
 	    &uvas->rb_root, entry);
 	return (found == NULL);
@@ -75,6 +76,7 @@ static void
 gmem_rb_remove(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 
+	uvas->rb_entries --;
 	RB_REMOVE(gmem_uvas_entries_tree, &uvas->rb_root, entry);
 }
 
@@ -354,7 +356,7 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 	// if (uvas->format.maxaddr > 0) {
 	if (instrument) {
 		error = gmem_rb_lowermatch2(&a, RB_ROOT(&uvas->rb_root), &call);
-		LOGRB(call);
+		LOGRB(call, uvas->rb_entries);
 	} else
 		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
 		

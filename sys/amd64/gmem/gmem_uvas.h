@@ -61,10 +61,11 @@ extern struct hist instrument_hist[MAXPGCNT];
 		} \
 	} \
 
-extern uint64_t rb_calls, rb_cnts;
-#define LOGRB(x) \
+extern uint64_t rb_calls, rb_cnts, rb_entries;
+#define LOGRB(x, y) \
 	if (instrument) { \
 		atomic_add_64(&rb_calls, x); \
+		atomic_add_64(&rb_entries, y); \
 		atomic_add_64(&rb_cnts, 1); \
 	} \
 
@@ -171,7 +172,8 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	struct gmem_uvas_entry *first_place, *last_place;
 
 	// Number of entires
-	uint32_t entries_cnt;
+	uint64_t entries_cnt;
+	uint64_t rb_entries;
 
 	// format of uvas
 	struct gmem_vma_format format;
