@@ -154,7 +154,7 @@ struct gmem_rb_match_args {
  * allocate space in the free interval, subject to the conditions expressed
  * by a, and return 'true' if and only if the allocation attempt succeeds.
  */
-static bool
+static inline bool
 gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
     vm_offset_t end, vm_offset_t maxaddr)
 {
@@ -205,7 +205,7 @@ gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
 	return (false);
 }
 
-static void
+static inline void
 gmem_rb_match_insert(struct gmem_rb_match_args *a)
 {
 	bool found;
@@ -291,6 +291,39 @@ gmem_rb_first_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 }
 
 static int
+gmem_rb_quick_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
+{
+	struct gmem_uvas_entry *child;
+	vm_offset_t maxaddr = a->uvas->format.maxaddr;
+
+	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2 || entry->first >= maxaddr)
+		return (ENOMEM);
+
+	child = RB_LEFT(entry, rb_entry);
+	if (child != NULL && child->last < maxaddr &&
+	    gmem_rb_match_one(a, child->last, entry->start,
+	    maxaddr)) {
+		gmem_rb_match_insert(a);
+		return (0);
+	}
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && entry->end < maxaddr &&
+	    gmem_rb_match_one(a, entry->end, child->first,
+	    maxaddr)) {
+		gmem_rb_match_insert(a);
+		return (0);
+	}
+
+	child = RB_LEFT(entry, rb_entry);
+	if (child != NULL && child->free_down >= a->size + GMEM_PAGE_SIZE * 2)
+		return gmem_rb_quick_fit(a, child);
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && child->free_down >= a->size + GMEM_PAGE_SIZE * 2)
+		return gmem_rb_quick_fit(a, child);
+	return (ENOMEM);
+}
+
+static int
 gmem_rb_find_space(struct gmem_uvas *uvas, vm_offset_t size, u_int flags, struct gmem_uvas_entry *entry)
 {
 	struct gmem_rb_match_args a;
@@ -307,7 +340,7 @@ gmem_rb_find_space(struct gmem_uvas *uvas, vm_offset_t size, u_int flags, struct
 
 	// When comparing GMEM, we probably need the gmem_rb_ooo_search.
 	// error = gmem_rb_ooo_search(&a, RB_ROOT(&uvas->rb_root));
-	error = gmem_rb_first_fit(&a, RB_ROOT(&uvas->rb_root));
+	error = gmem_rb_quick_fit(&a, RB_ROOT(&uvas->rb_root));
 	
 	KASSERT(error == ENOMEM,
 	    ("error %d from gmem_rb_search", error));
