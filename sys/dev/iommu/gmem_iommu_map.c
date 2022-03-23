@@ -90,6 +90,8 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
     if (uvas == NULL)
         debug_printf("iommu ctx does not have a valid uvas\n");
 
+    // The Original IOMMU driver uses GMEM_PAGE_SIZE in the neighbourhood to prevent DMA bugs
+    // It is possible to add GMEM_PAGE_SIZE * 2 in the allocation request to simulate this behavior.
     if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
         error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);

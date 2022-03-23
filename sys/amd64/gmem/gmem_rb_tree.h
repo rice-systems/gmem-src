@@ -160,13 +160,9 @@ gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
 {
 	vm_offset_t bs, start;
 
-	a->entry->start = roundup2(beg + GMEM_PAGE_SIZE,
-	    a->uvas->format.alignment);
-	if (a->entry->start + a->size > maxaddr)
-		return (false);
+	a->entry->start = roundup2(beg, a->uvas->format.alignment);
 
-	/* GMEM_PAGE_SIZE to create gap after new entry. */
-	if (a->entry->start + a->size + GMEM_PAGE_SIZE > end)
+	if (a->entry->start + a->size > end)
 		return (false);
 
 	/* No boundary crossing. */
@@ -181,9 +177,7 @@ gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
 	bs = rounddown2(a->entry->start + a->uvas->format.boundary,
 	    a->uvas->format.boundary);
 	start = roundup2(bs, a->uvas->format.alignment);
-	/* GMEM_PAGE_SIZE to create gap after new entry. */
-	if (start + a->size + GMEM_PAGE_SIZE <= end &&
-	    start + a->size <= maxaddr &&
+	if (start + a->size <= end
 	    gmem_test_boundary(start, a->size, a->uvas->format.boundary)) {
 		a->entry->start = start;
 		return (true);
@@ -241,7 +235,7 @@ gmem_rb_ooo_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 		gmem_rb_match_insert(a);
 		return (0);
 	}
-	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2)
+	if (entry->free_down < a->size)
 		return (ENOMEM);
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
@@ -267,7 +261,7 @@ gmem_rb_first_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
 
 
-	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2 || entry->first >= maxaddr)
+	if (entry->free_down < a->size || entry->first >= maxaddr)
 		return (ENOMEM);
 	child = RB_LEFT(entry, rb_entry);
 	if (child != NULL && 0 == gmem_rb_first_fit(a, child))
@@ -296,7 +290,7 @@ gmem_rb_quick_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	struct gmem_uvas_entry *child;
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
 
-	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2 || entry->first >= maxaddr)
+	if (entry->free_down < a->size || entry->first >= maxaddr)
 		return (ENOMEM);
 
 	child = RB_LEFT(entry, rb_entry);
@@ -315,10 +309,10 @@ gmem_rb_quick_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	}
 
 	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && child->free_down >= a->size + GMEM_PAGE_SIZE * 2)
+	if (child != NULL && child->free_down >= a->size)
 		return gmem_rb_quick_fit(a, child);
 	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && child->free_down >= a->size + GMEM_PAGE_SIZE * 2)
+	if (child != NULL && child->free_down >= a->size)
 		return gmem_rb_quick_fit(a, child);
 	return (ENOMEM);
 }
