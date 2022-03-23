@@ -549,9 +549,11 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 	    domain, (uintmax_t)pflags));
 	KASSERT((flags & ~IOMMU_PGF_WAITOK) == 0, ("invalid flags %x", flags));
 
+	START_STATS;
 	DMAR_DOMAIN_PGLOCK(domain);
 	error = domain_map_buf_locked(domain, base, size, ma, pflags, flags);
 	DMAR_DOMAIN_PGUNLOCK(domain);
+    FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
 
@@ -693,9 +695,11 @@ domain_unmap_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 
 	domain = IODOM2DOM(iodom);
 
+	START_STATS;
 	DMAR_DOMAIN_PGLOCK(domain);
 	error = domain_unmap_buf_locked(domain, base, size, flags);
 	DMAR_DOMAIN_PGUNLOCK(domain);
+    FINISH_STATS(UNMAP, size >> 12);
 	return (error);
 }
 

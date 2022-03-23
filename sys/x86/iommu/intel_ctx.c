@@ -344,6 +344,7 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 	base = PCI_PPBMEMBASE(0, pci_read_config(root, PCIR_MEMBASE_1, 2));
 	limit = PCI_PPBMEMLIMIT(0, pci_read_config(root, PCIR_MEMLIMIT_1, 2));
 	error = iommu_gas_reserve_region_extend(iodom, base, limit + 1);
+	printf("[intel_ctx.c] reserve #347: %lx, %lx, %d\n", base, limit + 1, error);
 	if (bootverbose || error != 0)
 		device_printf(dev, "DMAR reserve [%#jx-%#jx] (error %d)\n",
 		    base, limit + 1, error);
@@ -367,6 +368,7 @@ dmar_reserve_pci_regions(struct dmar_domain *domain, device_t dev)
 		}
 		error = iommu_gas_reserve_region_extend(iodom, base,
 		    limit + 1);
+		printf("[intel_ctx.c] reserve #347: %lx, %lx, %d\n", base, limit + 1, error);
 		if (bootverbose || error != 0)
 			device_printf(dev, "DMAR reserve [%#jx-%#jx] "
 			    "(error %d)\n", base, limit + 1, error);
@@ -852,6 +854,7 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 	struct iommu_domain *domain;
 
 	domain = entry->domain;
+	START_STATS;
 	IOMMU_DOMAIN_LOCK(domain);
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
 		iommu_gas_free_region(domain, entry);
@@ -862,6 +865,7 @@ dmar_domain_free_entry(struct iommu_map_entry *entry, bool free)
 		iommu_gas_free_entry(domain, entry);
 	else
 		entry->flags = 0;
+	FINISH_STATS(VA_FREE, (entry->end - entry->start) >> 12);
 }
 
 void

@@ -593,6 +593,8 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		if (seg + 1 < tag->common.nsegments)
 			gas_flags |= IOMMU_MF_CANSPLIT;
 
+		// ORIGINAL BUG: The offset has already been rounded in size,
+		// Do not consider offset at all, it should just be 0.
 		error = iommu_map(domain, &tag->common, size, offset,
 		    IOMMU_MAP_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? IOMMU_MAP_ENTRY_WRITE : 0),

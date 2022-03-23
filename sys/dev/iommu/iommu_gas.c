@@ -405,6 +405,41 @@ iommu_gas_lowermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *ent
 }
 
 static int
+iommu_gas_lowermatch2(struct iommu_gas_match_args *a, struct iommu_map_entry *entry, int depth, int *maxdepth, int *call)
+{
+	struct iommu_map_entry *child;
+	iommu_gaddr_t maxaddr = a->common->lowaddr;
+
+	*call = *call + 1;
+	if (*maxdepth < depth)
+		*maxdepth = depth;
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && entry->end < maxaddr &&
+	    iommu_gas_match_one(a, entry->end, child->first,
+	    maxaddr)) {
+		iommu_gas_match_insert(a);
+		return (0);
+	}
+	if (entry->free_down < a->size + a->offset + IOMMU_PAGE_SIZE)
+		return (ENOMEM);
+	if (entry->first >= maxaddr)
+		return (ENOMEM);
+	child = RB_LEFT(entry, rb_entry);
+	if (child != NULL && 0 == iommu_gas_lowermatch2(a, child, depth + 1, maxdepth, call))
+		return (0);
+	if (child != NULL && child->last < maxaddr &&
+	    iommu_gas_match_one(a, child->last, entry->start,
+	    maxaddr)) {
+		iommu_gas_match_insert(a);
+		return (0);
+	}
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && 0 == iommu_gas_lowermatch2(a, child, depth + 1, maxdepth, call))
+		return (0);
+	return (ENOMEM);
+}
+
+static int
 iommu_gas_uppermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *entry)
 {
 	struct iommu_map_entry *child;
@@ -441,6 +476,7 @@ iommu_gas_find_space(struct iommu_domain *domain,
 {
 	struct iommu_gas_match_args a;
 	int error;
+	int maxdepth = 0, call = 0;
 
 	IOMMU_DOMAIN_ASSERT_LOCKED(domain);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", domain, entry));
@@ -454,9 +490,15 @@ iommu_gas_find_space(struct iommu_domain *domain,
 	a.entry = entry;
 
 	/* Handle lower region. */
+	START_STATS;
 	if (common->lowaddr > 0) {
-		error = iommu_gas_lowermatch(&a,
-		    RB_ROOT(&domain->rb_root));
+		if (instrument) {
+			error = iommu_gas_lowermatch2(&a, RB_ROOT(&domain->rb_root), 1, &maxdepth, &call);
+			LOGRB(call, maxdepth);
+		} else
+			error = iommu_gas_lowermatch(&a, RB_ROOT(&domain->rb_root));
+
+		FINISH_STATS(RB_LM, size >> 12);
 		if (error == 0)
 			return (0);
 		KASSERT(error == ENOMEM,
@@ -465,7 +507,9 @@ iommu_gas_find_space(struct iommu_domain *domain,
 	/* Handle upper region. */
 	if (common->highaddr >= domain->end)
 		return (ENOMEM);
+	RESET_STATS;
 	error = iommu_gas_uppermatch(&a, RB_ROOT(&domain->rb_root));
+	FINISH_STATS(RB_HM, size >> 12);
 	KASSERT(error == ENOMEM,
 	    ("error %d from iommu_gas_uppermatch", error));
 	return (error);
@@ -607,6 +651,8 @@ iommu_gas_map(struct iommu_domain *domain,
 	    (flags & IOMMU_MF_CANWAIT) != 0 ?  IOMMU_PGF_WAITOK : 0);
 	if (entry == NULL)
 		return (ENOMEM);
+
+	START_STATS;
 	IOMMU_DOMAIN_LOCK(domain);
 	error = iommu_gas_find_space(domain, common, size, offset, flags,
 	    entry);
@@ -625,6 +671,7 @@ iommu_gas_map(struct iommu_domain *domain,
 	    (uintmax_t)entry->end, (uintmax_t)domain->end));
 	entry->flags |= eflags;
 	IOMMU_DOMAIN_UNLOCK(domain);
+	FINISH_STATS(VA_ALLOC, size >> 12);
 
 	error = domain->ops->map(domain, entry->start,
 	    entry->end - entry->start, ma, eflags,
