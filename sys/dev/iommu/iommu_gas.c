@@ -403,41 +403,6 @@ iommu_gas_lowermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *ent
 }
 
 static int
-iommu_gas_lowermatch2(struct iommu_gas_match_args *a, struct iommu_map_entry *entry, int depth, int *maxdepth, int *call)
-{
-	struct iommu_map_entry *child;
-	iommu_gaddr_t maxaddr = a->common->lowaddr;
-
-	*call = *call + 1;
-	if (*maxdepth < depth)
-		*maxdepth = depth;
-	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && entry->end < maxaddr &&
-	    iommu_gas_match_one(a, entry->end, child->first,
-	    maxaddr)) {
-		iommu_gas_match_insert(a);
-		return (0);
-	}
-	if (entry->free_down < a->size + IOMMU_PAGE_SIZE * 2)
-		return (ENOMEM);
-	if (entry->first >= maxaddr)
-		return (ENOMEM);
-	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && 0 == iommu_gas_lowermatch2(a, child, depth + 1, maxdepth, call))
-		return (0);
-	if (child != NULL && child->last < maxaddr &&
-	    iommu_gas_match_one(a, child->last, entry->start,
-	    maxaddr)) {
-		iommu_gas_match_insert(a);
-		return (0);
-	}
-	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && 0 == iommu_gas_lowermatch2(a, child, depth + 1, maxdepth, call))
-		return (0);
-	return (ENOMEM);
-}
-
-static int
 iommu_gas_uppermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *entry)
 {
 	struct iommu_map_entry *child;
@@ -487,15 +452,8 @@ iommu_gas_find_space(struct iommu_domain *domain,
 	a.entry = entry;
 
 	/* Handle lower region. */
-	START_STATS;
 	if (common->lowaddr > 0) {
-		if (instrument) {
-			error = iommu_gas_lowermatch2(&a, RB_ROOT(&domain->rb_root), 1, &maxdepth, &call);
-			LOGRB(call, maxdepth);
-		} else
-			error = iommu_gas_lowermatch(&a, RB_ROOT(&domain->rb_root));
-
-		FINISH_STATS(RB_LM, size >> 12);
+		error = iommu_gas_lowermatch(&a, RB_ROOT(&domain->rb_root));
 		if (error == 0)
 			return (0);
 		KASSERT(error == ENOMEM,
@@ -504,9 +462,7 @@ iommu_gas_find_space(struct iommu_domain *domain,
 	/* Handle upper region. */
 	if (common->highaddr >= domain->end)
 		return (ENOMEM);
-	RESET_STATS;
 	error = iommu_gas_uppermatch(&a, RB_ROOT(&domain->rb_root));
-	FINISH_STATS(RB_HM, size >> 12);
 	KASSERT(error == ENOMEM,
 	    ("error %d from iommu_gas_uppermatch", error));
 	return (error);

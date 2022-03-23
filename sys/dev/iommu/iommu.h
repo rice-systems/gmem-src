@@ -227,9 +227,7 @@ SYSCTL_DECL(_hw_iommu);
 #define VA_ALLOC      2
 #define VA_FREE       3
 #define TLB_INV       4
-#define RB_LM         5
-#define RB_HM         6
-#define STAT_COUNT    7
+#define STAT_COUNT    5
 #define MAXPGCNT      512
 
 // indexed by buffer size / 4KB
@@ -256,14 +254,6 @@ extern struct hist instrument_hist[MAXPGCNT];
 			atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
 			atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
 		} \
-	} \
-
-extern uint64_t rb_calls, rb_cnts, rb_depth;
-#define LOGRB(x, y) \
-	if (instrument) { \
-		atomic_add_64(&rb_calls, x); \
-		atomic_add_64(&rb_depth, y); \
-		atomic_add_64(&rb_cnts, 1); \
 	} \
 
 #endif /* !_DEV_IOMMU_IOMMU_H_ */
