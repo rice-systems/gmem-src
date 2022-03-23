@@ -263,7 +263,6 @@ gmem_rb_find_space(struct gmem_uvas *uvas, vm_offset_t size, u_int flags, struct
 {
 	struct gmem_rb_match_args a;
 	int error = GMEM_OK;
-	int call = 0;
 
 	GMEM_UVAS_LOCK(uvas);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", uvas, entry));
