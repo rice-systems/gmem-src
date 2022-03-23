@@ -708,8 +708,6 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	for (i = 0; i < STAT_COUNT; i ++)
 		if (instrument_hist[1].count[i] == 0)
 			instrument_hist[1].count[i] = 1;
-	if (rb_cnts == 0)
-		rb_cnts = 1;
 
 	sbuf_printf(&sbuf, "MAP: %ld\n",
 		instrument_hist[1].latency[MAP] / instrument_hist[1].count[MAP]
