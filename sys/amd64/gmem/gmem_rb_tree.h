@@ -66,7 +66,6 @@ gmem_rb_insert(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *found;
 
-	uvas->rb_entries ++;
 	found = RB_INSERT(gmem_uvas_entries_tree,
 	    &uvas->rb_root, entry);
 	return (found == NULL);
@@ -75,8 +74,6 @@ gmem_rb_insert(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 static void
 gmem_rb_remove(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 {
-
-	uvas->rb_entries --;
 	RB_REMOVE(gmem_uvas_entries_tree, &uvas->rb_root, entry);
 }
 
@@ -147,8 +144,6 @@ gmem_rb_destroy(struct gmem_uvas *uvas)
 struct gmem_rb_match_args {
 	struct gmem_uvas *uvas;
 	vm_offset_t size;
-	int offset;
-	// const struct bus_dma_tag_common *common;
 	u_int gas_flags;
 	struct gmem_uvas_entry *entry;
 };
@@ -171,28 +166,25 @@ gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
 		return (false);
 
 	/* GMEM_PAGE_SIZE to create gap after new entry. */
-	if (a->entry->start < beg + GMEM_PAGE_SIZE ||
-	    a->entry->start + a->size + a->offset + GMEM_PAGE_SIZE > end)
+	if (a->entry->start + a->size + GMEM_PAGE_SIZE > end)
 		return (false);
 
 	/* No boundary crossing. */
-	if (gmem_test_boundary(a->entry->start + a->offset, a->size,
-	    a->uvas->format.boundary))
+	if (gmem_test_boundary(a->entry->start, a->size, a->uvas->format.boundary))
 		return (true);
 
 	/*
-	 * The start + offset to start + offset + size region crosses
+	 * The start to start + size region crosses
 	 * the boundary.  Check if there is enough space after the
 	 * next boundary after the beg.
 	 */
-	bs = rounddown2(a->entry->start + a->offset + a->uvas->format.boundary,
+	bs = rounddown2(a->entry->start + a->uvas->format.boundary,
 	    a->uvas->format.boundary);
 	start = roundup2(bs, a->uvas->format.alignment);
 	/* GMEM_PAGE_SIZE to create gap after new entry. */
-	if (start + a->offset + a->size + GMEM_PAGE_SIZE <= end &&
-	    start + a->offset + a->size <= maxaddr &&
-	    gmem_test_boundary(start + a->offset, a->size,
-	    a->uvas->format.boundary)) {
+	if (start + a->size + GMEM_PAGE_SIZE <= end &&
+	    start + a->size <= maxaddr &&
+	    gmem_test_boundary(start, a->size, a->uvas->format.boundary)) {
 		a->entry->start = start;
 		return (true);
 	}
@@ -247,7 +239,7 @@ gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 		gmem_rb_match_insert(a);
 		return (0);
 	}
-	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
+	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2)
 		return (ENOMEM);
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
@@ -266,6 +258,7 @@ gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	return (ENOMEM);
 }
 
+// TODO: Make it address-ordered.
 static int
 gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry, int *call)
 {
@@ -280,7 +273,7 @@ gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry,
 		gmem_rb_match_insert(a);
 		return (0);
 	}
-	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
+	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2 || entry->first >= maxaddr)
 		return (ENOMEM);
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
@@ -300,41 +293,8 @@ gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry,
 	return (ENOMEM);
 }
 
-// static int
-// gmem_uvas_uppermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
-// {
-// 	struct gmem_uvas_entry *child;
-
-// 	if (entry->free_down < a->size + a->offset + GMEM_PAGE_SIZE)
-// 		return (ENOMEM);
-// 	if (entry->last < a->common->highaddr)
-// 		return (ENOMEM);
-// 	child = RB_LEFT(entry, rb_entry);
-// 	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
-// 		return (0);
-// 	if (child != NULL && child->last >= a->common->highaddr &&
-// 	    gmem_rb_match_one(a, child->last, entry->start,
-// 	    a->uvas->end)) {
-// 		gmem_rb_match_insert(a);
-// 		return (0);
-// 	}
-// 	child = RB_RIGHT(entry, rb_entry);
-// 	if (child != NULL && entry->end >= a->common->highaddr &&
-// 	    gmem_rb_match_one(a, entry->end, child->first,
-// 	    a->uvas->end)) {
-// 		gmem_rb_match_insert(a);
-// 		return (0);
-// 	}
-// 	if (child != NULL && 0 == gmem_uvas_uppermatch(a, child))
-// 		return (0);
-// 	return (ENOMEM);
-// }
-
 static int
-gmem_rb_find_space(struct gmem_uvas *uvas,
-    // const struct bus_dma_tag_common *common, 
-    vm_offset_t size,
-    int offset, u_int flags, struct gmem_uvas_entry *entry)
+gmem_rb_find_space(struct gmem_uvas *uvas, vm_offset_t size, u_int flags, struct gmem_uvas_entry *entry)
 {
 	struct gmem_rb_match_args a;
 	int error = GMEM_OK;
@@ -346,8 +306,6 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 
 	a.uvas = uvas;
 	a.size = size;
-	a.offset = offset;
-	// a.common = common;
 	a.gas_flags = flags;
 	a.entry = entry;
 
@@ -356,7 +314,7 @@ gmem_rb_find_space(struct gmem_uvas *uvas,
 	// if (uvas->format.maxaddr > 0) {
 	if (instrument) {
 		error = gmem_rb_lowermatch2(&a, RB_ROOT(&uvas->rb_root), &call);
-		LOGRB(call, uvas->rb_entries);
+		LOGRB(call);
 	} else
 		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
 		

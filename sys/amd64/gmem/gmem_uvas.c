@@ -202,9 +202,8 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
-		// TODO: 
-		// offset makes no sense. Upgrade it to fit page alignment in the future
-		error = gmem_rb_find_space(uvas, size, 0, flags, entry);
+		// TODO: offset makes no sense. (Offset is effectively a bug.)
+		error = gmem_rb_find_space(uvas, size, flags, entry);
 		// printf("rb alloc: start %lx, size %lx\n", entry->start, size);
 		// printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
