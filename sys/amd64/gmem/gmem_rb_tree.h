@@ -177,7 +177,7 @@ gmem_rb_match_one(struct gmem_rb_match_args *a, vm_offset_t beg,
 	bs = rounddown2(a->entry->start + a->uvas->format.boundary,
 	    a->uvas->format.boundary);
 	start = roundup2(bs, a->uvas->format.alignment);
-	if (start + a->size <= end
+	if (start + a->size <= end &&
 	    gmem_test_boundary(start, a->size, a->uvas->format.boundary)) {
 		a->entry->start = start;
 		return (true);
