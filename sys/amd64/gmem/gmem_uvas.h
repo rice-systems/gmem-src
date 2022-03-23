@@ -61,11 +61,10 @@ extern struct hist instrument_hist[MAXPGCNT];
 		} \
 	} \
 
-extern uint64_t rb_calls, rb_cnts, rb_entries;
-#define LOGRB(x, y) \
+extern uint64_t rb_calls, rb_cnts;
+#define LOGRB(x) \
 	if (instrument) { \
 		atomic_add_64(&rb_calls, x); \
-		atomic_add_64(&rb_entries, y); \
 		atomic_add_64(&rb_cnts, 1); \
 	} \
 
