@@ -177,7 +177,7 @@ struct iommu_map_entry *iommu_map_alloc_entry(struct iommu_domain *iodom,
     u_int flags);
 void iommu_map_free_entry(struct iommu_domain *, struct iommu_map_entry *);
 int iommu_map(struct iommu_domain *iodom,
-    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+    const struct bus_dma_tag_common *common, iommu_gaddr_t size,
     u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res);
 int iommu_map_region(struct iommu_domain *domain,
     struct iommu_map_entry *entry, u_int eflags, u_int flags, vm_page_t *ma);
@@ -191,7 +191,7 @@ void iommu_gas_free_entry(struct iommu_domain *domain,
 void iommu_gas_free_space(struct iommu_domain *domain,
     struct iommu_map_entry *entry);
 int iommu_gas_map(struct iommu_domain *domain,
-    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+    const struct bus_dma_tag_common *common, iommu_gaddr_t size,
     u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res);
 void iommu_gas_free_region(struct iommu_domain *domain,
     struct iommu_map_entry *entry);

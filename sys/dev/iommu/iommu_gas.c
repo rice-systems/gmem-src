@@ -286,7 +286,6 @@ iommu_gas_fini_domain(struct iommu_domain *domain)
 struct iommu_gas_match_args {
 	struct iommu_domain *domain;
 	iommu_gaddr_t size;
-	int offset;
 	const struct bus_dma_tag_common *common;
 	u_int gas_flags;
 	struct iommu_map_entry *entry;
@@ -310,27 +309,26 @@ iommu_gas_match_one(struct iommu_gas_match_args *a, iommu_gaddr_t beg,
 		return (false);
 
 	/* IOMMU_PAGE_SIZE to create gap after new entry. */
-	if (a->entry->start < beg + IOMMU_PAGE_SIZE ||
-	    a->entry->start + a->size + a->offset + IOMMU_PAGE_SIZE > end)
+	if (a->entry->start + a->size + IOMMU_PAGE_SIZE > end)
 		return (false);
 
 	/* No boundary crossing. */
-	if (iommu_test_boundary(a->entry->start + a->offset, a->size,
+	if (iommu_test_boundary(a->entry->start, a->size,
 	    a->common->boundary))
 		return (true);
 
 	/*
-	 * The start + offset to start + offset + size region crosses
+	 * The start to start + size region crosses
 	 * the boundary.  Check if there is enough space after the
 	 * next boundary after the beg.
 	 */
-	bs = rounddown2(a->entry->start + a->offset + a->common->boundary,
+	bs = rounddown2(a->entry->start + a->common->boundary,
 	    a->common->boundary);
 	start = roundup2(bs, a->common->alignment);
 	/* IOMMU_PAGE_SIZE to create gap after new entry. */
-	if (start + a->offset + a->size + IOMMU_PAGE_SIZE <= end &&
-	    start + a->offset + a->size <= maxaddr &&
-	    iommu_test_boundary(start + a->offset, a->size,
+	if (start + a->size + IOMMU_PAGE_SIZE <= end &&
+	    start + a->size <= maxaddr &&
+	    iommu_test_boundary(start, a->size,
 	    a->common->boundary)) {
 		a->entry->start = start;
 		return (true);
@@ -385,7 +383,7 @@ iommu_gas_lowermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *ent
 		iommu_gas_match_insert(a);
 		return (0);
 	}
-	if (entry->free_down < a->size + a->offset + IOMMU_PAGE_SIZE)
+	if (entry->free_down < a->size + IOMMU_PAGE_SIZE * 2)
 		return (ENOMEM);
 	if (entry->first >= a->common->lowaddr)
 		return (ENOMEM);
@@ -420,7 +418,7 @@ iommu_gas_lowermatch2(struct iommu_gas_match_args *a, struct iommu_map_entry *en
 		iommu_gas_match_insert(a);
 		return (0);
 	}
-	if (entry->free_down < a->size + a->offset + IOMMU_PAGE_SIZE)
+	if (entry->free_down < a->size + IOMMU_PAGE_SIZE * 2)
 		return (ENOMEM);
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
@@ -444,7 +442,7 @@ iommu_gas_uppermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *ent
 {
 	struct iommu_map_entry *child;
 
-	if (entry->free_down < a->size + a->offset + IOMMU_PAGE_SIZE)
+	if (entry->free_down < a->size + IOMMU_PAGE_SIZE * 2)
 		return (ENOMEM);
 	if (entry->last < a->common->highaddr)
 		return (ENOMEM);
@@ -472,7 +470,7 @@ iommu_gas_uppermatch(struct iommu_gas_match_args *a, struct iommu_map_entry *ent
 static int
 iommu_gas_find_space(struct iommu_domain *domain,
     const struct bus_dma_tag_common *common, iommu_gaddr_t size,
-    int offset, u_int flags, struct iommu_map_entry *entry)
+    u_int flags, struct iommu_map_entry *entry)
 {
 	struct iommu_gas_match_args a;
 	int error;
@@ -484,7 +482,6 @@ iommu_gas_find_space(struct iommu_domain *domain,
 
 	a.domain = domain;
 	a.size = size;
-	a.offset = offset;
 	a.common = common;
 	a.gas_flags = flags;
 	a.entry = entry;
@@ -638,7 +635,7 @@ iommu_gas_free_region(struct iommu_domain *domain, struct iommu_map_entry *entry
 
 int
 iommu_gas_map(struct iommu_domain *domain,
-    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+    const struct bus_dma_tag_common *common, iommu_gaddr_t size,
     u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res)
 {
 	struct iommu_map_entry *entry;
@@ -654,7 +651,7 @@ iommu_gas_map(struct iommu_domain *domain,
 
 	START_STATS;
 	IOMMU_DOMAIN_LOCK(domain);
-	error = iommu_gas_find_space(domain, common, size, offset, flags,
+	error = iommu_gas_find_space(domain, common, size, flags,
 	    entry);
 	if (error == ENOMEM) {
 		IOMMU_DOMAIN_UNLOCK(domain);
@@ -827,12 +824,12 @@ iommu_map_free_entry(struct iommu_domain *domain, struct iommu_map_entry *entry)
 
 int
 iommu_map(struct iommu_domain *domain,
-    const struct bus_dma_tag_common *common, iommu_gaddr_t size, int offset,
+    const struct bus_dma_tag_common *common, iommu_gaddr_t size,
     u_int eflags, u_int flags, vm_page_t *ma, struct iommu_map_entry **res)
 {
 	int error;
 
-	error = iommu_gas_map(domain, common, size, offset, eflags, flags,
+	error = iommu_gas_map(domain, common, size, eflags, flags,
 	    ma, res);
 
 	return (error);
@@ -864,7 +861,7 @@ iommu_unmap_msi(struct iommu_ctx *ctx)
 }
 
 int
-iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size, int offset,
+iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size,
     u_int eflags, u_int flags, vm_page_t *ma)
 {
 	struct iommu_domain *domain;
@@ -880,7 +877,7 @@ iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size, int offset,
 	IOMMU_DOMAIN_UNLOCK(domain);
 
 	if (entry == NULL) {
-		error = iommu_gas_map(domain, &ctx->tag->common, size, offset,
+		error = iommu_gas_map(domain, &ctx->tag->common, size,
 		    eflags, flags, ma, &entry);
 		IOMMU_DOMAIN_LOCK(domain);
 		if (error == 0) {

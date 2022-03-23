@@ -40,7 +40,7 @@ struct iommu_domain;
 struct iommu_ctx;
 
 void iommu_translate_msi(struct iommu_domain *domain, uint64_t *addr);
-int iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size, int offset,
+int iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size,
     u_int eflags, u_int flags, vm_page_t *ma);
 void iommu_unmap_msi(struct iommu_ctx *ctx);
 
