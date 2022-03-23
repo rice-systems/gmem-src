@@ -58,20 +58,14 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	KASSERT((flags & ~(GMEM_WAITOK)) == 0,
 	    ("unsupported flags %x", flags));
 
-	// printf("Trying to allocate\n");
-	// PRINTINFO;
-	// printf("Allowed to sleep? %d\n", flags);
 	res = uma_zalloc(gmem_uvas_entry_zone, ((flags & GMEM_WAITOK) !=
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
-		// printf("allocated succeeded\n");
 		res->uvas = uvas;
 		atomic_add_int(&uvas->entries_cnt, 1);
-		// printf("done\n");
 	}
 	else
 		printf("gmem_uvas_alloc_entry NOMEM\n");
-	// PRINTINFO;
 	return (res);
 }
 
@@ -96,7 +90,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 	dev_pmap_t *pmap_to_share, void *dev_data, bool replicate, bool need_lookup,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
-	PRINTINFO;
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL)
 	{
@@ -158,7 +151,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// attach dev and pmap to the uvas
 		panic("Attaching to a uvas is not implemented");
 	}
-	PRINTINFO;
 	return GMEM_OK;
 }
 
@@ -191,10 +183,8 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
-	PRINTINFO;
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
-	// printf("gmem_uvas_alloc_entry \n");
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
 
@@ -204,8 +194,6 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// use rb-tree allocator
 		// TODO: offset makes no sense. (Offset is effectively a bug.)
 		error = gmem_rb_find_space(uvas, size, flags, entry);
-		// printf("rb alloc: start %lx, size %lx\n", entry->start, size);
-		// printf("gmem_uvas_find_space \n");
 		if (error == GMEM_ENOMEM) {
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
@@ -213,7 +201,6 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 		// [TODO]
 		// entry->flags |= eflags;
 		*start = entry->start;
-		debug_printf("uvas %p, start %lx, end %lx \n", uvas, *start, *start + size);
 	}
 	else if (uvas->allocator == VMEM)
 	{
@@ -240,7 +227,6 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
-	PRINTINFO;
 	if (start >= end) {
 		printf("Trying to allocate an invalid va span, start %lx end %lx\n", start, end);
 		return GMEM_EINVALIDARGS;
@@ -260,13 +246,11 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
 		}
-		debug_printf("uvas %p, start %lx, end %lx \n", uvas, start, end);
 	}
 	else if (uvas->allocator == VMEM)
 	{
 		vm_offset_t new_start;
 		// use vmem allocator
-		debug_printf("VMEM xalloc with start %lx, end %lx\n", start, end);
 		error = 0;
 		error = vmem_xalloc(uvas->arena, end - start, 0, 0, 0, start, end, 
 			M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ? M_WAITOK : M_NOWAIT), &new_start);
@@ -290,8 +274,6 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, gmem_uvas_entry_t *entry)
 {
-	PRINTINFO;
-	debug_printf("start %lx, end %lx \n", start, start + size);
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
 		panic("[gmem panic] uvas is null\n");
@@ -301,7 +283,6 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
     START_STATS;
 	if (uvas->allocator == RBTREE) {
 		// use rb-tree allocator
-		// printf("rb free: start %lx, size %lx\n", entry->start, size);
 		GMEM_UVAS_LOCK(uvas);
 		if (entry != NULL) {
 			gmem_rb_remove(uvas, entry);
@@ -311,8 +292,6 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			span.start = start;
 			span.end = start + size;
 			// TODO: use gmem_rb_free_span as a general operation.
-			// gmem_rb_remove(uvas, entry);
-			// gmem_uvas_free_entry(uvas, entry);
 			gmem_rb_free_span(uvas, &span);
 		}
 		GMEM_UVAS_UNLOCK(uvas);
@@ -324,12 +303,8 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			// TODO: remove this code and panic.
 			// We should explode here, because the iommu rb-allocator is not going to allocate the
 			// same address as what vmem allocated.
-			// printf("start %lx\n", start);
-			// printf("size %lx\n", size);
-			// printf("arena %p\n", uvas->arena);
-
-			vmem_free(uvas->arena, start, size);
-			// printf("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
+			// vmem_free(uvas->arena, start, size);
+			panic("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
 	FINISH_STATS(VA_FREE, size >> 12);

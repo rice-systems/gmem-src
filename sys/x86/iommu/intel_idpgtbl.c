@@ -443,7 +443,6 @@ domain_map_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 	flags |= IOMMU_PGF_OBJL;
 	TD_PREP_PINNED_ASSERT;
 
-	PRINTINFO;
 	for (sf = NULL, pi = 0; size > 0; base += pg_sz, size -= pg_sz,
 	    pi += run_sz) {
 		for (lvl = 0, c = 0, superpage = false;; lvl++) {
@@ -482,7 +481,6 @@ domain_map_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 		    ("mapping loop overflow %p %jx %jx %jx", domain,
 		    (uintmax_t)base, (uintmax_t)size, (uintmax_t)pg_sz));
 		KASSERT(pg_sz > 0, ("pg_sz 0 lvl %d", lvl));
-		PRINTINFO;
 		pte = domain_pgtbl_map_pte(domain, base, lvl, flags, &idx, &sf);
 		if (pte == NULL) {
 			KASSERT((flags & IOMMU_PGF_WAITOK) == 0,
@@ -498,7 +496,6 @@ domain_map_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 		    (superpage ? DMAR_PTE_SP : 0));
 		dmar_flush_pte_to_ram(domain->dmar, pte);
 		sf_buf_page(sf)->ref_count += 1;
-		PRINTINFO;
 	}
 	if (sf != NULL)
 		dmar_unmap_pgtbl(sf);
@@ -559,14 +556,12 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 
 	START_STATS;
 	DMAR_DOMAIN_PGLOCK(domain);
-	PRINTINFO;
 	error = domain_map_buf_locked(domain, base, size, ma, pflags, flags);
 	DMAR_DOMAIN_PGUNLOCK(domain);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
 
-	PRINTINFO;
 	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
 		domain_flush_iotlb_sync(domain, base, size);
 	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
@@ -575,7 +570,6 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 		dmar_flush_write_bufs(unit);
 		DMAR_UNLOCK(unit);
 	}
-	PRINTINFO;
 	return (0);
 }
 

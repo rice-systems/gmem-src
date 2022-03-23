@@ -227,7 +227,7 @@ gmem_rb_match_insert(struct gmem_rb_match_args *a)
 }
 
 static int
-gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
+gmem_rb_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
@@ -244,7 +244,7 @@ gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
 	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_lowermatch(a, child))
+	if (child != NULL && 0 == gmem_rb_search(a, child))
 		return (0);
 	if (child != NULL && child->last < maxaddr &&
 	    gmem_rb_match_one(a, child->last, entry->start,
@@ -253,43 +253,8 @@ gmem_rb_lowermatch(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 		return (0);
 	}
 	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_lowermatch(a, child))
+	if (child != NULL && 0 == gmem_rb_search(a, child))
 		return (0);
-	return (ENOMEM);
-}
-
-// TODO: Make it address-ordered.
-static int
-gmem_rb_lowermatch2(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry, int *call)
-{
-	struct gmem_uvas_entry *child;
-	vm_offset_t maxaddr = a->uvas->format.maxaddr;
-
-	*call = *call + 1;
-	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && entry->end < maxaddr &&
-	    gmem_rb_match_one(a, entry->end, child->first,
-	    maxaddr)) {
-		gmem_rb_match_insert(a);
-		return (0);
-	}
-	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2 || entry->first >= maxaddr)
-		return (ENOMEM);
-	if (entry->first >= maxaddr)
-		return (ENOMEM);
-	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_lowermatch2(a, child, call))
-		return (0);
-	if (child != NULL && child->last < maxaddr &&
-	    gmem_rb_match_one(a, child->last, entry->start,
-	    maxaddr)) {
-		gmem_rb_match_insert(a);
-		return (0);
-	}
-	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_lowermatch2(a, child, call))
-		return (0);
-	if (*call == 0) panic("fuck?");
 	return (ENOMEM);
 }
 
@@ -309,32 +274,10 @@ gmem_rb_find_space(struct gmem_uvas *uvas, vm_offset_t size, u_int flags, struct
 	a.gas_flags = flags;
 	a.entry = entry;
 
-	/* Handle lower region. */
-	START_STATS;
-	// if (uvas->format.maxaddr > 0) {
-	if (instrument) {
-		error = gmem_rb_lowermatch2(&a, RB_ROOT(&uvas->rb_root), &call);
-		LOGRB(call);
-	} else
-		error = gmem_rb_lowermatch(&a, RB_ROOT(&uvas->rb_root));
-		
-		// printf("lowermatch %d\n", call);
-		// if (error == 0)
-		// 	return (0);
-		KASSERT(error == ENOMEM,
-		    ("error %d from gmem_rb_lowermatch", error));
-	// }
-	FINISH_STATS(RB_LM, size >> 12);
-
-	/* Handle upper region. */
-	// if (common->highaddr >= uvas->end)
-	// 	return (ENOMEM);
-	// error = gmem_uvas_uppermatch(&a, RB_ROOT(&uvas->rb_root));
+	error = gmem_rb_search(&a, RB_ROOT(&uvas->rb_root));
+	
 	KASSERT(error == ENOMEM,
-	    ("error %d from gmem_uvas_uppermatch", error));
-	// if (error != 0)
-	// 	printf("gmem rb-allocator failed to find a space to insert, start : %lx, end : %lx, size: %lx\n",
-	// 		entry->start, entry->end, size);
+	    ("error %d from gmem_rb_search", error));
 	GMEM_UVAS_UNLOCK(uvas);
 	return (error);
 }
@@ -499,56 +442,5 @@ gmem_rb_reserve_region(struct gmem_uvas *uvas,
 		entry->flags |= GMEM_UVAS_ENTRY_UNMAPPED;
 	return (error);
 }
-
-/*
- * As in iommu_gas_reserve_region, reserve [start, end), but allow for existing
- * entries.
- */
-// TBH, I don't think we need this function. Directly use alloc_span_fixed should be good.
-// int
-// iommu_gas_reserve_region_extend(struct iommu_domain *domain,
-//     iommu_gaddr_t start, iommu_gaddr_t end)
-// {
-// 	struct iommu_map_entry *entry, *next, *prev, key = {};
-// 	iommu_gaddr_t entry_start, entry_end;
-// 	int error;
-
-// 	error = 0;
-// 	entry = NULL;
-// 	end = ummin(end, domain->end);
-// 	while (start < end) {
-// 		/* Preallocate an entry. */
-// 		if (entry == NULL)
-// 			entry = iommu_gas_alloc_entry(domain,
-// 			    IOMMU_PGF_WAITOK);
-// 		/* Calculate the free region from here to the next entry. */
-// 		key.start = key.end = start;
-// 		IOMMU_DOMAIN_LOCK(domain);
-// 		next = RB_NFIND(iommu_gas_entries_tree, &domain->rb_root, &key);
-// 		KASSERT(next != NULL, ("domain %p with end %#jx has no entry "
-// 		    "after %#jx", domain, (uintmax_t)domain->end,
-// 		    (uintmax_t)start));
-// 		entry_end = ummin(end, next->start);
-// 		prev = RB_PREV(iommu_gas_entries_tree, &domain->rb_root, next);
-// 		if (prev != NULL)
-// 			entry_start = ummax(start, prev->end);
-// 		else
-// 			entry_start = start;
-// 		start = next->end;
-// 		/* Reserve the region if non-empty. */
-// 		if (entry_start != entry_end) {
-// 			error = iommu_gas_reserve_region_locked(domain,
-// 			    entry_start, entry_end, entry);
-// 			if (error != 0)
-// 				break;
-// 			entry = NULL;
-// 		}
-// 		IOMMU_DOMAIN_UNLOCK(domain);
-// 	}
-// 	/* Release a preallocated entry if it was not used. */
-// 	if (entry != NULL)
-// 		iommu_gas_free_entry(domain, entry);
-// 	return (error);
-// }
 
 #endif
