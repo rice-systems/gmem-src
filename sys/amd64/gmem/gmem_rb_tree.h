@@ -226,8 +226,10 @@ gmem_rb_match_insert(struct gmem_rb_match_args *a)
 	a->entry->flags = GMEM_UVAS_ENTRY_MAP;
 }
 
+// This is the original IOMMU search function (lowermatch) which makes on sense.
+// It allocates addresses in a BS order.
 static int
-gmem_rb_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
+gmem_rb_ooo_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
 	vm_offset_t maxaddr = a->uvas->format.maxaddr;
@@ -244,7 +246,7 @@ gmem_rb_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	if (entry->first >= maxaddr)
 		return (ENOMEM);
 	child = RB_LEFT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_search(a, child))
+	if (child != NULL && 0 == gmem_rb_ooo_search(a, child))
 		return (0);
 	if (child != NULL && child->last < maxaddr &&
 	    gmem_rb_match_one(a, child->last, entry->start,
@@ -253,7 +255,37 @@ gmem_rb_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 		return (0);
 	}
 	child = RB_RIGHT(entry, rb_entry);
-	if (child != NULL && 0 == gmem_rb_search(a, child))
+	if (child != NULL && 0 == gmem_rb_ooo_search(a, child))
+		return (0);
+	return (ENOMEM);
+}
+
+static int
+gmem_rb_first_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
+{
+	struct gmem_uvas_entry *child;
+	vm_offset_t maxaddr = a->uvas->format.maxaddr;
+
+
+	if (entry->free_down < a->size + GMEM_PAGE_SIZE * 2 || entry->first >= maxaddr)
+		return (ENOMEM);
+	child = RB_LEFT(entry, rb_entry);
+	if (child != NULL && 0 == gmem_rb_first_fit(a, child))
+		return (0);
+	if (child != NULL && child->last < maxaddr &&
+	    gmem_rb_match_one(a, child->last, entry->start,
+	    maxaddr)) {
+		gmem_rb_match_insert(a);
+		return (0);
+	}
+	child = RB_RIGHT(entry, rb_entry);
+	if (child != NULL && entry->end < maxaddr &&
+	    gmem_rb_match_one(a, entry->end, child->first,
+	    maxaddr)) {
+		gmem_rb_match_insert(a);
+		return (0);
+	}
+	if (child != NULL && 0 == gmem_rb_first_fit(a, child))
 		return (0);
 	return (ENOMEM);
 }
@@ -273,7 +305,9 @@ gmem_rb_find_space(struct gmem_uvas *uvas, vm_offset_t size, u_int flags, struct
 	a.gas_flags = flags;
 	a.entry = entry;
 
-	error = gmem_rb_search(&a, RB_ROOT(&uvas->rb_root));
+	// When comparing GMEM, we probably need the gmem_rb_ooo_search.
+	// error = gmem_rb_ooo_search(&a, RB_ROOT(&uvas->rb_root));
+	error = gmem_rb_first_fit(&a, RB_ROOT(&uvas->rb_root));
 	
 	KASSERT(error == ENOMEM,
 	    ("error %d from gmem_rb_search", error));
