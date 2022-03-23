@@ -439,7 +439,6 @@ iommu_gas_find_space(struct iommu_domain *domain,
 {
 	struct iommu_gas_match_args a;
 	int error;
-	int maxdepth = 0, call = 0;
 
 	IOMMU_DOMAIN_ASSERT_LOCKED(domain);
 	KASSERT(entry->flags == 0, ("dirty entry %p %p", domain, entry));
