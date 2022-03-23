@@ -292,7 +292,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 		gstart = entry->start;
 		gend = entry->end;
 		error1 = gmem_iommu_map(&domain->iodom, domain->iodom.uvas, NULL, &gstart, gend - gstart, 
-			0, GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
+			GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 
 		// error1 = iommu_gas_map_region(DOM2IODOM(domain), entry,
