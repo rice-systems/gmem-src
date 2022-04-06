@@ -454,6 +454,7 @@ domain_map_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 			 * Check if the current base suitable for the
 			 * superpage mapping.  First, verify the level.
 			 */
+			// Apparently 2MB superpage level is never checked.
 			if (!domain_is_sp_lvl(domain, lvl))
 				continue;
 			/*
@@ -556,7 +557,7 @@ domain_map_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
 
 	START_STATS;
 	DMAR_DOMAIN_PGLOCK(domain);
-	error = domain_map_buf_locked(domain, base, size, ma, pflags, flags);
+	// error = domain_map_buf_locked(domain, base, size, ma, pflags, flags);
 	DMAR_DOMAIN_PGUNLOCK(domain);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)

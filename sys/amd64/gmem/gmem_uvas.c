@@ -80,18 +80,19 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
-// Three modes to use uvas:
+// Four modes to use uvas:
 // 	1. private: pmap is NULL && replicate == false
 //  2. shared: uvas and pmap are both not NULL, replicate == false
 //  3. replicate: uvas and pmap are both not NULL, replicate == true
+//  4. unique: the device is an edge device and the uvas has a single pmap
 //     TODO: change this mode to share CPU vma, consider the opencl case.
 //  lookup: faultable device requires looking up uvas entries 
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
-	dev_pmap_t *pmap_to_share, void *dev_data, bool replicate, bool need_lookup,
+	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
-	if (*uvas_res == NULL)
+	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
 	{
 		KASSERT(pmap_to_share == NULL, "Creating a uvas with non-null pmap");
 		KASSERT(dev_data == NULL, "Creating a uvas with non-null dev-specific data");
@@ -114,7 +115,8 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
 		// TODO: remove this. Do not couple dev_data with uvas.
-		uvas->dev_data = dev_data;
+		// uvas->dev_data = dev_data;
+		pmap->dev_data = dev_data;
 
 		// initialize uvas
 		TAILQ_INIT(&uvas->uvas_entry_header);
@@ -131,25 +133,21 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		uvas->format.boundary = boundary;
 		uvas->format.maxaddr = size;
 
-		if (need_lookup)
-		{
-			uvas->allocator = RBTREE;
-			// TODO: RB-TREE
-			gmem_rb_init(uvas);
-		}
-		else
-		{
-			uvas->allocator = VMEM;
-			// Currently we use no quantum cache
-			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), alignment, 0, M_WAITOK);
-		}
+		// Edge device does not need to perform page faults
+		// uvas->allocator = RBTREE;
+		// // TODO: RB-TREE
+		// gmem_rb_init(uvas);
+		uvas->allocator = VMEM;
+		// Currently we use no quantum cache
+		uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), alignment, 0, M_WAITOK);
+
 		*uvas_res = uvas;
 		*pmap_res = pmap;
 	}
 	else
 	{
 		// attach dev and pmap to the uvas
-		panic("Attaching to a uvas is not implemented");
+		panic("Other UVAS modes are not implemented");
 	}
 	return GMEM_OK;
 }
@@ -312,19 +310,27 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 }
 
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t first_page)
+	vm_size_t size, vm_page_t first_page, vm_prot_t prot, u_int8_t mem_flags)
 {
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
 
 	return GMEM_OK;
 }
 
+// Map a list of scattered 4KB pages
+// protection flags are required since a RO mapping can still be created with write permission
+// memory flags are required because the device may ask the kernel to manage its physical memory
+// mapping requires allocating physical pages.
 gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t *pages)
+	vm_size_t size, vm_page_t *pages, vm_prot_t prot, u_int mem_flags)
 {
+	int i;
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
 
-
+	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
+		pmap->mmu_ops->mmu_pmap_enter(pmap, start + size * i, GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[i]),
+			prot, mem_flags);
+	}
 	return GMEM_OK;
 }
 

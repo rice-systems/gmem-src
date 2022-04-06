@@ -37,6 +37,7 @@ struct gmem_dev
 	TAILQ_ENTRY(gmem_dev) gmem_dev_list;
 
 	// gmem_vma_format_t vma_format;
+	void *dev_data;
 };
 
 // global list (hashmap) of gmem devices 

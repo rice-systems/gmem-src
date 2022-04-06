@@ -106,9 +106,13 @@ gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap,
     // The uvas may allow a single pmap, multiple pmaps sharing the same, pmaps holding exclusive mappings
     // right now only consider the single pmap case.
     // TODO: use pmap->mmu_ops
-    error = domain->ops->map(domain, entry->start,
-        entry->end - entry->start, ma, eflags,
-        ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_WAITOK : 0));
+
+    error = gmem_uvas_map_pages_sg(pmap, entry->start,
+        entry->end - entry->start, ma, eflags, ((flags & IOMMU_MF_CANWAIT) != 0 ? IOMMU_PGF_WAITOK : 0));
+
+    // error = domain->ops->map(domain, entry->start,
+    //     entry->end - entry->start, ma, eflags,
+    //     ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_WAITOK : 0));
 
     if (error == ENOMEM) {
         // There is no need to call iotlb inv

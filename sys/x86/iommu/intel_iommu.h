@@ -18,6 +18,7 @@ struct intel_iommu_dev_data
 	struct dmar_domain *domain;
 };
 
+// This is a redundant data structure.
 struct intel_iommu_pgtable
 {
 	// some junk from dmar_domain, delete all the followings in the future

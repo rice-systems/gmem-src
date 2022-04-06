@@ -76,6 +76,13 @@ extern struct hist instrument_hist[MAXPGCNT];
 #define GMEM_UVA_ALLOC            0x0000
 #define GMEM_UVA_ALLOC_FIXED      0x0008
 
+/* UVAS MODE */
+#define GMEM_UVAS_UNIQUE     0x0
+#define GMEM_UVAS_GLOBAL     0x1
+#define GMEM_UVAS_REPLICATED 0x2
+#define GMEM_UVAS_EXCLUSIVE  0x3
+
+
 
 #define	GMEM_UVAS_ENTRY_PLACE	0x0001	/* Fake entry */
 #define	GMEM_UVAS_ENTRY_RMRR	0x0002	/* Permanent, not linked by
@@ -175,7 +182,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 	// TODO: remove this. use what you have in pmap.
 	// Otherwise we are coupling the uvas with a specific device.
-	void *dev_data;
+	// void *dev_data;
 };
 
 // TODO: delete the following shit.
@@ -277,13 +284,13 @@ struct dev_pmap
 struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags);
 void gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry);
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
-	dev_pmap_t *pmap_to_share, void *dev_data, bool replicate, bool need_lookup,
+	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size);
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t first_page);
+	vm_size_t size, vm_page_t first_page, vm_prot_t prot, u_int mem_flags);
 gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t *pages);
+	vm_size_t size, vm_page_t *pages, vm_prot_t prot, u_int mem_flags);
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, void (* unmap_callback(void *)),
 	void *callback_args);

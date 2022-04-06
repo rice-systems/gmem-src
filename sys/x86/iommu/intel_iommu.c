@@ -65,7 +65,7 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 
 	pgtable = pmap->data;
 	// TODO: equivalent semantic conversion first
-	pgtable->pglvl = 4;
+	// pgtable->pglvl = 4;
 	pgtable->id_mapped = ((intel_iommu_dev_data_t *) dev_data)->id_mapped;
 	pgtable->dmar = ((intel_iommu_dev_data_t *) dev_data)->dmar;
 	pgtable->domain = ((intel_iommu_dev_data_t *) dev_data)->domain;
@@ -135,9 +135,42 @@ static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
 	return GMEM_OK;
 }
 
-static gmem_error_t intel_iommu_pmap_enter(vm_offset_t va, vm_size_t size, 
-	vm_paddr_t pa, vm_prot_t protection)
+static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
+	vm_paddr_t pa, vm_prot_t prot, u_int mem_flags)
 {
+
+	struct dmar_domain *domain;
+	struct dmar_unit *unit;
+	uint64_t pflags;
+	int error;
+
+	pflags = ((prot & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_TM) != 0 ? DMAR_PTE_TM : 0);
+
+	intel_iommu_pgtable_t *pgtable = pmap->data;
+	domain = pgtable->domain;
+	unit = domain->dmar;
+
+
+	START_STATS;
+	DMAR_DOMAIN_PGLOCK(domain);
+	error = domain_map_buf_locked(domain, base, size, ma, pflags, flags);
+	DMAR_DOMAIN_PGUNLOCK(domain);
+    FINISH_STATS(MAP, size >> 12);
+	if (error != 0)
+		return (error);
+
+	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
+		domain_flush_iotlb_sync(domain, base, size);
+	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
+		/* See 11.1 Write Buffer Flushing. */
+		DMAR_LOCK(unit);
+		dmar_flush_write_bufs(unit);
+		DMAR_UNLOCK(unit);
+	}
+
 	return GMEM_OK;
 }
 
