@@ -196,6 +196,7 @@ domain_is_sp_lvl(struct dmar_domain *domain, int lvl)
 {
 	int alvl, cap_sps;
 	static const int sagaw_sp[] = {
+		0, // 4KB should always return false; This is missing in the driver so that 2MB sp is never checked.
 		DMAR_CAP_SPS_2M,
 		DMAR_CAP_SPS_1G,
 		DMAR_CAP_SPS_512G,
