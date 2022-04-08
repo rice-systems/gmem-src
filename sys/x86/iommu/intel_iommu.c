@@ -59,16 +59,10 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	intel_iommu_pgtable_t *pgtable;
 
 	KASSERT(pmap->data == NULL, "creating a pmap over existing page table");
-	pmap->data = malloc(sizeof(intel_iommu_pgtable_t), M_DEVBUF, M_WAITOK | M_ZERO);
+	pmap->data = dev_data;
 
 
 	pgtable = pmap->data;
-	// TODO: equivalent semantic conversion first
-	// pgtable->pglvl = 4;
-	pgtable->id_mapped = ((intel_iommu_dev_data_t *) dev_data)->id_mapped;
-	pgtable->dmar = ((intel_iommu_dev_data_t *) dev_data)->dmar;
-	pgtable->domain = ((intel_iommu_dev_data_t *) dev_data)->domain;
-
 	if (pgtable->id_mapped) {
 		if ((pgtable->dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
 			pgtable->domain->pgtbl_obj = domain_get_idmap_pgtbl(pgtable->domain,

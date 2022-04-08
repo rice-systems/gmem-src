@@ -587,8 +587,8 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		// TODO: put uvas under ctx instead of domain
 		// ultimately, ctx corresponds to mm_struct
 		if (domain1 != NULL) {
-			intel_iommu_dev_data_t *dev_data;
-			dev_data = malloc(sizeof(intel_iommu_dev_data_t), M_DMAR_CTX, M_WAITOK | M_ZERO);
+			intel_iommu_pgtable_t *dev_data;
+			dev_data = malloc(sizeof(intel_iommu_pgtable_t), M_DMAR_CTX, M_WAITOK | M_ZERO);
 			dev_data->dmar = dmar;
 			dev_data->domain = domain1;
 			dev_data->id_mapped = id_mapped;
@@ -929,9 +929,9 @@ dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free)
 // TODO: let gmem perform unload, extract all data from pmap not from uvas.
 // This is just an iommu-specific unload.
 void
-dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
+dmar_domain_unload_entry(struct iommu_domain *iodom, struct gmem_uvas_entry *entry, bool free)
 {
-	struct dmar_domain *domain;
+	struct dmar_domain *domain = IODOM2DOM(iodom);
 	struct dmar_unit *unit;
 
 	intel_iommu_dev_data_t *dev_data = (intel_iommu_dev_data_t *) entry->uvas->dev_data;
@@ -1048,10 +1048,10 @@ iommu_free_ctx(struct iommu_ctx *context)
 }
 
 void
-iommu_domain_unload_entry(struct gmem_uvas_entry *entry, bool free)
+iommu_domain_unload_entry(struct iommu_domain *domain, struct gmem_uvas_entry *entry, bool free)
 {
 
-	dmar_domain_unload_entry(entry, free);
+	dmar_domain_unload_entry(domain, entry, free);
 }
 
 void

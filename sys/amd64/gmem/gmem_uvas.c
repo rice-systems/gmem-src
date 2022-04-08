@@ -114,10 +114,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
-		// TODO: remove this. Do not couple dev_data with uvas.
-		// uvas->dev_data = dev_data;
-		pmap->dev_data = dev_data;
-
 		// initialize uvas
 		TAILQ_INIT(&uvas->uvas_entry_header);
 		TAILQ_INIT(&uvas->dev_pmap_header);
@@ -314,6 +310,10 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 {
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
 
+	if (size & PAGE_MASK)
+		return GMEM_EINVALIDARGS;
+	pmap->mmu_ops->mmu_pmap_enter(pmap, start, size, VM_PAGE_TO_PHYS(first_page),
+		prot, mem_flags);
 	return GMEM_OK;
 }
 

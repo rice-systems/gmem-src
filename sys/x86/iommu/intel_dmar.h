@@ -282,7 +282,7 @@ int dmar_move_ctx_to_domain(struct dmar_domain *domain, struct dmar_ctx *ctx);
 void dmar_free_ctx_locked(struct dmar_unit *dmar, struct dmar_ctx *ctx);
 void dmar_free_ctx(struct dmar_ctx *ctx);
 struct dmar_ctx *dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid);
-void dmar_domain_unload_entry(struct gmem_uvas_entry *entry, bool free);
+void dmar_domain_unload_entry(struct iommu_domain *domain, struct gmem_uvas_entry *entry, bool free);
 void dmar_domain_unload(struct dmar_domain *domain,
     struct gmem_uvas_entries_tailq *entries, bool cansleep);
 void dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free);

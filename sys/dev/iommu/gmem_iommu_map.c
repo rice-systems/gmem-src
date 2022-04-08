@@ -102,30 +102,22 @@ gmem_iommu_map(struct iommu_domain *domain, vm_offset_t *start, vm_offset_t size
             flags, &entry);
     }
 
-    KASSERT(error == GMEM_OK,
-        ("unexpected error %d from gmem_uvas_alloc_span", error));
+    // Failed to allocate VA space
+    if (error)
+        return error;
 
-    // The uvas may allow a single pmap, multiple pmaps sharing the same, pmaps holding exclusive mappings
-    // right now only consider the single pmap case.
-    // TODO: use pmap->mmu_ops
-
+    // Who should consider multiple pmaps cases?
     error = gmem_uvas_map_pages_sg(pmap, entry->start,
         entry->end - entry->start, ma, eflags, ((flags & IOMMU_MF_CANWAIT) != 0 ? IOMMU_PGF_WAITOK : 0));
 
-    // error = domain->ops->map(domain, entry->start,
-    //     entry->end - entry->start, ma, eflags,
-    //     ((flags & GMEM_MF_CANWAIT) != 0 ?  GMEM_WAITOK : 0));
-
-    if (error == ENOMEM) {
+    if (error) {
         // There is no need to call iotlb inv
         // TODO: we always free the entry when we add back this iotlb inv in the future
         // TODO: replace with unload_entry, as the map function could fail in the middle.
-        // iommu_domain_unload_entry(entry, true);
+        // iommu_domain_unload_entry(domain, entry, true);
         gmem_uvas_free_span(uvas, *start, size, entry);
         return (error);
     }
-    KASSERT(error == 0,
-        ("unexpected error %d from domain_map_buf", error));
 
     if (entry_ret != NULL)
         *entry_ret = entry;
