@@ -124,7 +124,7 @@ struct gmem_mmu_ops
 	// any throughput devices at this moment
 	// We also do not include async version for map, as it will not be used
 	gmem_error_t (*mmu_pmap_enter)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
-		vm_paddr_t pa, vm_prot_t prot, u_int mem_flags);
+		vm_paddr_t pa, u_int prot, u_int mem_flags);
 	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
 	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
 		vm_prot_t new_prot);

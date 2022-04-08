@@ -85,7 +85,7 @@ static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
 }
 
 static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
-	vm_paddr_t pa, vm_prot_t prot, u_int mem_flags)
+	vm_paddr_t pa, u_int prot, u_int mem_flags)
 {
 
 	struct dmar_domain *domain;
