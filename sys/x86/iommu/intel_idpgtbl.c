@@ -528,15 +528,15 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
-	int pglvl = 0;
+	// int pglvl = 0;
 
-	if (x86_translate(domain, base, &pglvl) != pa) {
-		printf("mapping verification failed, va 0x%lx, translate 0x%lx, paddr 0x%lx\n",
-			base, x86_translate(domain, base, &pglvl), pa);
-		return 1;
-	}
-	printf("[iommu] mapping root %lx, va %lx, size %lx, pa %lx, lvl %d, pflags %lx\n", 
-		VM_PAGE_TO_PHYS(domain->pglv0), base, size, pa, pglvl, pflags);
+	// if (x86_translate(domain, base, &pglvl) != pa) {
+	// 	printf("mapping verification failed, va 0x%lx, translate 0x%lx, paddr 0x%lx\n",
+	// 		base, x86_translate(domain, base, &pglvl), pa);
+	// 	return 1;
+	// }
+	// printf("[iommu] mapping root %lx, va %lx, size %lx, pa %lx, lvl %d, pflags %lx\n", 
+	// 	VM_PAGE_TO_PHYS(domain->pglv0), base, size, pa, pglvl, pflags);
 
 	return 0;
 }

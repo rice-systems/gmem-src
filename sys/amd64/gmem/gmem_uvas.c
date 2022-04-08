@@ -328,6 +328,7 @@ gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	int i;
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
 
+	printf("[gmem_uvas_map_pages_sg] eflags: %x\n", prot);
 	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
 		pmap->mmu_ops->mmu_pmap_enter(pmap, start + size * i, GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[i]),
 			prot, mem_flags);
