@@ -145,7 +145,7 @@ domain_idmap_nextlvl(struct idpgtbl *tbl, int lvl, vm_pindex_t idx,
 		for (i = 0, f = addr; i < DMAR_NPTEPG; i++, f += pg_sz) {
 			if (f >= tbl->maxaddr)
 				break;
-			pte[i].pte = (DMAR_PTE_ADDR_MASK & f) |
+			pte[i] = (DMAR_PTE_ADDR_MASK & f) |
 			    DMAR_PTE_R | DMAR_PTE_W;
 		}
 	} else {
@@ -155,7 +155,7 @@ domain_idmap_nextlvl(struct idpgtbl *tbl, int lvl, vm_pindex_t idx,
 			m1 = dmar_pgalloc(tbl->pgtbl_obj, base + i,
 			    IOMMU_PGF_NOALLOC);
 			KASSERT(m1 != NULL, ("lost page table page"));
-			pte[i].pte = (DMAR_PTE_ADDR_MASK &
+			pte[i] = (DMAR_PTE_ADDR_MASK &
 			    VM_PAGE_TO_PHYS(m1)) | DMAR_PTE_R | DMAR_PTE_W;
 		}
 	}
