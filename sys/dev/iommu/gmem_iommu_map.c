@@ -103,8 +103,10 @@ gmem_iommu_map(struct iommu_domain *domain, vm_offset_t *start, vm_offset_t size
     }
 
     // Failed to allocate VA space
-    if (error)
+    if (error) {
+        printf("!!!!!!Failed va allocation, no mapping will be created\n");
         return error;
+    }
 
     // Who should consider multiple pmaps cases?
     error = gmem_uvas_map_pages_sg(pmap, entry->start,
