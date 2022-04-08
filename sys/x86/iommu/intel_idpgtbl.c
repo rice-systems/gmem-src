@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 #include <vm/vm_map.h>
+#include <vm/vmmeter.h>
 #include <dev/pci/pcireg.h>
 #include <machine/atomic.h>
 #include <machine/bus.h>
@@ -387,7 +388,7 @@ finish:
 				// we need to dig deeper
 				if (*pte == 0) {
 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
-						flags | DMAR_PGF_ZERO);
+						flags | IOMMU_PGF_ZERO);
 					dmar_pte_store(pte, 
 						DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m));
 					dmar_flush_pte_to_ram(domain->dmar, pte);
@@ -586,7 +587,6 @@ void
 domain_free_pgtbl(struct dmar_domain *domain)
 {
 	vm_object_t obj;
-	vm_page_t m;
 
 	obj = domain->pgtbl_obj;
 	if (obj == NULL) {
@@ -675,7 +675,9 @@ domain_flush_iotlb_sync(struct dmar_domain *domain, iommu_gaddr_t base,
 	DMAR_UNLOCK(unit);
 }
 
+
+// TODO: remove them
 const struct iommu_domain_map_ops dmar_domain_map_ops = {
-	.map = domain_map_buf,
+	.map = domain_map_buf_locked,
 	.unmap = domain_unmap_buf,
 };
