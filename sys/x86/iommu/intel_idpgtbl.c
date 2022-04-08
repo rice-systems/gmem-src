@@ -542,22 +542,22 @@ domain_unmap_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 	return (0);
 }
 
-static int
-domain_unmap_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
-    iommu_gaddr_t size)
-{
-	struct dmar_domain *domain;
-	int error;
+// static int
+// domain_unmap_buf(struct iommu_domain *iodom, iommu_gaddr_t base,
+//     iommu_gaddr_t size)
+// {
+// 	struct dmar_domain *domain;
+// 	int error;
 
-	domain = IODOM2DOM(iodom);
+// 	domain = IODOM2DOM(iodom);
 
-	START_STATS;
-	DMAR_DOMAIN_PGLOCK(domain);
-	error = domain_unmap_buf_locked(domain, base, size);
-	DMAR_DOMAIN_PGUNLOCK(domain);
-    FINISH_STATS(UNMAP, size >> 12);
-	return (error);
-}
+// 	START_STATS;
+// 	DMAR_DOMAIN_PGLOCK(domain);
+// 	error = domain_unmap_buf_locked(domain, base, size);
+// 	DMAR_DOMAIN_PGUNLOCK(domain);
+//     FINISH_STATS(UNMAP, size >> 12);
+// 	return (error);
+// }
 
 int
 domain_alloc_pgtbl(struct dmar_domain *domain)

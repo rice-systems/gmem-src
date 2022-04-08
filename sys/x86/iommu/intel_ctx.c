@@ -934,9 +934,6 @@ dmar_domain_unload_entry(struct iommu_domain *iodom, struct gmem_uvas_entry *ent
 	struct dmar_domain *domain = IODOM2DOM(iodom);
 	struct dmar_unit *unit;
 
-	intel_iommu_dev_data_t *dev_data = (intel_iommu_dev_data_t *) entry->uvas->dev_data;
-
-	domain = dev_data->domain;
 	unit = DOM2DMAR(domain);
 	if (unit->qi_enabled) {
 		debug_printf("[intel_ctx.c] performing quick invalidations\n");
