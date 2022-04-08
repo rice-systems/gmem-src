@@ -535,9 +535,9 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 			base, x86_translate(domain, base, &pglvl), pa);
 		return 1;
 	}
-	printf("[iommu] mapping root %lx, va %lx, size %lx, pa %lx, lvl %d\n", 
-		VM_PAGE_TO_PHYS(domain->pglv0), base, size, pa, pglvl);
-	
+	printf("[iommu] mapping root %lx, va %lx, size %lx, pa %lx, lvl %d, pflags %lx\n", 
+		VM_PAGE_TO_PHYS(domain->pglv0), base, size, pa, pglvl, pflags);
+
 	return 0;
 }
 
