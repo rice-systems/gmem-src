@@ -123,9 +123,9 @@ struct gmem_mmu_ops
 	// We do not include batching mechanism here, as we will not exercise
 	// any throughput devices at this moment
 	// We also do not include async version for map, as it will not be used
-	gmem_error_t (*mmu_pmap_enter)(vm_offset_t va, vm_size_t size, 
-		vm_paddr_t pa, vm_prot_t protection);
-	gmem_error_t (*mmu_pmap_release)(vm_offset_t va, vm_size_t size);
+	gmem_error_t (*mmu_pmap_enter)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
+		vm_paddr_t pa, vm_prot_t protection, vm_prot_t prot, u_int mem_flags);
+	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
 	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
 		vm_prot_t new_prot);
 };
