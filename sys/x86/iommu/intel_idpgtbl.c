@@ -677,7 +677,7 @@ domain_flush_iotlb_sync(struct dmar_domain *domain, iommu_gaddr_t base,
 
 
 // TODO: remove them
-// const struct iommu_domain_map_ops dmar_domain_map_ops = {
-// 	.map = domain_map_buf_locked,
-// 	.unmap = domain_unmap_buf,
-// };
+const struct iommu_domain_map_ops dmar_domain_map_ops = {
+	.map = NULL,
+	.unmap = NULL,
+};
