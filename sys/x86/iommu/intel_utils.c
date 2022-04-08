@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
 #include <vm/vm_pageout.h>
+#include <vm/vmmeter.h>
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 #include <machine/bus.h>
@@ -318,7 +319,7 @@ dmar_pgalloc_null(vm_pindex_t idx, int flags)
 	vm_page_t m;
 	int zeroed;
 
-	zeroed = (flags & DMAR_PGF_ZERO) != 0 ? VM_ALLOC_ZERO : 0;
+	zeroed = (flags & IOMMU_PGF_ZERO) != 0 ? VM_ALLOC_ZERO : 0;
 
 	m = vm_page_alloc(NULL, idx, VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ | VM_ALLOC_ZERO | 
 		VM_ALLOC_NOBUSY | VM_ALLOC_WAITOK);
