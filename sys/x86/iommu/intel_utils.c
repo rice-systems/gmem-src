@@ -326,6 +326,8 @@ dmar_pgalloc_null(vm_pindex_t idx, int flags)
 	if (zeroed && ((m->flags & PG_ZERO) == 0))
 		pmap_zero_page(m);
 	atomic_add_int(&dmar_tbl_pagecnt, 1);
+
+	// Initial ref count = 1
 	m->ref_count = 1;
 	vm_wire_add(1);
 	return (m);
@@ -335,6 +337,7 @@ void
 dmar_pgfree_null(vm_page_t m)
 {
 	if (m != NULL && m->ref_count == 1) {
+		m->ref_count = 0;
 		vm_wire_sub(1);
 		vm_page_free(m);
 		atomic_subtract_int(&dmar_tbl_pagecnt, 1);
