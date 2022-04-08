@@ -306,7 +306,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 }
 
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t first_page, vm_prot_t prot, u_int8_t mem_flags)
+	vm_size_t size, vm_page_t first_page, vm_prot_t prot, u_int_t mem_flags)
 {
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
 
