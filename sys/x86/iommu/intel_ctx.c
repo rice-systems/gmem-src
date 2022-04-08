@@ -197,6 +197,8 @@ ctx_id_entry_init(struct dmar_ctx *ctx, dmar_ctx_entry_t *ctxp, bool move,
 		ctx_root = NULL;
 	} else {
 		ctx_root = domain->pglv0;
+		if (ctx_root == NULL)
+			printf("!!!!!!ctx root is NULL\n");
 		// ctx_root = dmar_pgalloc(domain->pgtbl_obj, 0, IOMMU_PGF_NOALLOC);
 	}
 

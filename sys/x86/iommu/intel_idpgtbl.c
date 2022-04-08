@@ -493,14 +493,48 @@ domain_pmap_destroy(struct dmar_domain *domain, int lvl, dmar_pte_t *ptep)
 	return 1;
 }
 
+static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int *pglvl)
+{
+	int lvl, id, shift;
+	vm_paddr_t pg_frame;
+	shift = 12 + (domain->pglvl - 1) * 9;
+	dmar_pte_t *pte = (dmar_pte_t *) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
+	for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+		id = (va >> shift) & DMAR_PTEMASK;
+		pte = &pte[id];
+		if (*pte != 0) {
+			if ((*pte & DMAR_PTE_SP) != 0 || lvl == domain->pglvl - 1) {
+				pg_frame = (1ULL << shift) - 1;
+				*pglvl = domain->pglvl - 1 - lvl;
+				return (*pte & ~pg_frame) + (va & pg_frame);
+			}
+			else
+				pte = (dmar_pte_t *) PHYS_TO_DMAP(*pte & PG_FRAME);
+		}
+		else {
+			printf("translation failed at lvl %d\n", lvl);
+			return 0;
+		}
+		shift -= DMAR_NPTEPGSHIFT;
+	}
+	return 0;
+}
+
 // This function has been changed to map a contiguous pa range.
 int
 domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
-	printf("[iommu] mapping va %lx, size %lx, pa %lx\n", base, size, pa);
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+
+	int pglvl = 0;
+	if (x86_translate(domain, base, &pglvl) != pa) {
+		printf("[iommu] mapping va %lx, size %lx, pa %lx\n", base, size, pa);
+		printf("mapping verification failed, va 0x%lx, translate 0x%lx, paddr 0x%lx\n",
+			base, x86_translate(domain, va, &pglvl), pa);
+		return 1;
+	}
 	return 0;
 }
 
@@ -571,8 +605,9 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 	domain->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
 	    IDX_TO_OFF(pglvl_max_pages(domain->pglvl)), 0, 0, NULL);
 	DMAR_DOMAIN_PGLOCK(domain);
-	m = dmar_pgalloc(domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
-	    IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
+	m = dmar_pgalloc_null(0, DMAR_PGF_WAITOK | DMAR_PGF_ZERO);
+	// m = dmar_pgalloc(domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
+	//     IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
 	/* No implicit free of the top level page table page. */
 	m->ref_count = 2;
 	domain->pglv0 = m;
