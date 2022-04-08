@@ -306,7 +306,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 }
 
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t first_page, vm_prot_t prot, u_int mem_flags)
+	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags)
 {
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
 
@@ -323,7 +323,7 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 // mapping requires allocating physical pages.
 // This interface automatically coalesce contiguous scattered pages.
 gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t *pages, vm_prot_t prot, u_int mem_flags)
+	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags)
 {
 	int i;
 	KASSERT(pmap != NULL, "The pmap to map is NULL!");
