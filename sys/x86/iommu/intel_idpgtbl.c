@@ -74,6 +74,14 @@ __FBSDID("$FreeBSD$");
 #include <amd64/gmem/gmem_uvas.h>
 #include <x86/iommu/intel_iommu.h>
 
+
+
+static inline int
+domain_page_shift(struct dmar_domain *domain, int lvl)
+{
+	return (domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT + DMAR_PAGE_SHIFT;
+}
+
 /*
  * The cache of the identity mapping page tables for the DMARs.  Using
  * the cache saves significant amount of memory for page tables by
