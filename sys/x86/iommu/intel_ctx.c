@@ -196,8 +196,8 @@ ctx_id_entry_init(struct dmar_ctx *ctx, dmar_ctx_entry_t *ctxp, bool move,
 		    ("ctx %p non-null pgtbl_obj", ctx));
 		ctx_root = NULL;
 	} else {
-		ctx_root = dmar_pgalloc(domain->pgtbl_obj, 0,
-		    IOMMU_PGF_NOALLOC);
+		ctx_root = domain->pglv0;
+		// ctx_root = dmar_pgalloc(domain->pgtbl_obj, 0, IOMMU_PGF_NOALLOC);
 	}
 
 	if (iommu_is_buswide_ctx(DMAR2IOMMU(unit), busno)) {
