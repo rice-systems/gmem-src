@@ -532,7 +532,7 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	if (x86_translate(domain, base, &pglvl) != pa) {
 		printf("[iommu] mapping va %lx, size %lx, pa %lx\n", base, size, pa);
 		printf("mapping verification failed, va 0x%lx, translate 0x%lx, paddr 0x%lx\n",
-			base, x86_translate(domain, va, &pglvl), pa);
+			base, x86_translate(domain, base, &pglvl), pa);
 		return 1;
 	}
 	return 0;
@@ -605,7 +605,7 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 	domain->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
 	    IDX_TO_OFF(pglvl_max_pages(domain->pglvl)), 0, 0, NULL);
 	DMAR_DOMAIN_PGLOCK(domain);
-	m = dmar_pgalloc_null(0, DMAR_PGF_WAITOK | DMAR_PGF_ZERO);
+	m = dmar_pgalloc_null(0, IOMMU_PGF_WAITOK | IOMMU_PGF_ZERO);
 	// m = dmar_pgalloc(domain->pgtbl_obj, 0, IOMMU_PGF_WAITOK |
 	//     IOMMU_PGF_ZERO | IOMMU_PGF_OBJL);
 	/* No implicit free of the top level page table page. */
