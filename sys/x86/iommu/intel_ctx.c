@@ -970,7 +970,6 @@ dmar_domain_unload(struct dmar_domain *domain,
 	struct dmar_unit *unit;
 	struct iommu_domain *iodom;
 	struct gmem_uvas_entry *entry, *entry1;
-	int error;
 
 	iodom = DOM2IODOM(domain);
 	unit = DOM2DMAR(domain);
