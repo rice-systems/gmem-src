@@ -200,7 +200,7 @@ ctx_id_entry_init(struct dmar_ctx *ctx, dmar_ctx_entry_t *ctxp, bool move,
 		if (ctx_root == NULL)
 			printf("!!!!!!ctx root is NULL\n");
 		else
-			printf("[iommu] setting ctx root to a valid pglv0\n");
+			printf("[iommu] setting ctx root to a valid pglv0 pa %lx\n", VM_PAGE_TO_PHYS(ctx_root));
 		// ctx_root = dmar_pgalloc(domain->pgtbl_obj, 0, IOMMU_PGF_NOALLOC);
 	}
 
