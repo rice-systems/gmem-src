@@ -498,6 +498,7 @@ int
 domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
+	printf("[iommu] mapping va %lx, size %lx, pa %lx\n", base, size, pa);
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	return 0;
