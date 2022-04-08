@@ -58,7 +58,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
 #include <vm/vm_pageout.h>
-#include <vm/vmmeter.h>
+#include <sys/vmmeter.h>
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 #include <machine/bus.h>
