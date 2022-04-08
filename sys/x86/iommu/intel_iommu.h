@@ -57,7 +57,7 @@ extern gmem_mmu_ops_t intel_iommu_ops;
 
 extern int
 domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
 
 extern int domain_unmap_buf_locked(struct dmar_domain *domain,
     iommu_gaddr_t base, iommu_gaddr_t size);

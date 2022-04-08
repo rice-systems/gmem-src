@@ -334,13 +334,13 @@ domain_pgtbl_pte_off(struct dmar_domain *domain, iommu_gaddr_t base, int lvl)
 }
 
 static int
-domain_pmap_enter(struct dmar_domain *domain, dmar_gaddr_t base, 
-    dmar_gaddr_t size, dmar_gaddr_t pa, uint64_t pflags, int flags, 
+domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
     int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t m, pm;
 	dmar_pte_t *pte;
-	dmar_gaddr_t pgshift, pg_size, pg_frame, end1, mapsize;
+	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
 	int i, ret = 0;
 
 	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));
@@ -400,12 +400,12 @@ finish:
 
 // No need to consider demotion since it never splits mappings.
 static int
-domain_pmap_release(struct dmar_domain *domain, dmar_gaddr_t base, 
-    dmar_gaddr_t size, int lvl, dmar_pte_t *ptep)
+domain_pmap_release(struct dmar_domain *domain, vm_offset_t base, 
+    vm_offset_t size, int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t pm;
 	dmar_pte_t *pte;
-	dmar_gaddr_t pgshift, pg_size, pg_frame, end1, mapsize;
+	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
 	int i;
 
 	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));

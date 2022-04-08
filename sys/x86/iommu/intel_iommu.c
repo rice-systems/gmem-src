@@ -111,14 +111,14 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 
 	START_STATS;
 	DMAR_DOMAIN_PGLOCK(domain);
-	error = domain_map_buf_locked(domain, base, size, pa, pflags, flags);
+	error = domain_map_buf_locked(domain, va, size, pa, pflags, mem_flags);
 	DMAR_DOMAIN_PGUNLOCK(domain);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
 
 	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
-		domain_flush_iotlb_sync(domain, base, size);
+		domain_flush_iotlb_sync(domain, va, size);
 	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
 		/* See 11.1 Write Buffer Flushing. */
 		DMAR_LOCK(unit);
