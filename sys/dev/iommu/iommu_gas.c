@@ -89,8 +89,7 @@ iommu_unmap_msi(struct iommu_ctx *ctx)
 	if (entry == NULL)
 		return;
 
-	domain->ops->unmap(domain, entry->start, entry->end -
-	    entry->start, IOMMU_PGF_WAITOK);
+	gmem_uvas_unmap(domain->pmap, entry->start, entry->end - entry->start, NULL, NULL);
 
 	// IOMMU_DOMAIN_LOCK(domain);
 	// iommu_gas_free_space(domain, entry);
@@ -123,7 +122,7 @@ iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size,
 
 	if (entry == NULL) {
         // TODO: use dev_pmap_t *pmap
-		error = gmem_iommu_map(domain, domain->uvas, NULL, &start, size,
+		error = gmem_iommu_map(domain, &start, size,
 		    eflags, flags | GMEM_UVA_ALLOC, ma, &entry);
 
 		IOMMU_DOMAIN_LOCK(domain);

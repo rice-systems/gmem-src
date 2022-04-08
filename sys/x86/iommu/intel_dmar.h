@@ -72,6 +72,7 @@ struct dmar_domain {
 	LIST_HEAD(, dmar_ctx) contexts;	/* (u) */
 	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
+	vm_page_t pglv0;
 };
 
 struct dmar_ctx {
@@ -219,7 +220,9 @@ iommu_gaddr_t domain_page_size(struct dmar_domain *domain, int lvl);
 int calc_am(struct dmar_unit *unit, iommu_gaddr_t base, iommu_gaddr_t size,
     iommu_gaddr_t *isizep);
 struct vm_page *dmar_pgalloc(vm_object_t obj, vm_pindex_t idx, int flags);
+vm_page_t dmar_pgalloc_null(vm_pindex_t idx, int flags);
 void dmar_pgfree(vm_object_t obj, vm_pindex_t idx, int flags);
+void dmar_pgfree_null(vm_page_t m);
 void *dmar_map_pgtbl(vm_object_t obj, vm_pindex_t idx, int flags,
     struct sf_buf **sf);
 void dmar_unmap_pgtbl(struct sf_buf *sf);

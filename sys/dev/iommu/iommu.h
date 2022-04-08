@@ -218,7 +218,7 @@ struct iommu_ctx *iommu_get_dev_ctx(device_t dev);
 
 
 // GMEM-based functions for map/unmap
-int gmem_iommu_map(struct iommu_domain *domain, gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, 
+int gmem_iommu_map(struct iommu_domain *domain, vm_offset_t *start, 
 	vm_offset_t size, u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **ret);
 
 SYSCTL_DECL(_hw_iommu);

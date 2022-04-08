@@ -291,18 +291,9 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 
 		gstart = entry->start;
 		gend = entry->end;
-		error1 = gmem_iommu_map(&domain->iodom, domain->iodom.uvas, NULL, &gstart, gend - gstart, 
+		error1 = gmem_iommu_map(&domain->iodom, &gstart, gend - gstart, 
 			GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, &entry);
-
-		// error1 = iommu_gas_map_region(DOM2IODOM(domain), entry,
-		//     IOMMU_MAP_ENTRY_READ | IOMMU_MAP_ENTRY_WRITE,
-		//     IOMMU_MF_CANWAIT | IOMMU_MF_RMRR, ma);
-
-		// if (gstart != entry->start) {
-		// 	panic("Inconsistent gmem va allocation uvas: %p, gmem start:%lx, iommu start:%lx, size:%lx",
-		// 		domain->iodom.uvas, gstart, entry->start, size);
-		// }
 
 		/*
 		 * Non-failed RMRR entries are owned by context rb
@@ -995,8 +986,9 @@ dmar_domain_unload(struct dmar_domain *domain,
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
 		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
 		    ("not mapped entry %p %p", domain, entry));
-		error = iodom->ops->unmap(iodom, entry->start, entry->end -
-		    entry->start, cansleep ? IOMMU_PGF_WAITOK : 0);
+		// error = iodom->ops->unmap(iodom, entry->start, entry->end -
+		//     entry->start, cansleep ? IOMMU_PGF_WAITOK : 0);
+		gmem_uvas_unmap(iodom->pmap, entry->start, entry->end - entry->start, NULL, NULL);
 		KASSERT(error == 0, ("unmap %p error %d", domain, error));
 		if (!unit->qi_enabled) {
 			domain_flush_iotlb_sync(domain, entry->start,

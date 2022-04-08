@@ -312,6 +312,34 @@ dmar_pgfree(vm_object_t obj, vm_pindex_t idx, int flags)
 		VM_OBJECT_WUNLOCK(obj);
 }
 
+vm_page_t
+dmar_pgalloc_null(vm_pindex_t idx, int flags)
+{
+	vm_page_t m;
+	int zeroed;
+
+	zeroed = (flags & DMAR_PGF_ZERO) != 0 ? VM_ALLOC_ZERO : 0;
+
+	m = vm_page_alloc(NULL, idx, VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ | VM_ALLOC_ZERO | 
+		VM_ALLOC_NOBUSY | VM_ALLOC_WAITOK);
+	if (zeroed && ((m->flags & PG_ZERO) == 0))
+		pmap_zero_page(m);
+	atomic_add_int(&dmar_tbl_pagecnt, 1);
+	m->ref_count = 1;
+	vm_wire_add(1);
+	return (m);
+}
+
+void
+dmar_pgfree_null(vm_page_t m)
+{
+	if (m != NULL && m->ref_count == 1) {
+		vm_wire_sub(1);
+		vm_page_free(m);
+		atomic_subtract_int(&dmar_tbl_pagecnt, 1);
+	}
+}
+
 void *
 dmar_map_pgtbl(vm_object_t obj, vm_pindex_t idx, int flags,
     struct sf_buf **sf)

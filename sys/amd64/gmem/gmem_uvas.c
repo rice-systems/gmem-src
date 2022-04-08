@@ -321,6 +321,7 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 // protection flags are required since a RO mapping can still be created with write permission
 // memory flags are required because the device may ask the kernel to manage its physical memory
 // mapping requires allocating physical pages.
+// This interface automatically coalesce contiguous scattered pages.
 gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages, vm_prot_t prot, u_int mem_flags)
 {
@@ -343,6 +344,7 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
 	if (unmap_callback == NULL)
 	{
 		// The unmap will be sync
+		pmap->mmu_ops->mmu_pmap_release(pmap, start, size);
 	}
 	else
 	{
