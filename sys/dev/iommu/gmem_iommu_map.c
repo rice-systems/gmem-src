@@ -109,7 +109,7 @@ gmem_iommu_map(struct iommu_domain *domain, vm_offset_t *start, vm_offset_t size
     }
 
     // Who should consider multiple pmaps cases?
-    printf("[gmem_uvas_map_pages_sg] mapping flags %x, start %lx, size %lx\n", eflags, entry->start, entry->end - entry->start);
+    // printf("[gmem_uvas_map_pages_sg] mapping flags %x, start %lx, size %lx\n", eflags, entry->start, entry->end - entry->start);
     error = gmem_uvas_map_pages_sg(pmap, entry->start,
         entry->end - entry->start, ma, eflags, ((flags & IOMMU_MF_CANWAIT) != 0 ? IOMMU_PGF_WAITOK : 0));
 
