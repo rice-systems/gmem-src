@@ -529,7 +529,8 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
-	vm_offset_t pte, pglvl;
+	vm_offset_t pte;
+	int pglvl;
 	if (base == 0x6d000) {
 		pte = x86_translate(domain, base, &pglvl);
 		printf("0x6d000 is mapped with pte %lx, supposed to be pa %lx\n", pte, pa);
