@@ -326,7 +326,6 @@ gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags)
 {
 	vm_offset_t i, last_i = 0;
-	vm_offset_t va, pa, map_size;
 
 	if (pmap == NULL || size < GMEM_PAGE_SIZE)
 		return GMEM_EINVALIDARGS;
