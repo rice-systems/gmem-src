@@ -453,14 +453,14 @@ finish:
 				// we need to dig deeper
 				if (*pte == 0) {
 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
-						flags | DMAR_PGF_ZERO);
+						flags | IOMMU_PGF_ZERO);
 					dmar_pte_store(pte, 
 						DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m));
 					dmar_flush_pte_to_ram(domain->dmar, pte);
-					pm->wire_count ++;
+					pm->ref_count ++;
 				}
 				domain_pmap_enter(domain, base, mapsize, 
-						(pa + offset * GMEM_PAGE_SIZE), pflags, flags, contig, lvl + 1, 
+						(pa + offset * GMEM_PAGE_SIZE), pflags, flags, lvl + 1, 
 						(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
 				size -= mapsize;
 				offset += mapsize >> DMAR_PAGE_SHIFT;
