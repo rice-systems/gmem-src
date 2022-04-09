@@ -432,7 +432,7 @@ domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base,
 			dmar_pte_store(pte, (pa + offset * GMEM_PAGE_SIZE) | pflags);
 finish:
 			dmar_flush_pte_to_ram(domain->dmar, pte);
-			pm->wire_count ++;
+			pm->ref_count ++;
 			size -= pg_size;
 			offset += 1 << (pgshift - DMAR_PAGE_SHIFT);
 		} 
