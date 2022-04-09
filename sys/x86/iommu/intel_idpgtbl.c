@@ -342,71 +342,6 @@ domain_pgtbl_pte_off(struct dmar_domain *domain, iommu_gaddr_t base, int lvl)
 	return (base & DMAR_PTEMASK);
 }
 
-// static int
-// domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base, 
-//     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
-//     int lvl, dmar_pte_t *ptep)
-// {
-// 	vm_page_t m, pm;
-// 	dmar_pte_t *pte;
-// 	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
-// 	int i, ret = 0;
-
-// 	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));
-
-// 	i = domain_pgtbl_pte_off(domain, base, lvl);
-// 	pgshift = domain_page_shift(domain, lvl);
-// 	pg_size = 1ULL << pgshift;
-// 	pg_frame = pg_size - 1;
-
-// 	while (size > 0) {
-// 		pte = &ptep[i];
-
-// 		// map the page, it could be a superpage
-// 		if (lvl == domain->pglvl - 1) {
-// 			dmar_pte_store(pte, pa | pflags);
-// finish:
-// 			dmar_flush_pte_to_ram(domain->dmar, pte);
-// 			pm->ref_count ++;
-// 			size -= pg_size;
-// 		} 
-// 		else {
-// 			// now determine the map size (base, mapsize)
-// 			end1 = ((base >> pgshift) + 1) << pgshift;
-// 			mapsize = (end1 <= base + size) ? end1 - base : size;
-
-// 			// Can we map a superpage?
-// 			if ((mapsize == pg_size) && ((base & pg_frame) == 0)
-// 				&& ((pa & pg_frame) == 0)
-// 				&& domain_is_sp_lvl(domain, lvl + 1)) {
-// 				dmar_pte_store(pte, pa | pflags | DMAR_PTE_SP);
-// 				base += mapsize;
-// 				pa += mapsize;
-// 				goto finish;
-// 			}
-// 			else {
-// 				// we need to dig deeper
-// 				if (*pte == 0) {
-// 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
-// 						flags | IOMMU_PGF_ZERO);
-// 					dmar_pte_store(pte, 
-// 						DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m));
-// 					dmar_flush_pte_to_ram(domain->dmar, pte);
-// 					pm->ref_count ++;
-// 				}
-// 				domain_pmap_enter(domain, base, mapsize, 
-// 						pa, pflags, flags, lvl + 1, 
-// 						(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
-// 				size -= mapsize;
-// 				base += mapsize;
-// 				pa += mapsize;
-// 			}
-// 		}
-// 		i ++;
-// 	}
-// 	return ret;
-// }
-
 static int
 domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
@@ -592,30 +527,16 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
-	vm_offset_t pte;
-	int pglvl, i;
+	// verification code
+	// vm_offset_t pte;
+	// int pglvl, i;
 
-	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
-		pte = x86_translate(domain, base + i * GMEM_PAGE_SIZE, &pglvl);
-		if (pte != pa + i * GMEM_PAGE_SIZE)
-			printf("mapping failed at va: %lx, pa %lx, pte %lx\n", base + i * GMEM_PAGE_SIZE,
-				pa + i * GMEM_PAGE_SIZE, pte);
-	}
-	// printf("[domain_map_buf_locked] va %lx, size %lx, pa %lx\n", base, size, pa);
-	// if (base <= 0x6d000 && 0x6d000 < base + size) {
-	// 	pte = x86_translate(domain, base, &pglvl);
-	// 	printf("[iommu] 0x6d000 is mapped with pte %lx, supposed to be pa %lx\n", pte, pa);
+	// for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
+	// 	pte = x86_translate(domain, base + i * GMEM_PAGE_SIZE, &pglvl);
+	// 	if (pte != pa + i * GMEM_PAGE_SIZE)
+	// 		printf("mapping failed at va: %lx, pa %lx, pte %lx\n", base + i * GMEM_PAGE_SIZE,
+	// 			pa + i * GMEM_PAGE_SIZE, pte);
 	// }
-	// int pglvl = 0;
-
-	// if (x86_translate(domain, base, &pglvl) != pa) {
-	// 	printf("mapping verification failed, va 0x%lx, translate 0x%lx, paddr 0x%lx\n",
-	// 		base, x86_translate(domain, base, &pglvl), pa);
-	// 	return 1;
-	// }
-	// printf("[iommu] mapping root %lx, va %lx, size %lx, pa %lx, lvl %d, pflags %lx\n", 
-	// 	VM_PAGE_TO_PHYS(domain->pglv0), base, size, pa, pglvl, pflags);
-
 	return 0;
 }
 
