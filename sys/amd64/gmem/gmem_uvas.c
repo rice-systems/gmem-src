@@ -325,15 +325,27 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags)
 {
-	uint64_t i = 0;
-	KASSERT(pmap != NULL, "The pmap to map is NULL!");
+	vm_offset_t i, last_i = 0;
+	vm_offset_t va, pa, map_size;
 
-	// printf("[gmem_uvas_map_pages_sg] eflags: %x\n", prot);
+	if (pmap == NULL || size < GMEM_PAGE_SIZE)
+		return GMEM_EINVALIDARGS;
 
 	// coalesce mapping requests
-	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
-		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * i, GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[i]),
+	while(last_i * GMEM_PAGE_SIZE < size) {
+		i = last_i;
+
+		// advance when contiguous
+		while((i + 1) * GMEM_PAGE_SIZE < size && 
+			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
+			++ i;
+
+		// map pages[last_i], ..., pages[i]
+		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
+			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			prot, mem_flags);
+
+		last_i = i + 1;
 	}
 	return GMEM_OK;
 }

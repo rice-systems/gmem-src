@@ -529,15 +529,15 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
-	vm_offset_t pte;
-	int pglvl;
+	// vm_offset_t pte;
+	// int pglvl;
 
 	// pte = x86_translate(domain, base, &pglvl);
-	printf("[domain_map_buf_locked] va %lx, size %lx, pa %lx\n", base, size, pa);
-	if (base <= 0x6d000 && 0x6d000 < base + size) {
-		pte = x86_translate(domain, base, &pglvl);
-		printf("[iommu] 0x6d000 is mapped with pte %lx, supposed to be pa %lx\n", pte, pa);
-	}
+	// printf("[domain_map_buf_locked] va %lx, size %lx, pa %lx\n", base, size, pa);
+	// if (base <= 0x6d000 && 0x6d000 < base + size) {
+	// 	pte = x86_translate(domain, base, &pglvl);
+	// 	printf("[iommu] 0x6d000 is mapped with pte %lx, supposed to be pa %lx\n", pte, pa);
+	// }
 	// int pglvl = 0;
 
 	// if (x86_translate(domain, base, &pglvl) != pa) {
