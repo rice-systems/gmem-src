@@ -529,10 +529,15 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
-	// vm_offset_t pte;
-	// int pglvl;
+	vm_offset_t pte;
+	int pglvl, i;
 
-	// pte = x86_translate(domain, base, &pglvl);
+	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
+		pte = x86_translate(domain, base + i * GMEM_PAGE_SIZE, &pglvl);
+		if (pte != pa + i * GMEM_PAGE_SIZE)
+			printf("mapping failed at va: %lx, pa %lx, pte %lx\n", base + i * GMEM_PAGE_SIZE,
+				pa + i * GMEM_PAGE_SIZE, pte);
+	}
 	// printf("[domain_map_buf_locked] va %lx, size %lx, pa %lx\n", base, size, pa);
 	// if (base <= 0x6d000 && 0x6d000 < base + size) {
 	// 	pte = x86_translate(domain, base, &pglvl);
