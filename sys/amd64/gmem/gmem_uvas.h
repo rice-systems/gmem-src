@@ -98,6 +98,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 #define GMEM_PROT_READ 		0x0001
 #define GMEM_PROT_WRITE     0x0002
 #define GMEM_PAGE_SIZE 4096
+#define GMEM_PAGE_SHIFT 12
 #define GMEM_PAGE_MASK (GMEM_PAGE_SIZE - 1)
 
 static inline bool
