@@ -531,6 +531,9 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 
 	vm_offset_t pte;
 	int pglvl;
+
+	pte = x86_translate(domain, base, &pglvl);
+	printf("[domain_map_buf_locked] va %lx, size %lx, pte %lx\n", base, size, pte);
 	if (base <= 0x6d000 && 0x6d000 < base + size) {
 		pte = x86_translate(domain, base, &pglvl);
 		printf("[iommu] 0x6d000 is mapped with pte %lx, supposed to be pa %lx\n", pte, pa);
