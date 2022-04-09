@@ -506,6 +506,7 @@ static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int 
 			if ((*pte & DMAR_PTE_SP) != 0 || lvl == domain->pglvl - 1) {
 				pg_frame = (1ULL << shift) - 1;
 				*pglvl = domain->pglvl - 1 - lvl;
+				printf("pte is %lx\n", *pte);
 				return (*pte & ~pg_frame) + (va & pg_frame);
 			}
 			else
@@ -528,6 +529,11 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
+	vm_offset_t pa, pglvl;
+	if (base == 0x6d000) {
+		pa = x86_translate(domain, base, &pglvl);
+		printf("0x6d000 is mapped at pa %lx\n", pa);
+	}
 	// int pglvl = 0;
 
 	// if (x86_translate(domain, base, &pglvl) != pa) {
