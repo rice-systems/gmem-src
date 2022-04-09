@@ -342,15 +342,80 @@ domain_pgtbl_pte_off(struct dmar_domain *domain, iommu_gaddr_t base, int lvl)
 	return (base & DMAR_PTEMASK);
 }
 
+// static int
+// domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base, 
+//     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
+//     int lvl, dmar_pte_t *ptep)
+// {
+// 	vm_page_t m, pm;
+// 	dmar_pte_t *pte;
+// 	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
+// 	int i, ret = 0;
+
+// 	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));
+
+// 	i = domain_pgtbl_pte_off(domain, base, lvl);
+// 	pgshift = domain_page_shift(domain, lvl);
+// 	pg_size = 1ULL << pgshift;
+// 	pg_frame = pg_size - 1;
+
+// 	while (size > 0) {
+// 		pte = &ptep[i];
+
+// 		// map the page, it could be a superpage
+// 		if (lvl == domain->pglvl - 1) {
+// 			dmar_pte_store(pte, pa | pflags);
+// finish:
+// 			dmar_flush_pte_to_ram(domain->dmar, pte);
+// 			pm->ref_count ++;
+// 			size -= pg_size;
+// 		} 
+// 		else {
+// 			// now determine the map size (base, mapsize)
+// 			end1 = ((base >> pgshift) + 1) << pgshift;
+// 			mapsize = (end1 <= base + size) ? end1 - base : size;
+
+// 			// Can we map a superpage?
+// 			if ((mapsize == pg_size) && ((base & pg_frame) == 0)
+// 				&& ((pa & pg_frame) == 0)
+// 				&& domain_is_sp_lvl(domain, lvl + 1)) {
+// 				dmar_pte_store(pte, pa | pflags | DMAR_PTE_SP);
+// 				base += mapsize;
+// 				pa += mapsize;
+// 				goto finish;
+// 			}
+// 			else {
+// 				// we need to dig deeper
+// 				if (*pte == 0) {
+// 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
+// 						flags | IOMMU_PGF_ZERO);
+// 					dmar_pte_store(pte, 
+// 						DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m));
+// 					dmar_flush_pte_to_ram(domain->dmar, pte);
+// 					pm->ref_count ++;
+// 				}
+// 				domain_pmap_enter(domain, base, mapsize, 
+// 						pa, pflags, flags, lvl + 1, 
+// 						(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
+// 				size -= mapsize;
+// 				base += mapsize;
+// 				pa += mapsize;
+// 			}
+// 		}
+// 		i ++;
+// 	}
+// 	return ret;
+// }
+
 static int
-domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base, 
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
+domain_pmap_enter(struct dmar_domain *domain, dmar_gaddr_t base, 
+    dmar_gaddr_t size, vm_offset_t pa, uint64_t pflags, int flags, 
     int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t m, pm;
 	dmar_pte_t *pte;
-	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
-	int i, ret = 0;
+	dmar_gaddr_t pgshift, pg_size, pg_frame, end1, mapsize;
+	int i, ret = 0, offset = 0;
 
 	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));
 
@@ -364,11 +429,12 @@ domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base,
 
 		// map the page, it could be a superpage
 		if (lvl == domain->pglvl - 1) {
-			dmar_pte_store(pte, pa | pflags);
+			dmar_pte_store(pte, (pa + offset * GMEM_PAGE_SIZE) | pflags);
 finish:
 			dmar_flush_pte_to_ram(domain->dmar, pte);
-			pm->ref_count ++;
+			pm->wire_count ++;
 			size -= pg_size;
+			offset += 1 << (pgshift - DMAR_PAGE_SHIFT);
 		} 
 		else {
 			// now determine the map size (base, mapsize)
@@ -377,29 +443,28 @@ finish:
 
 			// Can we map a superpage?
 			if ((mapsize == pg_size) && ((base & pg_frame) == 0)
-				&& ((pa & pg_frame) == 0)
+				&& (((pa + offset * GMEM_PAGE_SIZE) & pg_frame) == 0)
 				&& domain_is_sp_lvl(domain, lvl + 1)) {
-				dmar_pte_store(pte, pa | pflags | DMAR_PTE_SP);
+				dmar_pte_store(pte, (pa + offset * GMEM_PAGE_SIZE) | pflags | DMAR_PTE_SP);
 				base += mapsize;
-				pa += mapsize;
 				goto finish;
 			}
 			else {
 				// we need to dig deeper
 				if (*pte == 0) {
 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
-						flags | IOMMU_PGF_ZERO);
+						flags | DMAR_PGF_ZERO);
 					dmar_pte_store(pte, 
 						DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m));
 					dmar_flush_pte_to_ram(domain->dmar, pte);
-					pm->ref_count ++;
+					pm->wire_count ++;
 				}
 				domain_pmap_enter(domain, base, mapsize, 
-						pa, pflags, flags, lvl + 1, 
+						(pa + offset * GMEM_PAGE_SIZE), pflags, flags, contig, lvl + 1, 
 						(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
 				size -= mapsize;
+				offset += mapsize >> DMAR_PAGE_SHIFT;
 				base += mapsize;
-				pa += mapsize;
 			}
 		}
 		i ++;
@@ -506,7 +571,6 @@ static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int 
 			if ((*pte & DMAR_PTE_SP) != 0 || lvl == domain->pglvl - 1) {
 				pg_frame = (1ULL << shift) - 1;
 				*pglvl = domain->pglvl - 1 - lvl;
-				printf("pte is %lx\n", *pte);
 				return (*pte & ~pg_frame) + (va & pg_frame);
 			}
 			else
