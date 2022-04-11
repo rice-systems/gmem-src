@@ -336,7 +336,7 @@ gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t st
 			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
 			++ i;
 
-		pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
+		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
 		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
