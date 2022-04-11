@@ -294,8 +294,8 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags);
-gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags);
+// gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
+// 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags);
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, void (* unmap_callback(void *)),
 	void *callback_args);

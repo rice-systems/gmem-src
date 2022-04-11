@@ -134,9 +134,9 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// // TODO: RB-TREE
 		// gmem_rb_init(uvas);
 		uvas->allocator = VMEM;
-		// Currently we use no quantum cache
+		// Currently we use the maximum available quantum cache (16)
 		uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-			alignment, 4096, M_WAITOK);
+			alignment, alignment * 16, M_WAITOK);
 
 		*uvas_res = uvas;
 		*pmap_res = pmap;
@@ -319,7 +319,7 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 // memory flags are required because the device may ask the kernel to manage its physical memory
 // mapping requires allocating physical pages.
 // This interface automatically coalesce contiguous scattered pages.
-gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
+static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags)
 {
 	vm_offset_t i, last_i = 0;
