@@ -408,7 +408,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
 
     // Who should consider multiple pmaps cases?
     error = gmem_uvas_prepare_and_map_pages_sg(pmap, entry->start,
-        entry->end - entry->start, ma, eflags, ((flags & IOMMU_MF_CANWAIT) != 0 ? IOMMU_PGF_WAITOK : 0));
+        entry->end - entry->start, ma, eflags, ((flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK : 0));
 
     if (error) {
         // There is no need to call iotlb inv
