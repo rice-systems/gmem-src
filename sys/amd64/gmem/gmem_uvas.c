@@ -295,11 +295,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		if (entry != NULL) {
 			vmem_free(uvas->arena, entry->start, entry->end - entry->start);
 		} else {
-			// TODO: remove this code and panic.
-			// We should explode here, because the iommu rb-allocator is not going to allocate the
-			// same address as what vmem allocated.
-			// vmem_free(uvas->arena, start, size);
-			panic("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
+			vmem_xfree(uvas->arena, start, size);
 		}
 	}
 	FINISH_STATS(VA_FREE, size >> 12);
@@ -323,7 +319,7 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 // memory flags are required because the device may ask the kernel to manage its physical memory
 // mapping requires allocating physical pages.
 // This interface automatically coalesce contiguous scattered pages.
-gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
+gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags)
 {
 	vm_offset_t i, last_i = 0;
@@ -339,6 +335,8 @@ gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 		while((i + 1) * GMEM_PAGE_SIZE < size && 
 			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
 			++ i;
+
+		pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
 		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
@@ -375,4 +373,53 @@ gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	KASSERT(uvas != NULL, "The uvas to mutate protection is NULL!");
 
 	return GMEM_OK;
+}
+
+// gmem_mmap_eager:
+// The interface takes the allocated physical memory,
+// and eagerly map these pages
+// It includes: va allocation, physical preparation, virtual mapping creation
+gmem_error_t
+gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offset_t size,
+    u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **entry_ret)
+{
+    gmem_uvas_entry_t *entry;
+    int error;
+
+    // Missing: entry->flags |= eflags;
+    if (uvas == NULL)
+        debug_printf("iommu ctx does not have a valid uvas\n");
+
+    // The Original IOMMU driver uses GMEM_PAGE_SIZE in the neighbourhood to prevent DMA bugs
+    // It is possible to add GMEM_PAGE_SIZE * 2 in the allocation request to simulate this behavior.
+    if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
+        error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+            flags, &entry);
+    else {
+        error = gmem_uvas_alloc_span_fixed(uvas, *start, *start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+            flags, &entry);
+    }
+
+    // Failed to allocate VA space
+    if (error) {
+        printf("!!!!!!Failed va allocation, no mapping will be created\n");
+        return error;
+    }
+
+    // Who should consider multiple pmaps cases?
+    error = gmem_uvas_prepare_and_map_pages_sg(pmap, entry->start,
+        entry->end - entry->start, ma, eflags, ((flags & IOMMU_MF_CANWAIT) != 0 ? IOMMU_PGF_WAITOK : 0));
+
+    if (error) {
+        // There is no need to call iotlb inv
+        // TODO: we always free the entry when we add back this iotlb inv in the future
+        // TODO: replace with unload_entry, as the map function could fail in the middle.
+        // iommu_domain_unload_entry(domain, entry, true);
+        gmem_uvas_free_span(uvas, *start, size, entry);
+        return (error);
+    }
+
+    if (entry_ret != NULL)
+        *entry_ret = entry;
+    return (0);
 }

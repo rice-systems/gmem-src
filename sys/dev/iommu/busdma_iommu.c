@@ -614,10 +614,10 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		if (seg + 1 < tag->common.nsegments)
 			gas_flags |= IOMMU_MF_CANSPLIT;
 
-		// Current stage: gmem_iommu_map is a shadow vm system for iommu
+		// Current stage: gmem_mmap_eager is a shadow vm system for iommu
 		// The busdma layer is not doing a good job of coding.
 		// Why does it have to manipulate anything with map entries?
-		error = gmem_iommu_map(domain, &gstart, size,
+		error = gmem_mmap_eager(domain->uvas, domain->pmap, &gstart, size,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
 		    gas_flags | GMEM_UVA_ALLOC, ma + idx, &entry);
@@ -1085,7 +1085,7 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 		    VM_MEMATTR_DEFAULT);
 	}
 
-	error = gmem_iommu_map(domain, &start, length, GMEM_UVAS_ENTRY_READ |
+	error = gmem_mmap_eager(domain->uvas, domain->pmap, &start, length, GMEM_UVAS_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
 	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 

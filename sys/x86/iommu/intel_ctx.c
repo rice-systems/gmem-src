@@ -295,7 +295,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 
 		gstart = entry->start;
 		gend = entry->end;
-		error1 = gmem_iommu_map(&domain->iodom, &gstart, gend - gstart, 
+		error1 = gmem_mmap_eager(domain->iodom.uvas, domain->iodom.pmap, &gstart, gend - gstart, 
 			GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, &entry);
 
@@ -908,26 +908,9 @@ void
 dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free)
 {
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
-		// iommu_gas_free_region(domain, entry);
+		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, NULL);
+	else
 		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
-		// TODO: distinguish vmem_xfree
-	else {
-		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
-	}
-	// TODO: replace dmar_domain_free_entry
-	// TODO: add gmem_uvas_entry for the last argument here to accelerate free_span.
-	// TODO: replace gentry with entry.
-	// This function does not allow memory allocation at all because of the unmap_async mechanism.
-	// Temporarily allow gmem_uvas_free_span to directly free an entry without specifying it.
-	// PRINTINFO;
-	// printf("start %lx, end %lx, size %lx\n", entry->start, entry->end,
-	// 	entry->end - entry->start);
-
-	// we always free.
-	// if (free)
-	// 	iommu_gas_free_entry(domain, entry);
-	// else
-	// 	entry->flags = 0;
 }
 
 // TODO: let gmem perform unload, extract all data from pmap not from uvas.

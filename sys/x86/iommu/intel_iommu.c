@@ -142,9 +142,15 @@ static gmem_error_t intel_iommu_pmap_protect(vm_offset_t va, vm_size_t size,
 	return GMEM_OK;
 }
 
+static gmem_error_t intel_iommu_prepare(vm_paddr pa, vm_offset_t size)
+{
+	return GMEM_OK;
+}
+
 gmem_mmu_ops_t intel_iommu_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
 	.mmu_has_range_tlb = false,
+	.prepare = intel_iommu_prepare,
 	.mmu_pmap_create = intel_iommu_pmap_create,
 	.mmu_pmap_destroy = intel_iommu_pmap_destroy,
 	.mmu_pmap_enter = intel_iommu_pmap_enter,

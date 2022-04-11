@@ -116,6 +116,9 @@ struct gmem_mmu_ops
 	unsigned long pgsize_bitmap;
 	bool mmu_has_range_tlb;
 
+	// device zeroing or just no-op 
+	gmem_error_t (*prepare)(vm_paddr_t pa, vm_size_t size);
+
 	// device page/range table creation and destruction.
 	gmem_error_t (*mmu_pmap_create)(dev_pmap_t *pmap, void *dev_data);
 	gmem_error_t (*mmu_pmap_destroy)(dev_pmap_t *pmap);
@@ -236,7 +239,7 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 	gmem_uvas_t *uvas;
 
 	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
-	
+
 	// The data structure below can be put in a customized data structure
 	struct iommu_qi_genseq gseq;
 	// struct iommu_domain *domain;
@@ -291,7 +294,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags);
-gmem_error_t gmem_uvas_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
+gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags);
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, void (* unmap_callback(void *)),
@@ -315,5 +318,9 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 // with exiting VA span.
 gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas, 
 	vm_offset_t start, vm_offset_t end, vm_prot_t protection, u_int flags, gmem_uvas_entry_t **ret);
+
+// GMEM-based functions for map/unmap
+gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, 
+	vm_offset_t size, u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **ret);
 
 #endif
