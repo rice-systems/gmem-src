@@ -940,7 +940,6 @@ dmar_domain_unload_entry(struct iommu_domain *iodom, struct gmem_uvas_entry *ent
 
 	unit = DOM2DMAR(domain);
 	if (unit->qi_enabled) {
-		debug_printf("[intel_ctx.c] performing quick invalidations\n");
 		DMAR_LOCK(unit);
 		dmar_qi_invalidate_locked(domain,
 		    entry->start, entry->end - entry->start, &entry->gseq,
@@ -950,7 +949,6 @@ dmar_domain_unload_entry(struct iommu_domain *iodom, struct gmem_uvas_entry *ent
 		TAILQ_INSERT_TAIL(&unit->tlb_flush_entries, entry, dmamap_link);
 		DMAR_UNLOCK(unit);
 	} else {
-		debug_printf("[intel_ctx.c] performing iotlb sync inv\n");
 		domain_flush_iotlb_sync(domain,
 		    entry->start, entry->end - entry->start);
 		dmar_domain_free_entry(entry, free);
@@ -978,11 +976,6 @@ dmar_domain_unload(struct dmar_domain *domain,
 	iodom = DOM2IODOM(domain);
 	unit = DOM2DMAR(domain);
 
-	// printf("[intel_ctx.c 951] domain unload\n");
-	// if (unit->qi_enabled)
-	// 	printf("[intel_ctx.c 951] qi enabled\n");
-	// else
-	// 	printf("[intel_ctx.c 951] iotlb inv\n");
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
 		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
 		    ("not mapped entry %p %p", domain, entry));

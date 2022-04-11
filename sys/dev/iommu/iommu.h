@@ -39,26 +39,6 @@
 #include <amd64/gmem/gmem_uvas.h>
 
 struct bus_dma_tag_common;
-// struct gmem_uvas_entry;
-// TAILQ_HEAD(iommu_map_entries_tailq, gmem_uvas_entry);
-
-// RB_HEAD(iommu_gas_entries_tree, gmem_uvas_entry);
-// RB_PROTOTYPE(iommu_gas_entries_tree, gmem_uvas_entry, rb_entry,
-//     iommu_gas_cmp_entries);
-
-// struct gmem_uvas_entry {
-// 	iommu_gaddr_t start;
-// 	iommu_gaddr_t end;
-// 	iommu_gaddr_t first;		/* Least start in subtree */
-// 	iommu_gaddr_t last;		/* Greatest end in subtree */
-// 	iommu_gaddr_t free_down;	/* Max free space below the
-// 					   current R/B tree node */
-// 	u_int flags;
-// 	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
-// 	RB_ENTRY(gmem_uvas_entry) rb_entry;	 /* Links for domain entries */
-// 	struct iommu_domain *domain;
-// 	struct iommu_qi_genseq gseq;
-// };
 
 struct iommu_unit {
 	struct mtx lock;

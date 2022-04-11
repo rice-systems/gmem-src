@@ -75,8 +75,54 @@ __FBSDID("$FreeBSD$");
 #include <x86/iommu/intel_iommu.h>
 
 /*
- * Guest Address Space management.
+ * Guest Address Space management with GMEM interfaces.
  */
+int
+gmem_iommu_map(struct iommu_domain *domain, vm_offset_t *start, vm_offset_t size,
+    u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **entry_ret)
+{
+    gmem_uvas_entry_t *entry;
+    int error;
+    gmem_uvas_t *uvas = domain->uvas;
+    dev_pmap_t *pmap = domain->pmap;
+
+    // Missing: entry->flags |= eflags;
+    if (uvas == NULL)
+        debug_printf("iommu ctx does not have a valid uvas\n");
+
+    // The Original IOMMU driver uses GMEM_PAGE_SIZE in the neighbourhood to prevent DMA bugs
+    // It is possible to add GMEM_PAGE_SIZE * 2 in the allocation request to simulate this behavior.
+    if ((flags & GMEM_UVA_ALLOC_FIXED) == 0)
+        error = gmem_uvas_alloc_span(uvas, start, size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+            flags, &entry);
+    else {
+        error = gmem_uvas_alloc_span_fixed(uvas, *start, *start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
+            flags, &entry);
+    }
+
+    // Failed to allocate VA space
+    if (error) {
+        printf("!!!!!!Failed va allocation, no mapping will be created\n");
+        return error;
+    }
+
+    // Who should consider multiple pmaps cases?
+    error = gmem_uvas_map_pages_sg(pmap, entry->start,
+        entry->end - entry->start, ma, eflags, ((flags & IOMMU_MF_CANWAIT) != 0 ? IOMMU_PGF_WAITOK : 0));
+
+    if (error) {
+        // There is no need to call iotlb inv
+        // TODO: we always free the entry when we add back this iotlb inv in the future
+        // TODO: replace with unload_entry, as the map function could fail in the middle.
+        // iommu_domain_unload_entry(domain, entry, true);
+        gmem_uvas_free_span(uvas, *start, size, entry);
+        return (error);
+    }
+
+    if (entry_ret != NULL)
+        *entry_ret = entry;
+    return (0);
+}
 
 void
 iommu_unmap_msi(struct iommu_ctx *ctx)
@@ -90,12 +136,6 @@ iommu_unmap_msi(struct iommu_ctx *ctx)
 		return;
 
 	gmem_uvas_unmap(domain->pmap, entry->start, entry->end - entry->start, NULL, NULL);
-
-	// IOMMU_DOMAIN_LOCK(domain);
-	// iommu_gas_free_space(domain, entry);
-	// IOMMU_DOMAIN_UNLOCK(domain);
-
-	// iommu_gas_free_entry(domain, entry);
 	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, entry);
 
 	domain->msi_entry = NULL;
@@ -169,21 +209,4 @@ iommu_translate_msi(struct iommu_domain *domain, uint64_t *addr)
 	    __func__, (uintmax_t)*addr, (uintmax_t)domain->msi_entry->end));
 }
 
-// int
-// iommu_map_region(struct iommu_domain *domain, struct iommu_map_entry *entry,
-//     u_int eflags, u_int flags, vm_page_t *ma)
-// {
-// 	int error;
-
-// 	error = iommu_gas_map_region(domain, entry, eflags, flags, ma);
-
-// 	return (error);
-// }
-
 SYSCTL_NODE(_hw, OID_AUTO, iommu, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, "");
-
-#ifdef INVARIANTS
-SYSCTL_INT(_hw_iommu, OID_AUTO, check_free, CTLFLAG_RWTUN,
-    &iommu_check_free, 0,
-    "Check the GPA RBtree for free_down and free_after validity");
-#endif

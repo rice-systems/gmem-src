@@ -235,8 +235,9 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 	// The unified address space it points to
 	gmem_uvas_t *uvas;
 
-	// TODO: remove the shit below
 	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
+	
+	// The data structure below can be put in a customized data structure
 	struct iommu_qi_genseq gseq;
 	// struct iommu_domain *domain;
 };
