@@ -142,7 +142,7 @@ static gmem_error_t intel_iommu_pmap_protect(vm_offset_t va, vm_size_t size,
 	return GMEM_OK;
 }
 
-static gmem_error_t intel_iommu_prepare(vm_paddr pa, vm_offset_t size)
+static gmem_error_t intel_iommu_prepare(vm_paddr_t pa, vm_offset_t size)
 {
 	return GMEM_OK;
 }
