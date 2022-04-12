@@ -129,10 +129,12 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 	intel_iommu_pgtable_t *pgtable = pmap->data;
 	int error;
 
+	START_STATS;
 	DMAR_DOMAIN_PGLOCK(pgtable->domain);
 	error = domain_unmap_buf_locked(pgtable->domain, va, size);
 	DMAR_DOMAIN_PGUNLOCK(pgtable->domain);
-
+	FINISH_STATS(UNMAP, size >> 12);
+	
 	return GMEM_OK;
 }
 
