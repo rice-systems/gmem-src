@@ -136,7 +136,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		uvas->allocator = VMEM;
 		// Currently we use the maximum available quantum cache (16)
 		uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-			alignment, alignment * 16, M_WAITOK);
+			alignment, alignment * 16, M_WAITOK | M_FIRSTFIT);
 
 		*uvas_res = uvas;
 		*pmap_res = pmap;
@@ -252,8 +252,10 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		if (start != new_start) {
 			debug_printf("VMEM xalloc failed with start %lx, end %lx, newstart %lx\n", start, end, new_start);
 		}
-		if (error != 0)
+		if (error != 0) {
+			gmem_uvas_free_entry(uvas, entry);
 			return error;
+		}
 		else {
 			entry->start = start;
 			entry->end = end;
@@ -294,6 +296,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	else if (uvas->allocator == VMEM) {
 		if (entry != NULL) {
 			vmem_free(uvas->arena, entry->start, entry->end - entry->start);
+			gmem_uvas_free_entry(uvas, entry);
 		} else {
 			vmem_xfree(uvas->arena, start, size);
 		}
