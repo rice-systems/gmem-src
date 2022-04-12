@@ -584,14 +584,14 @@ qc_init(vmem_t *vm, vmem_size_t qcache_max)
 {
 	qcache_t *qc;
 	vmem_size_t size;
-	int qcache_idx_max;
+	vmem_size_t qcache_idx_max;
 	int i;
 
 	MPASS((qcache_max & vm->vm_quantum_mask) == 0);
 	qcache_idx_max = MIN(qcache_max >> vm->vm_quantum_shift,
 	    VMEM_QCACHE_IDX_MAX);
 	vm->vm_qcache_max = qcache_idx_max << vm->vm_quantum_shift;
-	printf("QC Init: qcache_idx_max %d %lu %lu\n", qcache_idx_max, vm->vm_qcache_max, vm->vm_quantum_shift);
+	printf("QC Init: qcache_idx_max %lu %lu %d\n", qcache_idx_max, vm->vm_qcache_max, vm->vm_quantum_shift);
 	for (i = 0; i < qcache_idx_max; i++) {
 		qc = &vm->vm_qcache[i];
 		size = (i + 1) << vm->vm_quantum_shift;
