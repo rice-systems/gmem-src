@@ -286,7 +286,6 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 		GMEM_UVAS_LOCK(uvas);
 		if (entry != NULL) {
 			gmem_rb_remove(uvas, entry);
-			gmem_uvas_free_entry(uvas, entry);
 		} else {
 			gmem_uvas_entry_t span;
 			span.start = start;
@@ -307,6 +306,8 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 			panic("VMEM free for an arbitrary va span not implemented, must free a tracked va allocation\n");
 		}
 	}
+	if (entry != NULL) 
+		gmem_uvas_free_entry(uvas, entry);
 	FINISH_STATS(VA_FREE, size >> 12);
 	return GMEM_OK;
 }
