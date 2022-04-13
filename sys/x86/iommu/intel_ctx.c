@@ -524,9 +524,8 @@ dmar_domain_destroy(struct dmar_domain *domain)
 		// DMAR_DOMAIN_UNLOCK(domain);
 	}
 	if ((domain->iodom.flags & IOMMU_DOMAIN_PGTBL_INITED) != 0) {
-		if (domain->pgtbl_obj != NULL)
-			DMAR_DOMAIN_PGLOCK(domain);
-		domain_free_pgtbl(domain);
+		iodom->pmap->mmu_ops->mmu_pmap_destroy(iodom->pmap);
+		// domain_free_pgtbl(domain);
 	}
 
 	iommu_domain_fini(iodom);

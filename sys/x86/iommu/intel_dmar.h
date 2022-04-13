@@ -70,7 +70,6 @@ struct dmar_domain {
 	struct dmar_unit *dmar;		/* (c) */
 	LIST_ENTRY(dmar_domain) link;	/* (u) Member in the dmar list */
 	LIST_HEAD(, dmar_ctx) contexts;	/* (u) */
-	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
 	vm_page_t pglv0;
 };
@@ -83,15 +82,12 @@ struct dmar_ctx {
 	u_int refs;			/* (u) References from tags */
 };
 
-#define	DMAR_DOMAIN_PGLOCK(dom)		VM_OBJECT_WLOCK((dom)->pgtbl_obj)
-#define	DMAR_DOMAIN_PGTRYLOCK(dom)	VM_OBJECT_TRYWLOCK((dom)->pgtbl_obj)
-#define	DMAR_DOMAIN_PGUNLOCK(dom)	VM_OBJECT_WUNLOCK((dom)->pgtbl_obj)
-#define	DMAR_DOMAIN_ASSERT_PGLOCKED(dom) \
-	VM_OBJECT_ASSERT_WLOCKED((dom)->pgtbl_obj)
-
 #define	DMAR_DOMAIN_LOCK(dom)	mtx_lock(&(dom)->iodom.lock)
 #define	DMAR_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->iodom.lock)
 #define	DMAR_DOMAIN_ASSERT_LOCKED(dom) mtx_assert(&(dom)->iodom.lock, MA_OWNED)
+
+#define DMAR_DOMAIN_PGLOCK(dom) vm_page_lock(dom->pglv0)
+#define DMAR_DOMAIN_PGUNLOCK(dom) vm_page_unlock(dom->pglv0)
 
 #define	DMAR2IOMMU(dmar)	&((dmar)->iommu)
 #define	IOMMU2DMAR(dmar)	\

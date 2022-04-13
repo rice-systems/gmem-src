@@ -342,13 +342,15 @@ domain_pgtbl_pte_off(struct dmar_domain *domain, iommu_gaddr_t base, int lvl)
 	return (base & DMAR_PTEMASK);
 }
 
+// There are no concurrent mapping/unmapping of the same PTE,
+// so the lock only needs to protect page allocations of the iommu page table.
 static int
 domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
     int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t m, pm;
-	dmar_pte_t *pte;
+	dmar_pte_t *pte, pteval;
 	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
 	int i, ret = 0;
 
@@ -364,7 +366,7 @@ domain_pmap_enter(struct dmar_domain *domain, vm_offset_t base,
 
 		// map the page, it could be a superpage
 		if (lvl == domain->pglvl - 1) {
-			dmar_pte_store(pte, pa | pflags);
+			*pte = pa | pflags;
 finish:
 			dmar_flush_pte_to_ram(domain->dmar, pte);
 			pm->ref_count ++;
@@ -380,17 +382,16 @@ finish:
 			if ((mapsize == pg_size) && ((base & pg_frame) == 0)
 				&& ((pa & pg_frame) == 0)
 				&& domain_is_sp_lvl(domain, lvl + 1)) {
-				dmar_pte_store(pte, pa | pflags | DMAR_PTE_SP);
+				*pte = pa | pflags | DMAR_PTE_SP;
 				base += mapsize;
 				goto finish;
 			}
 			else {
-				// we need to dig deeper
+				// do we need to create pg table page?
 				if (*pte == 0) {
 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
 						flags | IOMMU_PGF_ZERO);
-					dmar_pte_store(pte, 
-						DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m));
+					*pte = DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m)
 					dmar_flush_pte_to_ram(domain->dmar, pte);
 					pm->ref_count ++;
 				}
@@ -424,12 +425,7 @@ domain_pmap_release(struct dmar_domain *domain, vm_offset_t base,
 	pg_frame = pg_size - 1;
 
 	while (size > 0) {
-
-		KASSERT(i < 512, ("i is going beyond boundary\n"));
 		pte = &ptep[i];
-		// not necessary
-		KASSERT(*pte != 0, ("pte in unmap is 0, pte %lx, i %d, lvl %d, base %lx, size %lx\n",
-			*pte, i, lvl, base, size));
 		if (lvl == domain->pglvl - 1 || (*pte & DMAR_PTE_SP) != 0) {
 			mapsize = pg_size;
 			// No need to consider splitting superpage mapping
@@ -441,8 +437,7 @@ domain_pmap_release(struct dmar_domain *domain, vm_offset_t base,
 				(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME)))
 				goto skip_clear;
 		}
-
-		dmar_pte_clear(pte);
+		*pte = 0;
 		dmar_flush_pte_to_ram(domain->dmar, pte);
 		pm->ref_count --;
 
@@ -453,7 +448,6 @@ skip_clear:
 		i ++;
 	}
 
-	KASSERT(pm->ref_count >= 0, ("pm wire count is less than 0\n"));
 	if (pm->ref_count == 1) {
 		dmar_pgfree_null(pm);
 		return 0;
@@ -461,7 +455,6 @@ skip_clear:
 	return 1;
 }
 
-// TODO: consider superpage demotion
 static int
 domain_pmap_destroy(struct dmar_domain *domain, int lvl, dmar_pte_t *ptep)
 {
@@ -479,12 +472,11 @@ domain_pmap_destroy(struct dmar_domain *domain, int lvl, dmar_pte_t *ptep)
 		if (lvl != domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
 			domain_pmap_destroy(domain, lvl + 1, 
 				(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
-		dmar_pte_clear(pte);
+		*pte = 0;
 		dmar_flush_pte_to_ram(domain->dmar, pte);
 		pm->ref_count --;
 	}
 
-	KASSERT(pm->ref_count >= 0, ("pm wire count is less than 0\n"));
 	if (pm->ref_count == 1) {
 		dmar_pgfree_null(pm);
 		return 0;
@@ -494,11 +486,13 @@ domain_pmap_destroy(struct dmar_domain *domain, int lvl, dmar_pte_t *ptep)
 
 // This function has been changed to map a contiguous pa range.
 int
-domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
+domain_map_buf(struct dmar_domain *domain, vm_offset_t base,
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
+	DMAR_DOMAIN_PGLOCK(domain);
 	domain_pmap_enter(domain, base, size, pa, pflags, flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	DMAR_DOMAIN_PGUNLOCK(domain);
 	return 0;
 }
 
@@ -506,12 +500,11 @@ domain_map_buf_locked(struct dmar_domain *domain, vm_offset_t base,
  * Assumes that the unmap is never partial.
  */
 int
-domain_unmap_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
+domain_unmap_buf(struct dmar_domain *domain, iommu_gaddr_t base,
     iommu_gaddr_t size)
 {
 	dmar_pte_t *pte;
 
-	DMAR_DOMAIN_ASSERT_PGLOCKED(domain);
 	if (size == 0)
 		return (0);
 
@@ -535,7 +528,10 @@ domain_unmap_buf_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 
 	KASSERT(domain->pglv0 != NULL, ("page table lv0 page is NULL"));
 	pte = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
+	
+	DMAR_DOMAIN_PGLOCK(domain);
 	domain_pmap_release(domain, base, size, 0, pte);
+	DMAR_DOMAIN_PGUNLOCK(domain);
 
 	TD_PINNED_ASSERT;
 	return (0);
@@ -546,39 +542,20 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 {
 	vm_page_t m;
 
-	KASSERT(domain->pgtbl_obj == NULL,
-	    ("already initialized %p", domain));
-
-	domain->pgtbl_obj = vm_pager_allocate(OBJT_PHYS, NULL,
-	    IDX_TO_OFF(pglvl_max_pages(domain->pglvl)), 0, 0, NULL);
-	DMAR_DOMAIN_PGLOCK(domain);
+	DMAR_DOMAIN_LOCK(domain);
 	m = dmar_pgalloc_null(0, IOMMU_PGF_WAITOK | IOMMU_PGF_ZERO);
 	/* No implicit free of the top level page table page. */
-	m->ref_count = 2;
+	m->ref_count ++;
 	domain->pglv0 = m;
 	vm_wire_add(1);
-	DMAR_DOMAIN_PGUNLOCK(domain);
-	DMAR_LOCK(domain->dmar);
 	domain->iodom.flags |= IOMMU_DOMAIN_PGTBL_INITED;
-	DMAR_UNLOCK(domain->dmar);
+	DMAR_DOMAIN_UNLOCK(domain);
 	return (0);
 }
 
 void
 domain_free_pgtbl(struct dmar_domain *domain)
 {
-	vm_object_t obj;
-
-	obj = domain->pgtbl_obj;
-	if (obj == NULL) {
-		KASSERT((domain->dmar->hw_ecap & DMAR_ECAP_PT) != 0 &&
-		    (domain->iodom.flags & IOMMU_DOMAIN_IDMAP) != 0,
-		    ("lost pagetable object domain %p", domain));
-		return;
-	}
-	DMAR_DOMAIN_ASSERT_PGLOCKED(domain);
-	domain->pgtbl_obj = NULL;
-
 	if ((domain->iodom.flags & IOMMU_DOMAIN_IDMAP) != 0) {
 		put_idmap_pgtbl(obj);
 		domain->iodom.flags &= ~IOMMU_DOMAIN_IDMAP;
@@ -586,12 +563,11 @@ domain_free_pgtbl(struct dmar_domain *domain)
 	}
 
 	/* Obliterate ref_counts */
+	DMAR_DOMAIN_LOCK(domain);
 	domain_pmap_destroy(domain, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-	VM_OBJECT_ASSERT_WLOCKED(obj);
 	domain->pglv0->ref_count = 0;
 	vm_wire_sub(1);
-	VM_OBJECT_WUNLOCK(obj);
-	vm_object_deallocate(obj);
+	DMAR_DOMAIN_UNLOCK(domain);
 }
 
 static inline uint64_t
