@@ -90,6 +90,14 @@ __FBSDID("$FreeBSD$");
 
 #include "ifdi_if.h"
 
+static void debug_unload(bus_dma_tag_t dmat, bus_dmamap_t map, char const * caller_name)
+{
+    printf( "[%s] dmamap_unload", caller_name );
+    bus_dmamap_unload(dmat, map);
+}
+
+#define bus_dmamap_unload(x, y) debug_unload(x, y, __func__)
+
 #ifdef PCI_IOV
 #include <dev/pci/pci_iov.h>
 #endif
@@ -908,7 +916,6 @@ netmap_fl_refill(iflib_rxq_t rxq, struct netmap_kring *kring, bool init)
 				    map[nic_i], addr);
 			} else if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
-				printf("[iflib refill] reload_map\n");
 				netmap_reload_map(na, fl->ifl_buf_tag,
 				    map[nic_i], addr);
 			}
@@ -1066,7 +1073,6 @@ iflib_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
-				printf("[iflib txsync] reload_map\n");
 				netmap_reload_map(na, txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[nic_i], addr);
 			}
