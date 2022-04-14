@@ -101,6 +101,7 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 	tc->impl->mem_free(dmat, vaddr, map);
 }
 
+#include <sys/systm.h>
 /*
  * Release the mapping held by map.
  */
