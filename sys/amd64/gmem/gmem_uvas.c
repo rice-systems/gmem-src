@@ -357,7 +357,7 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
 	KASSERT(pmap != NULL, "The pmap to unmap is NULL!");
 
 	// Think about how to async?
-	if (wait) {
+	if (unmap_callback != NULL) {
 		// The unmap will be sync
 		pmap->mmu_ops->mmu_pmap_release(pmap, start, size);
 	} else {
