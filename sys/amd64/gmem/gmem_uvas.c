@@ -352,7 +352,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 }
 
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, bool wait, void (* unmap_callback(void *)), void *callback_args)
+	vm_size_t size, void (* unmap_callback(void *)), void *callback_args)
 {
 	KASSERT(pmap != NULL, "The pmap to unmap is NULL!");
 
