@@ -391,7 +391,7 @@ finish:
 				if (*pte == 0) {
 					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
 						flags | IOMMU_PGF_ZERO);
-					*pte = DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m)
+					*pte = DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m);
 					dmar_flush_pte_to_ram(domain->dmar, pte);
 					pm->ref_count ++;
 				}
@@ -549,6 +549,7 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 	domain->pglv0 = m;
 	vm_wire_add(1);
 	domain->iodom.flags |= IOMMU_DOMAIN_PGTBL_INITED;
+	domain->pgtbl_obj = NULL;
 	DMAR_DOMAIN_UNLOCK(domain);
 	return (0);
 }
@@ -556,6 +557,16 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 void
 domain_free_pgtbl(struct dmar_domain *domain)
 {
+	vm_object_t obj;
+
+	obj = domain->pgtbl_obj;
+	if (obj == NULL && (domain->iodom.flags & IOMMU_DOMAIN_IDMAP) != 0) {
+		KASSERT((domain->dmar->hw_ecap & DMAR_ECAP_PT) != 0,
+		    ("lost pagetable object domain %p", domain));
+		return;
+	}
+	domain->pgtbl_obj = NULL;
+
 	if ((domain->iodom.flags & IOMMU_DOMAIN_IDMAP) != 0) {
 		put_idmap_pgtbl(obj);
 		domain->iodom.flags &= ~IOMMU_DOMAIN_IDMAP;

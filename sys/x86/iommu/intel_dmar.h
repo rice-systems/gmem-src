@@ -70,6 +70,7 @@ struct dmar_domain {
 	struct dmar_unit *dmar;		/* (c) */
 	LIST_ENTRY(dmar_domain) link;	/* (u) Member in the dmar list */
 	LIST_HEAD(, dmar_ctx) contexts;	/* (u) */
+	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
 	vm_page_t pglv0;
 };
