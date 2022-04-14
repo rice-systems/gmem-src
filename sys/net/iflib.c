@@ -90,14 +90,6 @@ __FBSDID("$FreeBSD$");
 
 #include "ifdi_if.h"
 
-static void debug_unload(bus_dma_tag_t dmat, bus_dmamap_t map, char const * caller_name)
-{
-    printf( "[%s] dmamap_unload", caller_name );
-    bus_dmamap_unload(dmat, map);
-}
-
-#define bus_dmamap_unload(x, y) debug_unload(x, y, __func__)
-
 #ifdef PCI_IOV
 #include <dev/pci/pci_iov.h>
 #endif

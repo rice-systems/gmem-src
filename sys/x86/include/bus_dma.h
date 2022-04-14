@@ -115,6 +115,14 @@ bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map)
 	}
 }
 
+static inline void debug_unload(bus_dma_tag_t dmat, bus_dmamap_t map, char const * caller_name)
+{
+    printf( "[%s] dmamap_unload", caller_name );
+    bus_dmamap_unload(dmat, map);
+}
+
+#define bus_dmamap_unload(x, y) debug_unload(x, y, __func__)
+
 static inline void
 bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 {
