@@ -954,11 +954,14 @@ dmar_domain_unload(struct dmar_domain *domain,
 	struct dmar_unit *unit;
 	struct iommu_domain *iodom;
 	struct gmem_uvas_entry *entry, *entry1;
+	uint64_t cnt = 0, size = 0;
 
 	iodom = DOM2IODOM(domain);
 	unit = DOM2DMAR(domain);
 
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
+		cnt ++;
+		size += entry->end - entry->start;
 		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
 		    ("not mapped entry %p %p", domain, entry));
 		// error = iodom->ops->unmap(iodom, entry->start, entry->end -
@@ -972,6 +975,7 @@ dmar_domain_unload(struct dmar_domain *domain,
 			dmar_domain_free_entry(entry, true);
 		}
 	}
+	printf("[iommu unload] cnt %lu, size 0x%lx\n", cnt, size);
 	if (TAILQ_EMPTY(entries))
 		return;
 

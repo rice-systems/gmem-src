@@ -908,6 +908,7 @@ netmap_fl_refill(iflib_rxq_t rxq, struct netmap_kring *kring, bool init)
 				    map[nic_i], addr);
 			} else if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
+				printf("[iflib refill] reload_map\n");
 				netmap_reload_map(na, fl->ifl_buf_tag,
 				    map[nic_i], addr);
 			}
@@ -1065,6 +1066,7 @@ iflib_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
+				printf("[iflib txsync] reload_map\n");
 				netmap_reload_map(na, txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[nic_i], addr);
 			}
