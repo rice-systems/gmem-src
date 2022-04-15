@@ -904,6 +904,7 @@ netmap_fl_refill(iflib_rxq_t rxq, struct netmap_kring *kring, bool init)
 			fl->ifl_rxd_idxs[i] = nic_i;
 
 			if (__predict_false(init)) {
+				printf("[fl_refill] loading addr %p\n", addr);
 				netmap_load_map(na, fl->ifl_buf_tag,
 				    map[nic_i], addr);
 			} else if (slot->flags & NS_BUF_CHANGED) {
@@ -2065,6 +2066,7 @@ iflib_fl_refill(if_ctx_t ctx, iflib_fl_t fl, int count)
 			err = bus_dmamap_load(fl->ifl_buf_tag, sd_map[frag_idx],
 			    cl, fl->ifl_buf_size, _rxq_refill_cb, &cb_arg,
 			    BUS_DMA_NOWAIT);
+			printf("[iflib refill] loading new mbuf %p\n", cl);
 			if (__predict_false(err != 0 || cb_arg.error)) {
 				uma_zfree(fl->ifl_zone, cl);
 				break;
