@@ -834,6 +834,8 @@ generic_rx_handler(struct ifnet *ifp, struct mbuf *m)
 		return 0;
 	}
 
+	printf("[netmap_generic] input mbuf starting at %p\n", m->m_data);
+
 	/* limit the size of the queue */
 	if (unlikely(!gna->rxsg && MBUF_LEN(m) > NETMAP_BUF_SIZE(na))) {
 		/* This may happen when GRO/LRO features are enabled for
