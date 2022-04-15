@@ -830,6 +830,7 @@ iflib_netmap_register(struct netmap_adapter *na, int onoff)
 }
 
 static int
+
 netmap_fl_refill(iflib_rxq_t rxq, struct netmap_kring *kring, bool init)
 {
 	struct netmap_adapter *na = kring->na;
@@ -3474,6 +3475,7 @@ iflib_encap(iflib_txq_t txq, struct mbuf **m_headp)
 	}
 
 retry:
+	printf("[iflib_encap] loading mbuf starting %p\n", m_head);
 	err = bus_dmamap_load_mbuf_sg(buf_tag, map, m_head, segs, &nsegs,
 	    BUS_DMA_NOWAIT);
 defrag:
