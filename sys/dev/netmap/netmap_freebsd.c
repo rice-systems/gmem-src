@@ -329,6 +329,7 @@ freebsd_generic_rx_handler(struct ifnet *ifp, struct mbuf *m)
 		return;
 	}
 
+	printf("[netmap] if_input mbuf %p\n", m->m_data);
 	stolen = generic_rx_handler(ifp, m);
 	if (!stolen) {
 		struct netmap_generic_adapter *gna =

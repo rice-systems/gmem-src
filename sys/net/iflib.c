@@ -2763,8 +2763,11 @@ assemble_segments(iflib_rxq_t rxq, if_rxd_info_t ri, if_rxsd_t sd, int *pf_rv)
 		m->m_data += padlen;
 		ri->iri_len -= padlen;
 		m->m_len = ri->iri_frags[i].irf_len;
+
+		printf("[iflib] attach mbuf %p\n", m->m_data);
 	} while (++i < ri->iri_nfrags);
 
+	printf("[iflib] assmebled %d segments\n", i);
 	return (mh);
 }
 
