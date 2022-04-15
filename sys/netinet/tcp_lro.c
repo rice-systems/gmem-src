@@ -1121,7 +1121,7 @@ tcp_lro_flush_all(struct lro_ctrl *lc)
 done:
 	/* flush active streams */
 	tcp_lro_rx_done(lc);
-
+	printf("[tcp_lro] done lro flush, %d\n", lc->lro_mbuf_count);
 	lc->lro_mbuf_count = 0;
 }
 
