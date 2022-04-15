@@ -2983,6 +2983,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 			if (!lro_possible) {
 				lro_possible = iflib_check_lro_possible(m, v4_forwarding, v6_forwarding);
 				if (lro_possible && mf != NULL) {
+					printf("[iflib_rxeof] if_input at 2986\n");
 					ifp->if_input(ifp, mf);
 					DBG_COUNTER_INC(rx_if_input);
 					mt = mf = NULL;
@@ -2996,6 +2997,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		}
 #endif
 		if (lro_possible) {
+			printf("[iflib_rxeof] if_input at 2999\n");
 			ifp->if_input(ifp, m);
 			DBG_COUNTER_INC(rx_if_input);
 			continue;
@@ -3008,6 +3010,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		mt = m;
 	}
 	if (mf != NULL) {
+		printf("[iflib_rxeof] if_input at 3011\n");
 		ifp->if_input(ifp, mf);
 		DBG_COUNTER_INC(rx_if_input);
 	}
