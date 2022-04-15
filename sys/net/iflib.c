@@ -2694,7 +2694,7 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	}
 
 	if (unload && irf->irf_len != 0) {
-		printf("[iflib] unloading mbuf starting at %lx\n", m->m_data);
+		printf("[iflib] unloading mbuf starting at %p\n", m->m_data);
 		bus_dmamap_unload(fl->ifl_buf_tag, map);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);

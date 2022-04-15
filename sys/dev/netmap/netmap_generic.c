@@ -986,7 +986,7 @@ generic_netmap_rxsync(struct netmap_kring *kring, int flags)
 			break;
 		}
 
-		printf("[netmap_generic] free mbuf starting at %lx\n", m->m_data);
+		printf("[netmap_generic] free mbuf starting at %p\n", m->m_data);
 
 		do {
 			nmaddr = NMB(na, &ring->slot[nm_i]);
