@@ -986,6 +986,8 @@ generic_netmap_rxsync(struct netmap_kring *kring, int flags)
 			break;
 		}
 
+		printf("[netmap_generic] free mbuf starting at %lx\n", m->m_data);
+
 		do {
 			nmaddr = NMB(na, &ring->slot[nm_i]);
 			/* We only check the address here on generic rx rings. */
