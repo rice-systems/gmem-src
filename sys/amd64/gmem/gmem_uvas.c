@@ -342,6 +342,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
+		printf("[iommu] map pa 0x%lx\n", VM_PAGE_TO_PHYS(pages[last_i]));
 		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			prot, mem_flags);
