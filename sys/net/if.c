@@ -3984,7 +3984,7 @@ if_transmit(struct ifnet *ifp, struct mbuf *m)
 static void
 if_input_default(struct ifnet *ifp __unused, struct mbuf *m)
 {
-
+	printf("[if_input_default] free m %p\n", m->m_data);
 	m_freem(m);
 }
 
