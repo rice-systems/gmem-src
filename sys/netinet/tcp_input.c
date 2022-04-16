@@ -1404,8 +1404,10 @@ drop:
 	INP_INFO_WUNLOCK_ASSERT(&V_tcbinfo);
 	if (s != NULL)
 		free(s, M_TCPLOG);
-	if (m != NULL)
+	if (m != NULL) {
+		printf("[tcp_input] free mbuf %p\n", m->m_data);
 		m_freem(m);
+	}
 	return (IPPROTO_DONE);
 }
 
