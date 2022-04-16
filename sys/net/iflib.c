@@ -2995,6 +2995,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 			if ((m->m_pkthdr.csum_flags & (CSUM_L4_CALC|CSUM_L4_VALID)) ==
 			    (CSUM_L4_CALC|CSUM_L4_VALID)) {
 				if (lro_possible && tcp_lro_rx(&rxq->ifr_lc, m, 0) == 0) {
+					printf("[iflib] done with tcp_lro_rx for mbuf %p\n", m->m_data);
 					continue;
 				}
 			}
@@ -3013,6 +3014,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		mt = m;
 	}
 	if (mf != NULL) {
+		printf("[iflib] maybe now it tries to free m bufs\n");
 		ifp->if_input(ifp, mf);
 		DBG_COUNTER_INC(rx_if_input);
 	}
