@@ -826,6 +826,7 @@ ours:
 	 */
 	IPSTAT_INC(ips_delivered);
 
+	printf("[ip_input] entering input, protocol %u\n", *inetsw[ip_protox[ip->ip_p]].pr_protocol);
 	(*inetsw[ip_protox[ip->ip_p]].pr_input)(&m, &hlen, ip->ip_p);
 	return;
 bad:
