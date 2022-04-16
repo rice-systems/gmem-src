@@ -2904,6 +2904,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		cidxp = &rxq->ifr_cq_cidx;
 	else
 		cidxp = &rxq->ifr_fl[0].ifl_cidx;
+	printf("[refill 1]\n");
 	if ((avail = iflib_rxd_avail(ctx, rxq, *cidxp, budget)) == 0) {
 		for (i = 0, fl = &rxq->ifr_fl[0]; i < sctx->isc_nfl; i++, fl++)
 			retval |= iflib_fl_refill_all(ctx, fl);
@@ -2965,6 +2966,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 	}
 	CURVNET_RESTORE();
 	/* make sure that we can refill faster than drain */
+	printf("[refill 2]\n");
 	for (i = 0, fl = &rxq->ifr_fl[0]; i < sctx->isc_nfl; i++, fl++)
 		retval |= iflib_fl_refill_all(ctx, fl);
 
