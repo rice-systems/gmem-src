@@ -2208,6 +2208,7 @@ iflib_fl_bufs_free(iflib_fl_t fl)
 		} else {
 			MPASS(*sd_m == NULL);
 		}
+		printf("[iflib_fl_bufs_free] dequeued\n");
 #if MEMORY_LOGGING
 		fl->ifl_m_dequeued++;
 		fl->ifl_cl_dequeued++;

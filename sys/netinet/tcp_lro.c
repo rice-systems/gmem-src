@@ -821,6 +821,7 @@ again:
 					    th->th_ack,
 					    th->th_win);
 			}
+			printf("[tcp_lro] free mbuf %p\n", m->m_data);
 			m_freem(m);
 			continue;
 		}
@@ -1084,8 +1085,6 @@ tcp_lro_flush_all(struct lro_ctrl *lc)
 	uint64_t nseq;
 	unsigned x;
 
-	printf("[tcp_lro] done lro flush, %d\n", lc->lro_mbuf_count);
-
 	/* check if no mbufs to flush */
 	if (lc->lro_mbuf_count == 0)
 		goto done;
@@ -1310,7 +1309,6 @@ tcp_lro_rx2(struct lro_ctrl *lc, struct mbuf *m, uint32_t csum, int use_hash)
 			m->m_pkthdr.lro_len = tcp_data_len;
 		} else {
 			/* no data and old ack */
-			printf("[tcp_lro] free mbuf %p\n", m->m_data);
 			m_freem(m);
 			return (0);
 		}
