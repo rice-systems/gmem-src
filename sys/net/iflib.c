@@ -2195,7 +2195,6 @@ iflib_fl_bufs_free(iflib_fl_t fl)
 			sd_map = fl->ifl_sds.ifsd_map[i];
 			bus_dmamap_sync(fl->ifl_buf_tag, sd_map,
 			    BUS_DMASYNC_POSTREAD);
-			printf("[iflib fl_bufs_free] unloading %p\n", sd_cl);
 			bus_dmamap_unload(fl->ifl_buf_tag, sd_map);
 			uma_zfree(fl->ifl_zone, *sd_cl);
 			*sd_cl = NULL;
@@ -2207,7 +2206,6 @@ iflib_fl_bufs_free(iflib_fl_t fl)
 		} else {
 			MPASS(*sd_m == NULL);
 		}
-		printf("[iflib_fl_bufs_free] dequeued\n");
 #if MEMORY_LOGGING
 		fl->ifl_m_dequeued++;
 		fl->ifl_cl_dequeued++;
