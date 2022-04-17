@@ -566,7 +566,6 @@ tcp_flush_out_le(struct tcpcb *tp, struct lro_ctrl *lc, struct lro_entry *le, in
 	if (tp && locked) {
 		tcp_lro_log(tp, lc, le, le->m_head, 8, 0, 0, 0, 0);
 	}
-	printf("[tcp_lro] At this moment the rx packets should be processed\n");
 	(*lc->ifp->if_input)(lc->ifp, le->m_head);
 	lc->lro_queued += le->append_cnt;
 }
@@ -822,7 +821,6 @@ again:
 					    th->th_ack,
 					    th->th_win);
 			}
-			printf("[tcp_lro] free mbuf %p\n", m->m_data);
 			m_freem(m);
 			continue;
 		}
@@ -977,7 +975,6 @@ skip_lookup:
 			tcp_lro_condense(tp, lc, le, locked);
 		} else
 			counter_u64_add(tcp_inp_lro_single_push, 1);
-		printf("[tcp_lro] tcp_flush_out_le executed\n");
 		tcp_flush_out_le(tp, lc, le, locked);
 #ifdef TCPHPTS
 	}
@@ -1089,7 +1086,6 @@ tcp_lro_flush_all(struct lro_ctrl *lc)
 
 	/* check if no mbufs to flush */
 	if (lc->lro_mbuf_count == 0) {
-		printf("[tcp_lro] flush all quickly finishes\n");
 		goto done;
 	}
 

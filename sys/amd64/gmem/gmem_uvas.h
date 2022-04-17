@@ -110,11 +110,24 @@ gmem_test_boundary(vm_offset_t start, vm_offset_t size, vm_offset_t boundary)
 	return (start + size <= ((start + boundary) & ~(boundary - 1)));
 }
 
+#define GMEM_MMU_LOCK(ops) mtx_lock(&ops->lock)
+#define GMEM_MMU_UNLOCK(ops) mtx_unlock(&ops->lock)
+
 struct gmem_mmu_ops
 {
+	// immutable variables once set
 	// bitmap of available page shifts for page-based TLB
 	unsigned long pgsize_bitmap;
 	bool mmu_has_range_tlb;
+	int inited;
+	struct mtx lock;
+
+	// protected by GMEM_MMU_LOCK
+	struct gmem_uvas_entries_tailq unmap_entries;
+	int delayed_entries;
+
+	// init function that initializes this mmu ops, including a global queue for tlb inv
+	gmem_error_t (*mmu_init)(struct gmem_mmu_ops *);
 
 	// device zeroing or just no-op 
 	gmem_error_t (*prepare)(vm_paddr_t pa, vm_size_t size);

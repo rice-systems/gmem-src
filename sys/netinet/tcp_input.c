@@ -1405,7 +1405,6 @@ drop:
 	if (s != NULL)
 		free(s, M_TCPLOG);
 	if (m != NULL) {
-		printf("[tcp_input] free mbuf %p\n", m->m_data);
 		m_freem(m);
 	}
 	return (IPPROTO_DONE);

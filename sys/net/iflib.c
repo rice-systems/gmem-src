@@ -2698,10 +2698,8 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 			*pf_rv = PFIL_PASS;
 	}
 
-	if (unload && irf->irf_len != 0) {
-		printf("[iflib] unloading mbuf starting at %p\n", m->m_data);
+	if (unload && irf->irf_len != 0)
 		bus_dmamap_unload(fl->ifl_buf_tag, map);
-	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
 		fl->ifl_gen = 0;
@@ -2905,7 +2903,6 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		cidxp = &rxq->ifr_cq_cidx;
 	else
 		cidxp = &rxq->ifr_fl[0].ifl_cidx;
-	printf("[refill 1]\n");
 	if ((avail = iflib_rxd_avail(ctx, rxq, *cidxp, budget)) == 0) {
 		for (i = 0, fl = &rxq->ifr_fl[0]; i < sctx->isc_nfl; i++, fl++)
 			retval |= iflib_fl_refill_all(ctx, fl);
@@ -2967,13 +2964,15 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 	}
 	CURVNET_RESTORE();
 	/* make sure that we can refill faster than drain */
-	printf("[refill 2]\n");
 	for (i = 0, fl = &rxq->ifr_fl[0]; i < sctx->isc_nfl; i++, fl++)
 		retval |= iflib_fl_refill_all(ctx, fl);
 
 	lro_enabled = (if_getcapenable(ifp) & IFCAP_LRO);
 	if (lro_enabled)
 		iflib_get_ip_forwarding(&rxq->ifr_lc, &v4_forwarding, &v6_forwarding);
+
+	// TODO: This is the safest point to sync IOMMU unmaps.
+
 	mt = mf = NULL;
 	while (mh != NULL) {
 		m = mh;
@@ -2996,7 +2995,6 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 			if ((m->m_pkthdr.csum_flags & (CSUM_L4_CALC|CSUM_L4_VALID)) ==
 			    (CSUM_L4_CALC|CSUM_L4_VALID)) {
 				if (lro_possible && tcp_lro_rx(&rxq->ifr_lc, m, 0) == 0) {
-					printf("[iflib] done with tcp_lro_rx for mbuf %p\n", m->m_data);
 					continue;
 				}
 			}
@@ -3015,7 +3013,6 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		mt = m;
 	}
 	if (mf != NULL) {
-		printf("[iflib] maybe now it tries to free m bufs\n");
 		ifp->if_input(ifp, mf);
 		DBG_COUNTER_INC(rx_if_input);
 	}
@@ -3027,7 +3024,6 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 	 * Flush any outstanding LRO work
 	 */
 #if defined(INET6) || defined(INET)
-	printf("[iflib_rxeof] tcp_lro_flush_all\n");
 	tcp_lro_flush_all(&rxq->ifr_lc);
 #endif
 	if (avail != 0 || iflib_rxd_avail(ctx, rxq, *cidxp, 1) != 0)
@@ -3481,7 +3477,6 @@ iflib_encap(iflib_txq_t txq, struct mbuf **m_headp)
 	}
 
 retry:
-	printf("[iflib_encap] loading mbuf starting %p\n", m_head);
 	err = bus_dmamap_load_mbuf_sg(buf_tag, map, m_head, segs, &nsegs,
 	    BUS_DMA_NOWAIT);
 defrag:

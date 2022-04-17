@@ -806,8 +806,6 @@ ether_input(struct ifnet *ifp, struct mbuf *m)
 	struct mbuf *mn;
 	bool needs_epoch;
 
-	printf("[ether_input] mbuf %p\n", m->m_data);
-
 	needs_epoch = !(ifp->if_flags & IFF_KNOWSEPOCH);
 
 	/*

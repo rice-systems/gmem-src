@@ -127,10 +127,12 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 	intel_iommu_pgtable_t *pgtable = pmap->data;
 	int error;
 
+	// destroy mappings
 	START_STATS;
 	error = domain_unmap_buf(pgtable->domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
+	// invalidate TLB
 	return GMEM_OK;
 }
 
@@ -145,9 +147,22 @@ static gmem_error_t intel_iommu_prepare(vm_paddr_t pa, vm_offset_t size)
 	return GMEM_OK;
 }
 
+static gmem_error_t intel_iommu_init(struct gmem_mmu_ops* ops)
+{
+	if (atomic_cmpset_int(ops->inited, 0, 1)) {
+		printf("[intel_iommu_ops] initing\n");
+		TAILQ_INIT(&ops->unmap_entries);
+		mtx_init(&ops->lock);
+		delayed_entries = 0;
+	}
+	return GMEM_OK;
+}
+
 gmem_mmu_ops_t intel_iommu_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
 	.mmu_has_range_tlb = false,
+	.inited = 0,
+	.mmu_init = intel_iommu_init,
 	.prepare = intel_iommu_prepare,
 	.mmu_pmap_create = intel_iommu_pmap_create,
 	.mmu_pmap_destroy = intel_iommu_pmap_destroy,
