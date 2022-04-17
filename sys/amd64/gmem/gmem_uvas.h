@@ -235,7 +235,7 @@ struct gmem_mmu_ops
 
 	// protected by GMEM_MMU_LOCK
 	struct gmem_uvas_entries_tailq unmap_entries;
-	int delayed_entries;
+	u_int unmap_entry_cnt;
 
 	// init function that initializes this mmu ops, including a global queue for tlb inv
 	gmem_error_t (*mmu_init)(struct gmem_mmu_ops *);

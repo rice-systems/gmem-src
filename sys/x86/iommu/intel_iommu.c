@@ -149,11 +149,11 @@ static gmem_error_t intel_iommu_prepare(vm_paddr_t pa, vm_offset_t size)
 
 static gmem_error_t intel_iommu_init(struct gmem_mmu_ops* ops)
 {
-	if (atomic_cmpset_int(ops->inited, 0, 1)) {
+	if (atomic_cmpset_int(&ops->inited, 0, 1)) {
 		printf("[intel_iommu_ops] initing\n");
 		TAILQ_INIT(&ops->unmap_entries);
-		mtx_init(&ops->lock);
-		delayed_entries = 0;
+		mtx_init(&ops->lock, "mmu lock for global device data structures", NULL, MTX_DEF);
+		ops->unmap_entry_cnt = 0;
 	}
 	return GMEM_OK;
 }
