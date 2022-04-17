@@ -110,43 +110,6 @@ gmem_test_boundary(vm_offset_t start, vm_offset_t size, vm_offset_t boundary)
 	return (start + size <= ((start + boundary) & ~(boundary - 1)));
 }
 
-#define GMEM_MMU_LOCK(ops) mtx_lock(&ops->lock)
-#define GMEM_MMU_UNLOCK(ops) mtx_unlock(&ops->lock)
-
-struct gmem_mmu_ops
-{
-	// immutable variables once set
-	// bitmap of available page shifts for page-based TLB
-	unsigned long pgsize_bitmap;
-	bool mmu_has_range_tlb;
-	int inited;
-	struct mtx lock;
-
-	// protected by GMEM_MMU_LOCK
-	struct gmem_uvas_entries_tailq unmap_entries;
-	int delayed_entries;
-
-	// init function that initializes this mmu ops, including a global queue for tlb inv
-	gmem_error_t (*mmu_init)(struct gmem_mmu_ops *);
-
-	// device zeroing or just no-op 
-	gmem_error_t (*prepare)(vm_paddr_t pa, vm_size_t size);
-
-	// device page/range table creation and destruction.
-	gmem_error_t (*mmu_pmap_create)(dev_pmap_t *pmap, void *dev_data);
-	gmem_error_t (*mmu_pmap_destroy)(dev_pmap_t *pmap);
-
-	// device mapping creation, manipulation and destruction
-	// We do not include batching mechanism here, as we will not exercise
-	// any throughput devices at this moment
-	// We also do not include async version for map, as it will not be used
-	gmem_error_t (*mmu_pmap_enter)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
-		vm_paddr_t pa, u_int prot, u_int mem_flags);
-	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
-	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
-		vm_prot_t new_prot);
-};
-
 RB_HEAD(gmem_uvas_entries_tree, gmem_uvas_entry);
 RB_PROTOTYPE(gmem_uvas_entries_tree, gmem_uvas_entry, rb_entry,
     gmem_uvas_cmp_entries);
@@ -256,6 +219,43 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 	// The data structure below can be put in a customized data structure
 	struct iommu_qi_genseq gseq;
 	// struct iommu_domain *domain;
+};
+
+#define GMEM_MMU_LOCK(ops) mtx_lock(&ops->lock)
+#define GMEM_MMU_UNLOCK(ops) mtx_unlock(&ops->lock)
+
+struct gmem_mmu_ops
+{
+	// immutable variables once set
+	// bitmap of available page shifts for page-based TLB
+	unsigned long pgsize_bitmap;
+	bool mmu_has_range_tlb;
+	int inited;
+	struct mtx lock;
+
+	// protected by GMEM_MMU_LOCK
+	struct gmem_uvas_entries_tailq unmap_entries;
+	int delayed_entries;
+
+	// init function that initializes this mmu ops, including a global queue for tlb inv
+	gmem_error_t (*mmu_init)(struct gmem_mmu_ops *);
+
+	// device zeroing or just no-op 
+	gmem_error_t (*prepare)(vm_paddr_t pa, vm_size_t size);
+
+	// device page/range table creation and destruction.
+	gmem_error_t (*mmu_pmap_create)(dev_pmap_t *pmap, void *dev_data);
+	gmem_error_t (*mmu_pmap_destroy)(dev_pmap_t *pmap);
+
+	// device mapping creation, manipulation and destruction
+	// We do not include batching mechanism here, as we will not exercise
+	// any throughput devices at this moment
+	// We also do not include async version for map, as it will not be used
+	gmem_error_t (*mmu_pmap_enter)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
+		vm_paddr_t pa, u_int prot, u_int mem_flags);
+	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
+	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
+		vm_prot_t new_prot);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
