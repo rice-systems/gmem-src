@@ -130,13 +130,16 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		uvas->format.maxaddr = size;
 
 		// Edge device does not need to perform page faults
-		// uvas->allocator = RBTREE;
-		// // TODO: RB-TREE
-		// gmem_rb_init(uvas);
-		uvas->allocator = VMEM;
-		// Currently we use the maximum available quantum cache (16)
-		uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-			alignment, alignment * 16, M_WAITOK | M_FIRSTFIT);
+		if (0) {
+			uvas->allocator = RBTREE;
+			// TODO: RB-TREE
+			gmem_rb_init(uvas);
+		} else {
+			uvas->allocator = VMEM;
+			// Currently we use the maximum available quantum cache (16)
+			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
+				alignment, alignment * 16, M_WAITOK | M_FIRSTFIT);
+		}
 
 		*uvas_res = uvas;
 		*pmap_res = pmap;

@@ -254,7 +254,7 @@ gmem_rb_ooo_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 	return (ENOMEM);
 }
 
-static int
+static inline int
 gmem_rb_first_fit(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
@@ -423,42 +423,6 @@ gmem_rb_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 // #endif
 
 	return (0);
-}
-
-static void
-gmem_rb_free_space(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
-{
-	KASSERT((entry->flags & (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_RMRR |
-	    GMEM_UVAS_ENTRY_MAP)) == GMEM_UVAS_ENTRY_MAP,
-	    ("permanent entry %p %p", uvas, entry));
-
-	gmem_rb_remove(uvas, entry);
-	entry->flags &= ~GMEM_UVAS_ENTRY_MAP;
-// #ifdef INVARIANTS
-// 	if (iommu_check_free)
-// 		gmem_uvas_check_free(uvas);
-// #endif
-}
-
-static void
-gmem_rb_free_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
-{
-	struct gmem_uvas_entry *next, *prev;
-
-	GMEM_UVAS_ASSERT_LOCKED(uvas);
-	KASSERT((entry->flags & (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_RMRR |
-	    GMEM_UVAS_ENTRY_MAP)) == GMEM_UVAS_ENTRY_RMRR,
-	    ("non-RMRR entry %p %p", uvas, entry));
-
-	prev = RB_PREV(gmem_uvas_entries_tree, &uvas->rb_root, entry);
-	next = RB_NEXT(gmem_uvas_entries_tree, &uvas->rb_root, entry);
-	gmem_rb_remove(uvas, entry);
-	entry->flags &= ~GMEM_UVAS_ENTRY_RMRR;
-
-	if (prev == NULL)
-		gmem_rb_insert(uvas, uvas->first_place);
-	if (next == NULL)
-		gmem_rb_insert(uvas, uvas->last_place);
 }
 
 // remove all rb entries covered by the given span

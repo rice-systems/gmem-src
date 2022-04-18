@@ -937,7 +937,7 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 }
 
 static void
-iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(*void)), void *args)
+iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(void *)), void *args)
 {
 	struct bus_dma_tag_iommu *tag;
 	struct bus_dmamap_iommu *map;
@@ -988,6 +988,7 @@ struct bus_dma_impl bus_dma_iommu_impl = {
 	.map_complete = iommu_bus_dmamap_complete,
 
 	// effectively it is an unmap function
+	.map_unload_async = iommu_bus_dmamap_unload_async,
 	.map_unload = iommu_bus_dmamap_unload,
 	.map_sync = iommu_bus_dmamap_sync,
 };
