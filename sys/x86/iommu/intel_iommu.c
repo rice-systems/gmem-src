@@ -173,10 +173,11 @@ static gmem_error_t intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *en
 		    dmar_domain_unload_emit_wait());
 		DMAR_UNLOCK(unit);
 	}
+	return GMEM_OK;
 }
 
 // invalidate a list of mappings in a coalesced way
-static gmem_error_t intel_iommu_tlb_flush(struct *gmem_uvas_entries_tailq entries)
+static gmem_error_t intel_iommu_tlb_flush(struct gmem_uvas_entries_tailq *entries)
 {
 	return GMEM_OK;
 }
