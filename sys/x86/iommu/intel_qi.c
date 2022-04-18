@@ -65,7 +65,7 @@ static long batch_no = 0;
 bool
 dmar_domain_unload_emit_wait()
 {
-	atomic_add_long(&batch_no);
+	atomic_add_long(&batch_no, 1);
 	return (domain->batch_no % dmar_batch_coalesce == 0);
 }
 
