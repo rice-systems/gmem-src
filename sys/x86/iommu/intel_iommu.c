@@ -170,7 +170,7 @@ static gmem_error_t intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *en
 		DMAR_LOCK(unit);
 		dmar_qi_invalidate_locked(domain, entry->start, entry->end -
 		    entry->start,
-		    dmar_domain_unload_emit_wait(domain, entry));
+		    dmar_domain_unload_emit_wait());
 		DMAR_UNLOCK(unit);
 	}
 }

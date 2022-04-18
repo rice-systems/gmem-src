@@ -912,16 +912,6 @@ dmar_domain_free_entry(struct gmem_uvas_entry *entry)
 		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
 }
 
-static bool
-dmar_domain_unload_emit_wait(struct dmar_domain *domain,
-    struct gmem_uvas_entry *entry)
-{
-
-	if (TAILQ_NEXT(entry, dmamap_link) == NULL)
-		return (true);
-	return (domain->batch_no++ % dmar_batch_coalesce == 0);
-}
-
 void
 dmar_domain_unload(struct dmar_domain *domain,
     struct gmem_uvas_entries_tailq *entries, bool cansleep)

@@ -61,6 +61,14 @@ __FBSDID("$FreeBSD$");
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
 
+static long batch_no = 0;
+bool
+dmar_domain_unload_emit_wait()
+{
+	atomic_add_long(&batch_no);
+	return (domain->batch_no % dmar_batch_coalesce == 0);
+}
+
 static bool
 dmar_qi_seq_processed(const struct dmar_unit *unit,
     const struct iommu_qi_genseq *pseq)
@@ -340,7 +348,6 @@ static void
 dmar_qi_task(void *arg, int pending __unused)
 {
 	struct dmar_unit *unit;
-	struct gmem_uvas_entry *entry;
 	uint32_t ics;
 
 	unit = arg;
