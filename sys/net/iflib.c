@@ -2972,7 +2972,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		iflib_get_ip_forwarding(&rxq->ifr_lc, &v4_forwarding, &v6_forwarding);
 
 	// TODO: This is the safest point to sync IOMMU unmaps.
-	bus_dmamap_unload_flush();
+	bus_dmamap_unload_flush_all();
 
 	mt = mf = NULL;
 	while (mh != NULL) {

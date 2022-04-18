@@ -128,14 +128,10 @@ bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map, void (*cb(void *))
 }
 
 static inline void
-bus_dmamap_unload_flush_all(bus_dma_tag_t dmat, bus_dmamap_t map)
+bus_dmamap_unload_flush_all()
 {
-	struct bus_dma_tag_common *tc;
-
-	if (map != NULL) {
-		tc = (struct bus_dma_tag_common *)dmat;
-		tc->impl->map_unload_flush_all(dmat, map);
-	}
+	// We should use the flush operation provided by the mmu_ops
+	// how to find it?
 }
 
 static inline void
