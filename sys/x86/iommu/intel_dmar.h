@@ -179,7 +179,9 @@ struct dmar_unit {
 	vmem_t *irtids;
 
 	/* Delayed freeing of map entries queue processing */
-	struct gmem_uvas_entries_tailq tlb_flush_entries;
+	// It is pointless to delay the IOVA free, because the physical mem has been freed so that
+	// the security is already broken.
+	// struct gmem_uvas_entries_tailq tlb_flush_entries;
 	struct task qi_task;
 	struct taskqueue *qi_taskqueue;
 };
@@ -252,7 +254,7 @@ void dmar_disable_qi_intr(struct dmar_unit *unit);
 int dmar_init_qi(struct dmar_unit *unit);
 void dmar_fini_qi(struct dmar_unit *unit);
 void dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t start,
-    iommu_gaddr_t size, struct iommu_qi_genseq *psec, bool emit_wait);
+    iommu_gaddr_t size, bool emit_wait);
 void dmar_qi_invalidate_ctx_glob_locked(struct dmar_unit *unit);
 void dmar_qi_invalidate_iotlb_glob_locked(struct dmar_unit *unit);
 void dmar_qi_invalidate_iec_glob(struct dmar_unit *unit);
@@ -279,7 +281,6 @@ int dmar_move_ctx_to_domain(struct dmar_domain *domain, struct dmar_ctx *ctx);
 void dmar_free_ctx_locked(struct dmar_unit *dmar, struct dmar_ctx *ctx);
 void dmar_free_ctx(struct dmar_ctx *ctx);
 struct dmar_ctx *dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid);
-void dmar_domain_unload_entry(struct iommu_domain *domain, struct gmem_uvas_entry *entry, bool free);
 void dmar_domain_unload(struct dmar_domain *domain,
     struct gmem_uvas_entries_tailq *entries, bool cansleep);
 void dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free);

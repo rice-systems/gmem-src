@@ -158,6 +158,29 @@ static gmem_error_t intel_iommu_init(struct gmem_mmu_ops* ops)
 	return GMEM_OK;
 }
 
+static gmem_error_t intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t entry)
+{
+	struct dmar_domain *domain = ((intel_iommu_pgtable_t *) pmap->data)->domain;
+	struct dmar_unit *unit = ((intel_iommu_pgtable_t *) pmap->data)->dmar;
+
+	if (!unit->qi_enabled) {
+		domain_flush_iotlb_sync(domain, entry->start,
+		    entry->end - entry->start);
+	} else {
+		DMAR_LOCK(unit);
+		dmar_qi_invalidate_locked(domain, entry->start, entry->end -
+		    entry->start,
+		    dmar_domain_unload_emit_wait(domain, entry));
+		DMAR_UNLOCK(unit);
+	}
+}
+
+// invalidate a list of mappings in a coalesced way
+static gmem_error_t intel_iommu_tlb_flush(struct *gmem_uvas_entries_tailq entries)
+{
+	return GMEM_OK;
+}
+
 gmem_mmu_ops_t intel_iommu_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
 	.mmu_has_range_tlb = false,
@@ -169,4 +192,5 @@ gmem_mmu_ops_t intel_iommu_ops = {
 	.mmu_pmap_enter = intel_iommu_pmap_enter,
 	.mmu_pmap_release = intel_iommu_pmap_release,
 	.mmu_pmap_protect = intel_iommu_pmap_protect,
+	.mmu_tlb_invl = intel_iommu_tlb_invl
 };

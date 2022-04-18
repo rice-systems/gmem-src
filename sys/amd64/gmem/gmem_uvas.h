@@ -167,10 +167,6 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 // TODO: delete the following shit.
 TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
-struct iommu_qi_genseq {
-	u_int gen;
-	uint32_t seq;
-};
 
 // IOMMU:
 // the iommu_map_entry used to have a dmamap_link field
@@ -215,10 +211,6 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 	gmem_uvas_t *uvas;
 
 	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
-
-	// The data structure below can be put in a customized data structure
-	struct iommu_qi_genseq gseq;
-	// struct iommu_domain *domain;
 };
 
 #define GMEM_MMU_LOCK(ops) mtx_lock(&ops->lock)
@@ -256,6 +248,8 @@ struct gmem_mmu_ops
 	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
 	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
 		vm_prot_t new_prot);
+	gmem_error_t (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t entry);
+	gmem_error_t (*mmu_tlb_flush)(struct *gmem_uvas_entries_tailq entries);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
@@ -309,8 +303,8 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags);
 // gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 // 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags);
-gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, void (* unmap_callback(void *)),
+gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t entry, 
+	void (* unmap_callback(void *)),
 	void *callback_args);
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection);

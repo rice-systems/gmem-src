@@ -937,6 +937,31 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 }
 
 static void
+iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(*void)), void *args)
+{
+	struct bus_dma_tag_iommu *tag;
+	struct bus_dmamap_iommu *map;
+	struct iommu_ctx *ctx;
+	struct iommu_domain *domain;
+	struct gmem_uvas_entries_tailq entries;
+
+	tag = (struct bus_dma_tag_iommu *)dmat;
+	map = (struct bus_dmamap_iommu *)map1;
+	ctx = tag->ctx;
+	domain = ctx->domain;
+	atomic_add_long(&ctx->unloads, 1);
+
+	TAILQ_INIT(&entries);
+	IOMMU_DOMAIN_LOCK(domain);
+	TAILQ_CONCAT(&entries, &map->map_entries, dmamap_link);
+	IOMMU_DOMAIN_UNLOCK(domain);
+	THREAD_NO_SLEEPING();
+	iommu_domain_unload(domain, &entries, false);
+	THREAD_SLEEPING_OK();
+	KASSERT(TAILQ_EMPTY(&entries), ("lazy iommu_ctx_unload %p", ctx));
+}
+
+static void
 iommu_bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map,
     bus_dmasync_op_t op)
 {

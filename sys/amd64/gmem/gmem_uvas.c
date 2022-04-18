@@ -339,7 +339,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
 			++ i;
 
-		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
+		pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
 		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
@@ -351,15 +351,17 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 	return GMEM_OK;
 }
 
-gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, void (* unmap_callback(void *)), void *callback_args)
+// eager device uses buffer granualrity so that we do not support split operations.
+gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t entry, 
+	void (* unmap_callback(void *)), void *callback_args)
 {
 	KASSERT(pmap != NULL, "The pmap to unmap is NULL!");
 
 	// Think about how to async?
 	if (unmap_callback != NULL) {
 		// The unmap will be sync
-		pmap->mmu_ops->mmu_pmap_release(pmap, start, size);
+		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 	} else {
 		// The unmap will be async
 	}

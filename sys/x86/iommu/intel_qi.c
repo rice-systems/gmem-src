@@ -222,8 +222,9 @@ dmar_qi_wait_for_seq(struct dmar_unit *unit, const struct iommu_qi_genseq *gseq,
 
 void
 dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
-    iommu_gaddr_t size, struct iommu_qi_genseq *pseq, bool emit_wait)
+    iommu_gaddr_t size, bool emit_wait)
 {
+	struct iommu_qi_genseq pseq;
 	struct dmar_unit *unit;
 	iommu_gaddr_t isize;
 	int am;
@@ -239,7 +240,7 @@ dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 		    DMAR_IQ_DESCR_IOTLB_DID(domain->domain),
 		    base | am);
 	}
-	dmar_qi_emit_wait_seq(unit, pseq, emit_wait);
+	dmar_qi_emit_wait_seq(unit, &pseq, emit_wait);
 	dmar_qi_advance_tail(unit);
 }
 
@@ -345,18 +346,6 @@ dmar_qi_task(void *arg, int pending __unused)
 	unit = arg;
 
 	DMAR_LOCK(unit);
-	for (;;) {
-		entry = TAILQ_FIRST(&unit->tlb_flush_entries);
-		if (entry == NULL)
-			break;
-		if (!dmar_qi_seq_processed(unit, &entry->gseq))
-			break;
-		TAILQ_REMOVE(&unit->tlb_flush_entries, entry, dmamap_link);
-		DMAR_UNLOCK(unit);
-		dmar_domain_free_entry(entry, (entry->flags &
-		    IOMMU_MAP_ENTRY_QI_NF) == 0);
-		DMAR_LOCK(unit);
-	}
 	ics = dmar_read4(unit, DMAR_ICS_REG);
 	if ((ics & DMAR_ICS_IWC) != 0) {
 		ics = DMAR_ICS_IWC;
@@ -381,7 +370,6 @@ dmar_init_qi(struct dmar_unit *unit)
 	if (!unit->qi_enabled)
 		return (0);
 
-	TAILQ_INIT(&unit->tlb_flush_entries);
 	TASK_INIT(&unit->qi_task, 0, dmar_qi_task, unit);
 	unit->qi_taskqueue = taskqueue_create_fast("dmarqf", M_WAITOK,
 	    taskqueue_thread_enqueue, &unit->qi_taskqueue);

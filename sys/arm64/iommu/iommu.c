@@ -304,7 +304,7 @@ iommu_domain_unload(struct iommu_domain *iodom,
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
 		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
 		    ("not mapped entry %p %p", iodom, entry));
-		gmem_uvas_unmap(iodom->pmap, entry->start, entry->end - entry->start, NULL, NULL);
+		gmem_uvas_unmap(iodom->pmap, entry, NULL, NULL);
 		KASSERT(error == 0, ("unmap %p error %d", iodom, error));
 		TAILQ_REMOVE(entries, entry, dmamap_link);
 		iommu_domain_free_entry(entry, true);
@@ -375,15 +375,6 @@ iommu_find(device_t dev, bool verbose)
 	IOMMU_LIST_UNLOCK();
 
 	return (NULL);
-}
-
-void
-iommu_domain_unload_entry(struct iommu_map_entry *entry, bool free)
-{
-
-	dprintf("%s\n", __func__);
-
-	iommu_domain_free_entry(entry, free);
 }
 
 static void

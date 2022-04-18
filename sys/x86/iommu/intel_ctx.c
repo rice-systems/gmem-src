@@ -903,38 +903,13 @@ dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid)
 	return (NULL);
 }
 
-void
-dmar_domain_free_entry(struct gmem_uvas_entry *entry, bool free)
+static inline void
+dmar_domain_free_entry(struct gmem_uvas_entry *entry)
 {
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
 		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, NULL);
 	else
 		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
-}
-
-// TODO: let gmem perform unload, extract all data from pmap not from uvas.
-// This is just an iommu-specific unload.
-void
-dmar_domain_unload_entry(struct iommu_domain *iodom, struct gmem_uvas_entry *entry, bool free)
-{
-	struct dmar_domain *domain = IODOM2DOM(iodom);
-	struct dmar_unit *unit;
-
-	unit = DOM2DMAR(domain);
-	if (unit->qi_enabled) {
-		DMAR_LOCK(unit);
-		dmar_qi_invalidate_locked(domain,
-		    entry->start, entry->end - entry->start, &entry->gseq,
-		    true);
-		if (!free)
-			entry->flags |= IOMMU_MAP_ENTRY_QI_NF;
-		TAILQ_INSERT_TAIL(&unit->tlb_flush_entries, entry, dmamap_link);
-		DMAR_UNLOCK(unit);
-	} else {
-		domain_flush_iotlb_sync(domain,
-		    entry->start, entry->end - entry->start);
-		dmar_domain_free_entry(entry, free);
-	}
 }
 
 static bool
@@ -954,40 +929,17 @@ dmar_domain_unload(struct dmar_domain *domain,
 	struct dmar_unit *unit;
 	struct iommu_domain *iodom;
 	struct gmem_uvas_entry *entry, *entry1;
-	// uint64_t cnt = 0, size = 0;
 
 	iodom = DOM2IODOM(domain);
 	unit = DOM2DMAR(domain);
 
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
-		// cnt ++;
-		// size += entry->end - entry->start;
-		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
-		    ("not mapped entry %p %p", domain, entry));
-		// error = iodom->ops->unmap(iodom, entry->start, entry->end -
-		//     entry->start, cansleep ? IOMMU_PGF_WAITOK : 0);
-		gmem_uvas_unmap(iodom->pmap, entry->start, entry->end - entry->start, NULL, NULL);
+		gmem_uvas_unmap(iodom->pmap, entry, NULL, NULL);
 		KASSERT(error == 0, ("unmap %p error %d", domain, error));
-		if (!unit->qi_enabled) {
-			domain_flush_iotlb_sync(domain, entry->start,
-			    entry->end - entry->start);
-			TAILQ_REMOVE(entries, entry, dmamap_link);
-			dmar_domain_free_entry(entry, true);
-		}
+		TAILQ_REMOVE(entries, entry, dmamap_link);
+		dmar_domain_free_entry(entry);
 	}
-	// printf("[iommu unload] cnt %lu, size 0x%lx\n", cnt, size);
-	if (TAILQ_EMPTY(entries))
-		return;
-
-	KASSERT(unit->qi_enabled, ("loaded entry left"));
-	DMAR_LOCK(unit);
-	TAILQ_FOREACH(entry, entries, dmamap_link) {
-		dmar_qi_invalidate_locked(domain, entry->start, entry->end -
-		    entry->start, &entry->gseq,
-		    dmar_domain_unload_emit_wait(domain, entry));
-	}
-	TAILQ_CONCAT(&unit->tlb_flush_entries, entries, dmamap_link);
-	DMAR_UNLOCK(unit);
+	return;
 }
 
 struct iommu_ctx *
@@ -1024,13 +976,6 @@ iommu_free_ctx(struct iommu_ctx *context)
 	ctx = IOCTX2CTX(context);
 
 	dmar_free_ctx(ctx);
-}
-
-void
-iommu_domain_unload_entry(struct iommu_domain *domain, struct gmem_uvas_entry *entry, bool free)
-{
-
-	dmar_domain_unload_entry(domain, entry, free);
 }
 
 void

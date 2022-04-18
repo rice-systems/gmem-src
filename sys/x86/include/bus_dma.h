@@ -102,20 +102,39 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 }
 
 // #include <sys/systm.h>
-// #define bus_dmamap_unload(x, y) _bus_dmamap_unload(x,y, __func__)
 /*
  * Release the mapping held by map.
  */
 static inline void
-// _bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map, const char *caller)
 bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map)
 {
 	struct bus_dma_tag_common *tc;
 
 	if (map != NULL) {
 		tc = (struct bus_dma_tag_common *)dmat;
-		// printf("[%s] ", caller);
 		tc->impl->map_unload(dmat, map);
+	}
+}
+
+static inline void
+bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map, void (*cb(void *)), void *args)
+{
+	struct bus_dma_tag_common *tc;
+
+	if (map != NULL) {
+		tc = (struct bus_dma_tag_common *)dmat;
+		tc->impl->map_unload_async(dmat, map, cb, args);
+	}
+}
+
+static inline void
+bus_dmamap_unload_flush_all(bus_dma_tag_t dmat, bus_dmamap_t map)
+{
+	struct bus_dma_tag_common *tc;
+
+	if (map != NULL) {
+		tc = (struct bus_dma_tag_common *)dmat;
+		tc->impl->map_unload_flush_all(dmat, map);
 	}
 }
 
