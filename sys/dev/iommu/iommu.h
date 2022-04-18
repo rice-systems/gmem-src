@@ -61,6 +61,11 @@ struct iommu_unit {
 	uint32_t buswide_ctxs[(PCI_BUSMAX + 1) / NBBY / sizeof(uint32_t)];
 };
 
+struct iommu_qi_genseq {
+	u_int gen;
+	uint32_t seq;
+};
+
 /*
  * Locking annotations:
  * (u) - Protected by iommu unit lock
