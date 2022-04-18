@@ -903,7 +903,7 @@ dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid)
 	return (NULL);
 }
 
-static inline void
+void
 dmar_domain_free_entry(struct gmem_uvas_entry *entry)
 {
 	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)

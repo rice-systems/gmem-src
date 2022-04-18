@@ -303,7 +303,7 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags);
 // gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 // 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags);
-gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t entry, 
+gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, 
 	void (* unmap_callback(void *)),
 	void *callback_args);
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
