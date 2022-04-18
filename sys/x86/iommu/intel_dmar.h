@@ -296,7 +296,7 @@ void dmar_quirks_pre_use(struct iommu_unit *dmar);
 int dmar_init_irt(struct dmar_unit *unit);
 void dmar_fini_irt(struct dmar_unit *unit);
 
-bool dmar_domain_unload_emit_wait(void);
+bool dmar_domain_unload_emit_wait(gmem_uvas_entry_t *entry);
 
 extern iommu_haddr_t dmar_high;
 extern int haw;

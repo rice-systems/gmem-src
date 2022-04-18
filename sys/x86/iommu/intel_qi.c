@@ -63,9 +63,9 @@ __FBSDID("$FreeBSD$");
 
 static long batch_no = 0;
 bool
-dmar_domain_unload_emit_wait()
+dmar_domain_unload_emit_wait(gmem_uvas_entry_t *entry)
 {
-	atomic_add_long(&batch_no, 1);
+	atomic_add_long(&batch_no, (entry->end - entry->start) / GMEM_PAGE_SIZE);
 	return (domain->batch_no % dmar_batch_coalesce == 0);
 }
 
