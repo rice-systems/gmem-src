@@ -368,7 +368,7 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 	if (wait) {
 		// The unmap will be sync
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
-		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		// pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 	} else {
 		// The unmap will be async
 	}
