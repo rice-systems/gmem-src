@@ -89,7 +89,7 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 //  lookup: faultable device requires looking up uvas entries 
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
 	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
-	void *unmap_queue,
+	struct gmem_uvas_entries_tailq *unmap_queue,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
