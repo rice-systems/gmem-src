@@ -297,14 +297,14 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry)
 		GMEM_UVAS_UNLOCK(uvas);
 	}
 	else if (uvas->allocator == VMEM) {
-		if ((entry & GMEM_UVAS_VMEM_XALLOC) == 0) {
+		if ((entry->flags & GMEM_UVAS_VMEM_XALLOC) == 0) {
 			vmem_free(uvas->arena, entry->start, entry->end - entry->start);
 		} else {
 			vmem_xfree(uvas->arena, entry->start, entry->end - entry->start);
 		}
 		gmem_uvas_free_entry(uvas, entry);
 	}
-	FINISH_STATS(VA_FREE, size >> 12);
+	FINISH_STATS(VA_FREE, (entry->end - entry->start) >> 12);
 	return GMEM_OK;
 }
 
