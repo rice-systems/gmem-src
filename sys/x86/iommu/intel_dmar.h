@@ -179,9 +179,8 @@ struct dmar_unit {
 	vmem_t *irtids;
 
 	/* Delayed freeing of map entries queue processing */
-	// It is pointless to delay the IOVA free, because the physical mem has been freed so that
-	// the security is already broken.
 	// struct gmem_uvas_entries_tailq tlb_flush_entries;
+	struct gmem_uvas_entries_tailq unmap_queue;
 	struct task qi_task;
 	struct taskqueue *qi_taskqueue;
 };

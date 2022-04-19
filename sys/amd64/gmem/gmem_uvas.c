@@ -89,6 +89,7 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 //  lookup: faultable device requires looking up uvas entries 
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
 	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
+	void *unmap_queue,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
@@ -113,9 +114,10 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
+		pmap->unmap_queue = unmap_queue;
 
 		// initialize uvas
-		TAILQ_INIT(&uvas->uvas_entry_header);
+		TAILQ_INIT(&uvas->mapped_entries);
 		TAILQ_INIT(&uvas->dev_pmap_header);
 
 		// insert pmap to uvas pmap list

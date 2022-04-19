@@ -133,7 +133,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	struct mtx lock;
 
 	// List of mapped entries
-	TAILQ_HEAD(gmem_uvas_entry_tailq, gmem_uvas_entry) uvas_entry_header;
+	TAILQ_HEAD(gmem_uvas_entry_tailq, gmem_uvas_entry) mapped_entries;
 
 	// Whether this uvas needs lookup of its entries
 	// This determines whether it uses vmem or rb-tree to allocate/free uvas entries.
@@ -164,7 +164,6 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	// void *dev_data;
 };
 
-// TODO: delete the following shit.
 TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
 
 // IOMMU:
@@ -286,6 +285,8 @@ struct dev_pmap
 	// 2. What happens when multiple devices share the same type of mmu?
 	struct gmem_mmu_ops *mmu_ops;
 
+	struct gmem_uvas_entries_tailq *unmap_queue;
+
 	// Device-specific page table data to be operated by gmem_mmu_ops
 	// can include a child_pmap for nested translation
 	// can also store the implementation of mmu_ops
@@ -296,6 +297,7 @@ struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flag
 void gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry);
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
 	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
+	void *unmap_queue,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size);
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
@@ -307,7 +309,6 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 	void *callback_args);
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection);
-
 
 // Free the va span defined by [start, start + size) or defined by
 // entry, if entry != NULL
