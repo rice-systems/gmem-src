@@ -262,6 +262,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		else {
 			entry->start = start;
 			entry->end = end;
+			entry->flags |= GMEM_UVAS_VMEM_XALLOC;
 		}
 	}
     FINISH_STATS(VA_ALLOC, (end - start) >> 12);
@@ -271,8 +272,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	return GMEM_OK;
 }
 
-gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
-	vm_size_t size, gmem_uvas_entry_t *entry)
+gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry)
 {
 	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
 	if (uvas == NULL) {
@@ -284,25 +284,25 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
 	if (uvas->allocator == RBTREE) {
 		// use rb-tree allocator
 		GMEM_UVAS_LOCK(uvas);
-		if (entry != NULL) {
+		// if (entry != NULL) {
 			gmem_rb_remove(uvas, entry);
 			gmem_uvas_free_entry(uvas, entry);
-		} else {
-			gmem_uvas_entry_t span;
-			span.start = start;
-			span.end = start + size;
-			// TODO: use gmem_rb_free_span as a general operation.
-			gmem_rb_free_span(uvas, &span);
-		}
+		// } else {
+		// 	gmem_uvas_entry_t span;
+		// 	span.start = start;
+		// 	span.end = start + size;
+		// 	// TODO: use gmem_rb_free_span as a general operation.
+		// 	gmem_rb_free_span(uvas, &span);
+		// }
 		GMEM_UVAS_UNLOCK(uvas);
 	}
 	else if (uvas->allocator == VMEM) {
-		if (entry != NULL) {
+		if ((entry & GMEM_UVAS_VMEM_XALLOC) == 0) {
 			vmem_free(uvas->arena, entry->start, entry->end - entry->start);
-			gmem_uvas_free_entry(uvas, entry);
 		} else {
-			vmem_xfree(uvas->arena, start, size);
+			vmem_xfree(uvas->arena, entry->start, entry->end - entry->start);
 		}
+		gmem_uvas_free_entry(uvas, entry);
 	}
 	FINISH_STATS(VA_FREE, size >> 12);
 	return GMEM_OK;
@@ -369,8 +369,10 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 		// The unmap will be sync
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		gmem_uvas_free_span(entry->uvas, entry);
 	} else {
 		// The unmap will be async
+		// gmem_uvas_enqueue_unmap_request(pmap, entry);
 	}
 
 	return GMEM_OK;
@@ -424,7 +426,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
         // TODO: we always free the entry when we add back this iotlb inv in the future
         // TODO: replace with unload_entry, as the map function could fail in the middle.
         // iommu_domain_unload_entry(domain, entry, true);
-        gmem_uvas_free_span(uvas, *start, size, entry);
+        gmem_uvas_free_span(uvas, entry);
         return (error);
     }
 

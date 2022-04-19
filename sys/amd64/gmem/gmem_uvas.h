@@ -85,8 +85,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 
 
 #define	GMEM_UVAS_ENTRY_PLACE	0x0001	/* Fake entry */
-#define	GMEM_UVAS_ENTRY_RMRR	0x0002	/* Permanent, not linked by
-					   dmamap_link */
+#define	GMEM_UVAS_VMEM_XALLOC	0x0002
 #define	GMEM_UVAS_ENTRY_MAP	0x0004	/* Busdma created, linked by
 					   dmamap_link */
 #define	GMEM_UVAS_ENTRY_UNMAPPED	0x0010	/* No backing pages */
@@ -312,8 +311,7 @@ gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 
 // Free the va span defined by [start, start + size) or defined by
 // entry, if entry != NULL
-gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, vm_offset_t start,
-	vm_size_t size, gmem_uvas_entry_t *entry);
+gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry);
 
 // Allocate a VA span with a given size, *start returns the offset and *ret returns a
 // pointer to the va span

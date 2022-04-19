@@ -904,15 +904,6 @@ dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid)
 }
 
 void
-dmar_domain_free_entry(struct gmem_uvas_entry *entry)
-{
-	if ((entry->flags & IOMMU_MAP_ENTRY_RMRR) != 0)
-		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, NULL);
-	else
-		gmem_uvas_free_span(entry->uvas, entry->start, entry->end - entry->start, entry);
-}
-
-void
 dmar_domain_unload(struct dmar_domain *domain,
     struct gmem_uvas_entries_tailq *entries, bool cansleep)
 {
@@ -924,9 +915,8 @@ dmar_domain_unload(struct dmar_domain *domain,
 	unit = DOM2DMAR(domain);
 
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
-		gmem_uvas_unmap(iodom->pmap, entry, 1, NULL, NULL);
 		TAILQ_REMOVE(entries, entry, dmamap_link);
-		dmar_domain_free_entry(entry);
+		gmem_uvas_unmap(iodom->pmap, entry, 1, NULL, NULL);
 	}
 	return;
 }

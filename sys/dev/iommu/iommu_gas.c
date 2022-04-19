@@ -86,7 +86,6 @@ iommu_unmap_msi(struct iommu_ctx *ctx)
 		return;
 
 	gmem_uvas_unmap(domain->pmap, entry, 1, NULL, NULL);
-	gmem_uvas_free_span(domain->uvas, entry->start, entry->end - entry->start, entry);
 
 	domain->msi_entry = NULL;
 	domain->msi_base = 0;
