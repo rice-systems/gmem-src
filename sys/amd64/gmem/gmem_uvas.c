@@ -355,7 +355,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 }
 
 // eager device uses buffer granualrity so that we do not support split operations.
-gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, 
+gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wait,
 	void (* unmap_callback(void *)), void *callback_args)
 {
 	KASSERT(pmap != NULL, "The pmap to unmap is NULL!");
@@ -365,10 +365,10 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry,
 	// So just perform it directly?
 
 	// Think about how to async?
-	if (unmap_callback != NULL) {
+	if (wait) {
 		// The unmap will be sync
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
-		// pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 	} else {
 		// The unmap will be async
 	}

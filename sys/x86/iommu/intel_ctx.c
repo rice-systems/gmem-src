@@ -924,16 +924,16 @@ dmar_domain_unload(struct dmar_domain *domain,
 	unit = DOM2DMAR(domain);
 
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
-		gmem_uvas_unmap(iodom->pmap, entry, NULL, NULL);
-		if (domain != ((intel_iommu_pgtable_t *) iodom->pmap->data)->domain)
-			printf("[dmar_domain_unload] incorrect domain!!!\n");
-		if (unit != ((intel_iommu_pgtable_t *) iodom->pmap->data)->dmar)
-			printf("[dmar_domain_unload] incorrect dmar_unit!!!\n");
+		gmem_uvas_unmap(iodom->pmap, entry, 1, NULL, NULL);
+		// if (domain != ((intel_iommu_pgtable_t *) iodom->pmap->data)->domain)
+		// 	printf("[dmar_domain_unload] incorrect domain!!!\n");
+		// if (unit != ((intel_iommu_pgtable_t *) iodom->pmap->data)->dmar)
+		// 	printf("[dmar_domain_unload] incorrect dmar_unit!!!\n");
 
-		if (!unit->qi_enabled) {
-			domain_flush_iotlb_sync(domain, entry->start,
-			    entry->end - entry->start);
-		}
+		// if (!unit->qi_enabled) {
+		// 	domain_flush_iotlb_sync(domain, entry->start,
+		// 	    entry->end - entry->start);
+		// }
 		TAILQ_REMOVE(entries, entry, dmamap_link);
 		dmar_domain_free_entry(entry);
 	}
