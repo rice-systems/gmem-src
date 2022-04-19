@@ -926,14 +926,12 @@ dmar_domain_unload(struct dmar_domain *domain,
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
 		gmem_uvas_unmap(iodom->pmap, entry, NULL, NULL);
 		KASSERT(error == 0, ("unmap %p error %d", domain, error));
-		TAILQ_REMOVE(entries, entry, dmamap_link);
-		// dmar_domain_free_entry(entry);
 		if (!unit->qi_enabled) {
 			domain_flush_iotlb_sync(domain, entry->start,
 			    entry->end - entry->start);
-			TAILQ_REMOVE(entries, entry, dmamap_link);
-			dmar_domain_free_entry(entry);
 		}
+		TAILQ_REMOVE(entries, entry, dmamap_link);
+		dmar_domain_free_entry(entry);
 	}
 	return;
 }
