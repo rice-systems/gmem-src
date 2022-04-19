@@ -342,7 +342,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
 			++ i;
 
-		pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
+		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
 		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
@@ -368,7 +368,7 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry,
 	if (unmap_callback != NULL) {
 		// The unmap will be sync
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
-		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		// pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 	} else {
 		// The unmap will be async
 	}
