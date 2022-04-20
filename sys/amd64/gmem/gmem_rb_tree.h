@@ -221,7 +221,7 @@ gmem_rb_match_insert(struct gmem_rb_match_args *a)
 
 // This is the original IOMMU search function (lowermatch) which makes on sense.
 // It allocates addresses in a BS order.
-static int
+static inline int
 gmem_rb_ooo_search(struct gmem_rb_match_args *a, struct gmem_uvas_entry *entry)
 {
 	struct gmem_uvas_entry *child;
@@ -425,28 +425,28 @@ gmem_rb_alloc_region(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry,
 }
 
 // remove all rb entries covered by the given span
-static void
-gmem_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
-{
-	struct gmem_uvas_entry *tmp, *prev;
-	tmp = RB_NFIND(gmem_uvas_entries_tree, &uvas->rb_root, entry);
-	do
-	{
-		prev = RB_PREV(gmem_uvas_entries_tree, &uvas->rb_root, tmp);
-		if (prev->end <= entry->start || prev == tmp)
-			break;
-		if (entry->start <= prev->start && prev->end <= entry->end) {
-			gmem_rb_remove(uvas, prev);
-			gmem_uvas_free_entry(uvas, prev);
-		}
-	} while (1);
+// static void
+// gmem_rb_free_span(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
+// {
+// 	struct gmem_uvas_entry *tmp, *prev;
+// 	tmp = RB_NFIND(gmem_uvas_entries_tree, &uvas->rb_root, entry);
+// 	do
+// 	{
+// 		prev = RB_PREV(gmem_uvas_entries_tree, &uvas->rb_root, tmp);
+// 		if (prev->end <= entry->start || prev == tmp)
+// 			break;
+// 		if (entry->start <= prev->start && prev->end <= entry->end) {
+// 			gmem_rb_remove(uvas, prev);
+// 			gmem_uvas_free_entry(uvas, prev);
+// 		}
+// 	} while (1);
 
-	if (entry->start <= tmp->start && tmp->end <= entry->end)
-	{
-		gmem_rb_remove(uvas, tmp);
-		gmem_uvas_free_entry(uvas, tmp);
-	}
-}
+// 	if (entry->start <= tmp->start && tmp->end <= entry->end)
+// 	{
+// 		gmem_rb_remove(uvas, tmp);
+// 		gmem_uvas_free_entry(uvas, tmp);
+// 	}
+// }
 
 
 static int
