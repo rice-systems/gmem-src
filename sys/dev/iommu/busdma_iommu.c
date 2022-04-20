@@ -678,6 +678,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	if (error == 0)
 		*segp = seg;
 	else {
+		printf("[busdma_iommu] unmap %d\n", __LINE__);
 		gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
 	}
 	return (error);
@@ -892,6 +893,7 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	atomic_add_long(&ctx->unloads, 1);
 
 	THREAD_NO_SLEEPING();
+	printf("[busdma_iommu] unmap %d\n", __LINE__);
 	gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
 	THREAD_SLEEPING_OK();
 }
@@ -910,6 +912,7 @@ iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(
 	domain = ctx->domain;
 	atomic_add_long(&ctx->unloads, 1);
 
+	printf("[busdma_iommu] unmap %d\n", __LINE__);
 	gmem_uvas_unmap_all(domain->pmap, false, NULL, NULL);
 }
 

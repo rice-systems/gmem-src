@@ -385,6 +385,7 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap) 
 {
 	gmem_uvas_entry_t *entry, *entry1;
+	printf("[GMEM generic killer] start\n");
 	TAILQ_FOREACH_SAFE(entry, &pmap->uvas->unmap_queue, mapped_entry, entry1) {
 		GMEM_UVAS_LOCK(pmap->uvas);
 		TAILQ_REMOVE(&pmap->uvas->unmap_queue, entry, mapped_entry);
@@ -394,6 +395,7 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap)
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		gmem_uvas_free_span(entry->uvas, entry);
 	}
+	printf("[GMEM generic killer] done\n");
 	return GMEM_OK;
 }
 
