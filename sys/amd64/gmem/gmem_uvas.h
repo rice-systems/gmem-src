@@ -127,12 +127,14 @@ struct gmem_vma_format
 	vm_offset_t maxaddr;
 };
 
+TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
+
 struct gmem_uvas // VM counterpart: struct vm_map
 {
 	struct mtx lock;
 
 	// List of mapped entries
-	gmem_uvas_entries_tailq mapped_entries, unmap_queue;
+	struct gmem_uvas_entries_tailq mapped_entries, unmap_queue;
 
 	// Whether this uvas needs lookup of its entries
 	// This determines whether it uses vmem or rb-tree to allocate/free uvas entries.
@@ -162,8 +164,6 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	// Otherwise we are coupling the uvas with a specific device.
 	// void *dev_data;
 };
-
-TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
 
 // IOMMU:
 // the iommu_map_entry used to have a dmamap_link field
