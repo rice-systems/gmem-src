@@ -92,6 +92,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
+	printf("[GMEM] creating uvas here, are we fucked up ?\n");
 	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
 	{
 		KASSERT(pmap_to_share == NULL, "Creating a uvas with non-null pmap");
