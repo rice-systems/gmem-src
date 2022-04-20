@@ -84,6 +84,33 @@ static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
 	return GMEM_OK;
 }
 
+static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int *pglvl)
+{
+	int lvl, id, shift;
+	vm_paddr_t pg_frame;
+	shift = 12 + (domain->pglvl - 1) * 9;
+	dmar_pte_t *pte = (dmar_pte_t *) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
+	for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+		id = (va >> shift) & DMAR_PTEMASK;
+		pte = &pte[id];
+		if (*pte != 0) {
+			if ((*pte & DMAR_PTE_SP) != 0 || lvl == domain->pglvl - 1) {
+				pg_frame = (1ULL << shift) - 1;
+				*pglvl = domain->pglvl - 1 - lvl;
+				return *pte; // (*pte & ~pg_frame) + (va & pg_frame);
+			}
+			else
+				pte = (dmar_pte_t *) PHYS_TO_DMAP(*pte & PG_FRAME);
+		}
+		else {
+			// printf("translation failed at lvl %d\n", lvl);
+			return 0;
+		}
+		shift -= DMAR_NPTEPGSHIFT;
+	}
+	return 0;
+}
+
 static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
 	vm_paddr_t pa, u_int prot, u_int mem_flags)
 {
@@ -91,7 +118,7 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	struct dmar_domain *domain;
 	struct dmar_unit *unit;
 	uint64_t pflags;
-	int error;
+	int error, pglvl;
 
 	pflags = ((prot & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
 	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
@@ -107,6 +134,10 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	START_STATS;
 	error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
+    if ((va <= 0x6d000 && 0x6d000 < va + size) || (va <= 0x6b000 && 0x6b000 < va + size)) {
+    	printf("[intel_iommu.c] mapping va %lx - %lx, pte of 0x6b000 is %lx\n",
+    		va, va + size, x86_translate(domain, 0x6b000, pglvl));
+    }
 	if (error != 0)
 		return (error);
 
