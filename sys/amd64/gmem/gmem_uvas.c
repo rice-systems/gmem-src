@@ -150,6 +150,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// attach dev and pmap to the uvas
 		panic("Other UVAS modes are not implemented");
 	}
+	printf("Done with UVAS creating\n");
 	return GMEM_OK;
 }
 
