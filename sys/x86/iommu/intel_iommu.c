@@ -177,10 +177,10 @@ static gmem_error_t intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *en
 }
 
 // invalidate a list of mappings in a coalesced way
-static gmem_error_t intel_iommu_tlb_flush(struct gmem_uvas_entries_tailq *entries)
-{
-	return GMEM_OK;
-}
+// static gmem_error_t intel_iommu_tlb_flush(struct gmem_uvas_entries_tailq *entries)
+// {
+// 	return GMEM_OK;
+// }
 
 gmem_mmu_ops_t intel_iommu_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),

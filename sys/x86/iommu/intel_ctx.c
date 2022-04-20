@@ -793,8 +793,6 @@ dmar_unref_domain_locked(struct dmar_unit *dmar, struct dmar_domain *domain)
 	LIST_REMOVE(domain, link);
 	DMAR_UNLOCK(dmar);
 
-	taskqueue_drain(dmar->iommu.delayed_taskqueue,
-	    &domain->iodom.unload_task);
 	dmar_domain_destroy(domain);
 }
 
