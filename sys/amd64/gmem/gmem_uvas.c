@@ -389,6 +389,7 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap)
 		GMEM_UVAS_LOCK(pmap->uvas);
 		TAILQ_REMOVE(&pmap->uvas->unmap_queue, entry, mapped_entry);
 		GMEM_UVAS_UNLOCK(pmap->uvas);
+
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		gmem_uvas_free_span(entry->uvas, entry);

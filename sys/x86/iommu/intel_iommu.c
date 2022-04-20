@@ -135,8 +135,8 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
     if ((va <= 0x6d000 && 0x6d000 < va + size) || (va <= 0x6b000 && 0x6b000 < va + size)) {
-    	printf("[intel_iommu.c] mapping va %lx - %lx, pte of 0x6b000 is %lx\n",
-    		va, va + size, x86_translate(domain, 0x6b000, &pglvl));
+    	printf("[intel_iommu.c] mapping va %lx - %lx, pte of 0x6b000 is %lx， PTE of 0x6d000 is %lx\n",
+    		va, va + size, x86_translate(domain, 0x6b000, &pglvl), x86_translate(domain, 0x6d000, &pglvl));
     }
 	if (error != 0)
 		return (error);
@@ -157,6 +157,14 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 {
 	intel_iommu_pgtable_t *pgtable = pmap->data;
 	int error;
+
+	int pglvl = 0;
+    if ((va <= 0x6d000 && 0x6d000 < va + size) || (va <= 0x6b000 && 0x6b000 < va + size)) {
+    	printf("[intel_iommu.c] UNMAPPING va %lx - %lx, pte of 0x6b000 is %lx， PTE of 0x6d000 is %lx\n",
+    		va, va + size, 
+    		x86_translate(pgtable->domain, 0x6b000, &pglvl), 
+    		x86_translate(pgtable->domain, 0x6d000, &pglvl));
+    }
 
 	// destroy mappings
 	START_STATS;
