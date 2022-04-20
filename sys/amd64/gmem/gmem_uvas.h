@@ -293,7 +293,6 @@ struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flag
 void gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry);
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
 	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
-	struct gmem_uvas_entries_tailq *unmap_queue,
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size);
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,

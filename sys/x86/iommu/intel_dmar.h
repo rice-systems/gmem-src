@@ -180,7 +180,6 @@ struct dmar_unit {
 
 	/* Delayed freeing of map entries queue processing */
 	// struct gmem_uvas_entries_tailq tlb_flush_entries;
-	struct gmem_uvas_entries_tailq unmap_queue;
 	struct task qi_task;
 	struct taskqueue *qi_taskqueue;
 };
