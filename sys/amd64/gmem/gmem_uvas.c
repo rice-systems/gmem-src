@@ -92,7 +92,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
-	printf("[GMEM] creating uvas here, are we fucked up ?\n");
 	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
 	{
 		KASSERT(pmap_to_share == NULL, "Creating a uvas with non-null pmap");
@@ -151,7 +150,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// attach dev and pmap to the uvas
 		panic("Other UVAS modes are not implemented");
 	}
-	printf("Done with UVAS creating\n");
 	return GMEM_OK;
 }
 
@@ -230,7 +228,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	int error;
 
 	if (start >= end) {
-		printf("Trying to allocate an invalid va span, start %lx end %lx\n", start, end);
+		debug_printf("Trying to allocate an invalid va span, start %lx end %lx\n", start, end);
 		return GMEM_EINVALIDARGS;
 	}
 	
