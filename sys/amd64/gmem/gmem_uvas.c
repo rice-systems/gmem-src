@@ -173,6 +173,7 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 	}
 	GMEM_UVAS_UNLOCK(uvas);
 	// free the uvas
+	// TODO: WE need to finish this, although the current code does not seem to touch it.
 	return GMEM_OK;
 }
 
@@ -390,6 +391,7 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap)
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		gmem_uvas_free_span(entry->uvas, entry);
 	}
+	return GMEM_OK;
 }
 
 // munmap all for program termination or whatever.

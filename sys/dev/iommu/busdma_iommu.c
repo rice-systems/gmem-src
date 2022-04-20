@@ -474,7 +474,6 @@ iommu_bus_dmamap_create(bus_dma_tag_t dmat, int flags, bus_dmamap_t *mapp)
 			return (ENOMEM);
 		}
 	}
-	TAILQ_INIT(&map->map_entries);
 	map->tag = tag;
 	map->locked = true;
 	map->cansleep = false;
@@ -495,12 +494,7 @@ iommu_bus_dmamap_destroy(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	map = (struct bus_dmamap_iommu *)map1;
 	if (map != NULL) {
 		domain = tag->ctx->domain;
-		IOMMU_DOMAIN_LOCK(domain);
-		if (!TAILQ_EMPTY(&map->map_entries)) {
-			IOMMU_DOMAIN_UNLOCK(domain);
-			return (EBUSY);
-		}
-		IOMMU_DOMAIN_UNLOCK(domain);
+		gmem_uvas_delete(domain->uvas);
 		free(map, M_IOMMU_DMAMAP);
 	}
 	tag->map_count--;
