@@ -85,7 +85,7 @@ iommu_unmap_msi(struct iommu_ctx *ctx)
 	if (entry == NULL)
 		return;
 
-	gmem_uvas_unmap(domain->pmap, entry, 1, NULL, NULL);
+	gmem_uvas_unmap(domain->pmap, entry, true, NULL, NULL);
 
 	domain->msi_entry = NULL;
 	domain->msi_base = 0;
