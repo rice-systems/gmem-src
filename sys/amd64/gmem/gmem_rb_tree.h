@@ -217,7 +217,6 @@ gmem_rb_match_insert(struct gmem_rb_match_args *a)
 	found = gmem_rb_insert(a->uvas, a->entry);
 	KASSERT(found, ("found dup %p start %jx size %jx",
 	    a->uvas, (uintmax_t)a->entry->start, (uintmax_t)a->size));
-	a->entry->flags = GMEM_UVAS_ENTRY_MAP;
 }
 
 // This is the original IOMMU search function (lowermatch) which makes on sense.
