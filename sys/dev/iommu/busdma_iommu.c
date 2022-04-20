@@ -494,7 +494,7 @@ iommu_bus_dmamap_destroy(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	map = (struct bus_dmamap_iommu *)map1;
 	if (map != NULL) {
 		domain = tag->ctx->domain;
-		gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
+		// gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
 		// gmem_uvas_delete(domain->uvas);
 		free(map, M_IOMMU_DMAMAP);
 	}
