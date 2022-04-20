@@ -386,7 +386,7 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entri
 {
 	gmem_uvas_entry_t *entry, *entry1;
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
-		TAILQ_REMOVE(entries, entry, mapped_entry);
+		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
 
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
@@ -400,7 +400,7 @@ gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
 	void (* unmap_callback(void *)), void *callback_args)
 {
 	GMEM_UVAS_LOCK(pmap->uvas);
-	gmem_uvas_unmap_external(pmap, pmap->uvas->mapped_entries, wait, unmap_callback, callback_args);
+	gmem_uvas_unmap_external(pmap, &pmap->uvas->mapped_entries, wait, unmap_callback, callback_args);
 	GMEM_UVAS_UNLOCK(pmap->uvas);
 
 	return GMEM_OK;

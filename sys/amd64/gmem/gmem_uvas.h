@@ -242,7 +242,7 @@ struct gmem_mmu_ops
 		vm_prot_t new_prot);
 	gmem_error_t (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t *entry);
 	gmem_error_t (*mmu_tlb_flush)(struct gmem_uvas_entries_tailq *entries);
-	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap);
+	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
@@ -322,7 +322,7 @@ gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *s
 	vm_offset_t size, u_int eflags, u_int flags, vm_page_t *ma, bool track, gmem_uvas_entry_t **ret);
 
 // Generic pmap kill function
-gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap);
+gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 
 
 gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries, 

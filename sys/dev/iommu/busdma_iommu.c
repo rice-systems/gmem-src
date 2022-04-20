@@ -498,7 +498,7 @@ iommu_bus_dmamap_destroy(bus_dma_tag_t dmat, bus_dmamap_t map1)
 
 		// TODO delete this
 		IOMMU_DOMAIN_LOCK(domain);
-		if (!TAILQ_EMPTY(&map1->map_entries)) {
+		if (!TAILQ_EMPTY(&map->map_entries)) {
 			IOMMU_DOMAIN_UNLOCK(domain);
 			return (EBUSY);
 		}
