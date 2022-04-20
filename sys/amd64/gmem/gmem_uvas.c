@@ -382,20 +382,16 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 	return GMEM_OK;
 }
 
-gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap) 
+gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries) 
 {
 	gmem_uvas_entry_t *entry, *entry1;
-	printf("[GMEM generic killer] start\n");
-	TAILQ_FOREACH_SAFE(entry, &pmap->uvas->unmap_queue, mapped_entry, entry1) {
-		GMEM_UVAS_LOCK(pmap->uvas);
-		TAILQ_REMOVE(&pmap->uvas->unmap_queue, entry, mapped_entry);
-		GMEM_UVAS_UNLOCK(pmap->uvas);
+	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
+		TAILQ_REMOVE(entries, entry, mapped_entry);
 
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		gmem_uvas_free_span(entry->uvas, entry);
 	}
-	printf("[GMEM generic killer] done\n");
 	return GMEM_OK;
 }
 
@@ -404,15 +400,24 @@ gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
 	void (* unmap_callback(void *)), void *callback_args)
 {
 	GMEM_UVAS_LOCK(pmap->uvas);
-	TAILQ_CONCAT(&pmap->uvas->unmap_queue, &pmap->uvas->mapped_entries, mapped_entry);
+	gmem_uvas_unmap_external(pmap, pmap->uvas->mapped_entries, wait, unmap_callback, callback_args);
 	GMEM_UVAS_UNLOCK(pmap->uvas);
 
+	return GMEM_OK;
+}
+
+// munmap all for program termination or whatever.
+gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries, 
+	int wait, void (* unmap_callback(void *)), void *callback_args)
+{
 	if (wait) {
 		// The termination will be sync
-		pmap->mmu_ops->mmu_pmap_kill(pmap);
+		pmap->mmu_ops->mmu_pmap_kill(pmap, ext_entries);
 	} else {
 		// The unmap will be async
-
+		GMEM_UVAS_LOCK(pmap->uvas);
+		TAILQ_CONCAT(&pmap->uvas->unmap_queue, ext_entries, mapped_entry);
+		GMEM_UVAS_UNLOCK(pmap->uvas);
 	}
 	return GMEM_OK;
 }
@@ -458,11 +463,12 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     }
 
     // Track it in uvas->mapped_entries
-    if (track) {
-    	GMEM_UVAS_LOCK(uvas);
+	if (track) {
+		GMEM_UVAS_LOCK(uvas);
+		entry->flags |= GMEM_UVAS_ENTRY_TRACKED;
 		TAILQ_INSERT_TAIL(&uvas->mapped_entries, entry, mapped_entry);
-    	GMEM_UVAS_UNLOCK(uvas);
-    }
+		GMEM_UVAS_UNLOCK(uvas);
+	}
 
     // Who should consider multiple pmaps cases?
     error = gmem_uvas_prepare_and_map_pages_sg(pmap, entry->start,

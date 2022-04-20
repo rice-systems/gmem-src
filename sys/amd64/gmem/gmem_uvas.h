@@ -59,9 +59,6 @@ extern struct hist instrument_hist[MAXPGCNT];
 		} \
 	} \
 
-// #define	IOMMU_DOMAIN_LOCK(dom)		mtx_lock(&(dom)->lock)
-// #define	IOMMU_DOMAIN_UNLOCK(dom)	mtx_unlock(&(dom)->lock)
-// #define	IOMMU_DOMAIN_ASSERT_LOCKED(dom)	mtx_assert(&(dom)->lock, MA_OWNED)
 #define GMEM_UVAS_LOCK(x) mtx_lock(&(x)->lock)
 #define GMEM_UVAS_UNLOCK(x) mtx_unlock(&(x)->lock)
 #define GMEM_UVAS_ASSERT_LOCKED(x) mtx_assert(&(x)->lock, MA_OWNED)
@@ -86,7 +83,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 
 #define	GMEM_UVAS_ENTRY_PLACE	0x0001	/* Fake entry */
 #define	GMEM_UVAS_VMEM_XALLOC	0x0002
-#define	GMEM_UVAS_ENTRY_MAP	0x0004
+#define	GMEM_UVAS_ENTRY_TRACKED	0x0004
 #define	GMEM_UVAS_ENTRY_UNMAPPED	0x0010	/* No backing pages */
 #define	GMEM_UVAS_ENTRY_QI_NF	0x0020	/* qi task, do not free entry */
 #define	GMEM_UVAS_ENTRY_READ	0x1000	/* Read permitted */
@@ -328,6 +325,8 @@ gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *s
 gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap);
 
 
+gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries, 
+	int wait, void (* unmap_callback(void *)), void *callback_args);
 gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
 	void (* unmap_callback(void *)), void *callback_args);
 #endif

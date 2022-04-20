@@ -474,6 +474,7 @@ iommu_bus_dmamap_create(bus_dma_tag_t dmat, int flags, bus_dmamap_t *mapp)
 			return (ENOMEM);
 		}
 	}
+	TAILQ_INIT(&map->map_entries);
 	map->tag = tag;
 	map->locked = true;
 	map->cansleep = false;
@@ -496,14 +497,12 @@ iommu_bus_dmamap_destroy(bus_dma_tag_t dmat, bus_dmamap_t map1)
 		domain = tag->ctx->domain;
 
 		// TODO delete this
-		GMEM_UVAS_LOCK(domain->uvas);
-		if (!TAILQ_EMPTY(&domain->uvas->mapped_entries)) {
-			GMEM_UVAS_UNLOCK(domain->uvas);
+		IOMMU_DOMAIN_LOCK(domain);
+		if (!TAILQ_EMPTY(&map1->map_entries)) {
+			IOMMU_DOMAIN_UNLOCK(domain);
 			return (EBUSY);
 		}
-		GMEM_UVAS_UNLOCK(domain->uvas);
-		// gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
-		// gmem_uvas_delete(domain->uvas);
+		IOMMU_DOMAIN_UNLOCK(domain);
 		free(map, M_IOMMU_DMAMAP);
 	}
 	tag->map_count--;
@@ -586,6 +585,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
 	vm_offset_t gstart;
+	struct gmem_uvas_entries_tailq ext_entries;
 
 	KASSERT(offset < IOMMU_PAGE_SIZE, ("offset %d", offset));
 	if (segs == NULL)
@@ -621,7 +621,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		error = gmem_mmap_eager(domain->uvas, domain->pmap, &gstart, size,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
-		    gas_flags | GMEM_UVA_ALLOC, ma + idx, true, &entry);
+		    gas_flags | GMEM_UVA_ALLOC, ma + idx, false, &entry);
 
 		if (error != 0)
 			break;
@@ -667,6 +667,10 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		    (uintmax_t)entry->start, (uintmax_t)entry->end,
 		    (uintmax_t)buflen1, (uintmax_t)tag->common.maxsegsz));
 
+		IOMMU_DOMAIN_LOCK(domain);
+		TAILQ_INSERT_TAIL(&map->map_entries, entry, mapped_entry);
+		IOMMU_DOMAIN_UNLOCK(domain);
+
 		segs[seg].ds_addr = entry->start + offset;
 		segs[seg].ds_len = buflen1;
 
@@ -678,8 +682,11 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	if (error == 0)
 		*segp = seg;
 	else {
-		printf("[busdma_iommu] unmap %d\n", __LINE__);
-		gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
+		TAILQ_INIT(&ext_entries);
+		IOMMU_DOMAIN_LOCK(domain);
+		TAILQ_CONCAT(&ext_entries, &map->map_entries, mapped_entry);
+		IOMMU_DOMAIN_UNLOCK(domain);
+		gmem_uvas_unmap_external(domain->pmap, ext_entries, true, NULL, NULL);
 	}
 	return (error);
 }
@@ -878,13 +885,14 @@ iommu_bus_dmamap_complete(bus_dma_tag_t dmat, bus_dmamap_t map1,
  *
  * On amd64, we assume that sf allocation cannot fail.
  */
-static void
-iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
+static inline void
+_iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1, bool wait, void (* cb(void *)), void *args)
 {
 	struct bus_dma_tag_iommu *tag;
 	struct bus_dmamap_iommu *map;
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
+	struct gmem_uvas_entries_tailq ext_entries;
 
 	tag = (struct bus_dma_tag_iommu *)dmat;
 	map = (struct bus_dmamap_iommu *)map1;
@@ -892,28 +900,24 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	domain = ctx->domain;
 	atomic_add_long(&ctx->unloads, 1);
 
-	THREAD_NO_SLEEPING();
-	printf("[busdma_iommu] unmap %d\n", __LINE__);
-	gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
-	THREAD_SLEEPING_OK();
+
+	TAILQ_INIT(&ext_entries);
+	IOMMU_DOMAIN_LOCK(domain);
+	TAILQ_CONCAT(&ext_entries, &map->map_entries, mapped_entry);
+	IOMMU_DOMAIN_UNLOCK(domain);
+	gmem_uvas_unmap_external(domain->pmap, &ext_entries, wait, cb, args);
+}
+
+static void
+iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
+{
+	_iommu_bus_dmamap_unload(dmat, map1, true, NULL, NULL);
 }
 
 static void
 iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(void *)), void *args)
 {
-	struct bus_dma_tag_iommu *tag;
-	struct bus_dmamap_iommu *map;
-	struct iommu_ctx *ctx;
-	struct iommu_domain *domain;
-
-	tag = (struct bus_dma_tag_iommu *)dmat;
-	map = (struct bus_dmamap_iommu *)map1;
-	ctx = tag->ctx;
-	domain = ctx->domain;
-	atomic_add_long(&ctx->unloads, 1);
-
-	printf("[busdma_iommu] unmap %d\n", __LINE__);
-	gmem_uvas_unmap_all(domain->pmap, false, NULL, NULL);
+	_iommu_bus_dmamap_unload(dmat, map1, false, cb, args);
 }
 
 static void
@@ -1063,11 +1067,15 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 
 	error = gmem_mmap_eager(domain->uvas, domain->pmap, &start, length, GMEM_UVAS_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
-	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, true, &entry);
+	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, false, &entry);
 
-	if (error != GMEM_OK) {
+	if (error == GMEM_OK) {
+		IOMMU_DOMAIN_LOCK(domain);
+		TAILQ_INSERT_TAIL(&map->map_entries, entry, mapped_entry);
+		IOMMU_DOMAIN_UNLOCK(domain);
+	} else
 		gmem_uvas_unmap(domain->pmap, entry, true, NULL, NULL);
-	}
+
 	for (i = 0; i < atop(length); i++)
 		vm_page_putfake(ma[i]);
 	free(ma, M_TEMP);
