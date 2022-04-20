@@ -454,7 +454,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     // Track it in uvas->mapped_entries
     if (track) {
     	GMEM_UVAS_LOCK(uvas);
-		TAILQ_INSERT_TAIL(uvas->mapped_entries, entry, mapped_entry);
+		TAILQ_INSERT_TAIL(&uvas->mapped_entries, entry, mapped_entry);
     	GMEM_UVAS_UNLOCK(uvas);
     }
 
