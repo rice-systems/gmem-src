@@ -111,7 +111,7 @@ iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size,
 
 	if (entry == NULL) {
 		error = gmem_mmap_eager(domain->uvas, domain->pmap, &start, size,
-		    eflags, flags | GMEM_UVA_ALLOC, ma, &entry);
+		    eflags, flags | GMEM_UVA_ALLOC, ma, false, &entry);
 
 		IOMMU_DOMAIN_LOCK(domain);
 		if (error == 0) {

@@ -380,6 +380,37 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 	return GMEM_OK;
 }
 
+gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap) 
+{
+	gmem_uvas_entry_t *entry, *entry1;
+	TAILQ_FOREACH_SAFE(entry, &pmap->uvas->unmap_queue, mapped_entry, entry1) {
+		GMEM_UVAS_LOCK(pmap->uvas);
+		TAILQ_REMOVE(&pmap->uvas->unmap_queue, entry, mapped_entry);
+		GMEM_UVAS_UNLOCK(pmap->uvas);
+		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		gmem_uvas_free_span(entry->uvas, entry);
+	}
+}
+
+// munmap all for program termination or whatever.
+gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
+	void (* unmap_callback(void *)), void *callback_args)
+{
+	GMEM_UVAS_LOCK(pmap->uvas);
+	TAILQ_CONCAT(&pmap->uvas->unmap_queue, &pmap->uvas->mapped_entries, mapped_entry);
+	GMEM_UVAS_UNLOCK(pmap->uvas);
+
+	if (wait) {
+		// The termination will be sync
+		pmap->mmu_ops->mmu_pmap_kill(pmap);
+	} else {
+		// The unmap will be async
+
+	}
+	return GMEM_OK;
+}
+
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection)
 {
@@ -394,7 +425,7 @@ gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 // It includes: va allocation, physical preparation, virtual mapping creation
 gmem_error_t
 gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offset_t size,
-    u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **entry_ret)
+    u_int eflags, u_int flags, vm_page_t *ma, bool track, gmem_uvas_entry_t **entry_ret)
 {
     gmem_uvas_entry_t *entry;
     int error;
@@ -416,7 +447,15 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     // Failed to allocate VA space
     if (error) {
         printf("!!!!!!Failed va allocation, no mapping will be created\n");
+        // Any states require reversing?
         return error;
+    }
+
+    // Track it in uvas->mapped_entries
+    if (track) {
+    	GMEM_UVAS_LOCK(uvas);
+		TAILQ_INSERT_TAIL(uvas->mapped_entries, entry, mapped_entry);
+    	GMEM_UVAS_UNLOCK(uvas);
     }
 
     // Who should consider multiple pmaps cases?

@@ -86,8 +86,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 
 #define	GMEM_UVAS_ENTRY_PLACE	0x0001	/* Fake entry */
 #define	GMEM_UVAS_VMEM_XALLOC	0x0002
-#define	GMEM_UVAS_ENTRY_MAP	0x0004	/* Busdma created, linked by
-					   dmamap_link */
+#define	GMEM_UVAS_ENTRY_MAP	0x0004
 #define	GMEM_UVAS_ENTRY_UNMAPPED	0x0010	/* No backing pages */
 #define	GMEM_UVAS_ENTRY_QI_NF	0x0020	/* qi task, do not free entry */
 #define	GMEM_UVAS_ENTRY_READ	0x1000	/* Read permitted */
@@ -133,7 +132,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	struct mtx lock;
 
 	// List of mapped entries
-	TAILQ_HEAD(gmem_uvas_entry_tailq, gmem_uvas_entry) mapped_entries;
+	gmem_uvas_entries_tailq mapped_entries, unmap_queue;
 
 	// Whether this uvas needs lookup of its entries
 	// This determines whether it uses vmem or rb-tree to allocate/free uvas entries.
@@ -207,8 +206,6 @@ struct gmem_uvas_entry // VM counterpart: struct vm_map_entry
 
 	// The unified address space it points to
 	gmem_uvas_t *uvas;
-
-	TAILQ_ENTRY(gmem_uvas_entry) dmamap_link; /* Link for dmamap entries */
 };
 
 #define GMEM_MMU_LOCK(ops) mtx_lock(&ops->lock)
@@ -248,6 +245,7 @@ struct gmem_mmu_ops
 		vm_prot_t new_prot);
 	gmem_error_t (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t *entry);
 	gmem_error_t (*mmu_tlb_flush)(struct gmem_uvas_entries_tailq *entries);
+	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
@@ -284,8 +282,6 @@ struct dev_pmap
 	// 1. Could it change dynamically?
 	// 2. What happens when multiple devices share the same type of mmu?
 	struct gmem_mmu_ops *mmu_ops;
-
-	struct gmem_uvas_entries_tailq *unmap_queue;
 
 	// Device-specific page table data to be operated by gmem_mmu_ops
 	// can include a child_pmap for nested translation
@@ -327,6 +323,12 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 
 // GMEM-based functions for map/unmap
 gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, 
-	vm_offset_t size, u_int eflags, u_int flags, vm_page_t *ma, gmem_uvas_entry_t **ret);
+	vm_offset_t size, u_int eflags, u_int flags, vm_page_t *ma, bool track, gmem_uvas_entry_t **ret);
 
+// Generic pmap kill function
+gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap);
+
+
+gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
+	void (* unmap_callback(void *)), void *callback_args);
 #endif

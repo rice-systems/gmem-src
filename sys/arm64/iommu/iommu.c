@@ -302,8 +302,6 @@ iommu_domain_unload(struct iommu_domain *iodom,
 	int error;
 
 	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
-		KASSERT((entry->flags & IOMMU_MAP_ENTRY_MAP) != 0,
-		    ("not mapped entry %p %p", iodom, entry));
 		TAILQ_REMOVE(entries, entry, dmamap_link);
 		gmem_uvas_unmap(iodom->pmap, entry, 1, NULL, NULL);
 		KASSERT(error == 0, ("unmap %p error %d", iodom, error));

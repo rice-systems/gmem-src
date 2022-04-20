@@ -571,8 +571,6 @@ iommu_bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map1)
 	iommu_bus_dmamap_destroy(dmat, map1);
 }
 
-// I don't think the busdma layer should deal with a dmamap_link linked list for
-// map entries. This is just coupling the va allocator with higher-level functions.
 static int
 iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
     struct bus_dmamap_iommu *map, vm_page_t *ma, int offset, bus_size_t buflen,
@@ -620,7 +618,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		error = gmem_mmap_eager(domain->uvas, domain->pmap, &gstart, size,
 		    GMEM_UVAS_ENTRY_READ |
 		    ((flags & BUS_DMA_NOWRITE) == 0 ? GMEM_UVAS_ENTRY_WRITE : 0),
-		    gas_flags | GMEM_UVA_ALLOC, ma + idx, &entry);
+		    gas_flags | GMEM_UVA_ALLOC, ma + idx, true, &entry);
 
 		if (error != 0)
 			break;
@@ -666,11 +664,6 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		    (uintmax_t)entry->start, (uintmax_t)entry->end,
 		    (uintmax_t)buflen1, (uintmax_t)tag->common.maxsegsz));
 
-		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_INSERT_TAIL(&map->map_entries, entry, dmamap_link);
-		entry->flags |= IOMMU_MAP_ENTRY_MAP;
-		IOMMU_DOMAIN_UNLOCK(domain);
-
 		segs[seg].ds_addr = entry->start + offset;
 		segs[seg].ds_len = buflen1;
 
@@ -682,27 +675,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 	if (error == 0)
 		*segp = seg;
 	else {
-		/*
-		 * The busdma interface does not allow us to report
-		 * partial buffer load, so unfortunately we have to
-		 * revert all work done.
-		 */
-		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_FOREACH_REVERSE_SAFE(entry, &map->map_entries, gmem_uvas_entries_tailq,
-			dmamap_link, entry1) {
-			/*
-			 * No entries other than what we have created
-			 * during the failed run might have been
-			 * inserted there in between, since we own ctx
-			 * pglock.
-			 */
-			TAILQ_REMOVE(&map->map_entries, entry, dmamap_link);
-			TAILQ_INSERT_TAIL(&domain->unload_entries, entry,
-			    dmamap_link);
-		}
-		IOMMU_DOMAIN_UNLOCK(domain);
-		taskqueue_enqueue(domain->iommu->delayed_taskqueue,
-		    &domain->unload_task);
+		gmem_uvas_unmap_all(domain->pmap, false, NULL, NULL);
 	}
 	return (error);
 }
@@ -908,9 +881,6 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	struct bus_dmamap_iommu *map;
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-#ifndef IOMMU_DOMAIN_UNLOAD_SLEEP
-	struct gmem_uvas_entries_tailq entries;
-#endif
 
 	tag = (struct bus_dma_tag_iommu *)dmat;
 	map = (struct bus_dmamap_iommu *)map1;
@@ -918,22 +888,7 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 	domain = ctx->domain;
 	atomic_add_long(&ctx->unloads, 1);
 
-#if defined(IOMMU_DOMAIN_UNLOAD_SLEEP)
-	IOMMU_DOMAIN_LOCK(domain);
-	TAILQ_CONCAT(&domain->unload_entries, &map->map_entries, dmamap_link);
-	IOMMU_DOMAIN_UNLOCK(domain);
-	taskqueue_enqueue(domain->iommu->delayed_taskqueue,
-	    &domain->unload_task);
-#else
-	TAILQ_INIT(&entries);
-	IOMMU_DOMAIN_LOCK(domain);
-	TAILQ_CONCAT(&entries, &map->map_entries, dmamap_link);
-	IOMMU_DOMAIN_UNLOCK(domain);
-	THREAD_NO_SLEEPING();
-	iommu_domain_unload(domain, &entries, false);
-	THREAD_SLEEPING_OK();
-	KASSERT(TAILQ_EMPTY(&entries), ("lazy iommu_ctx_unload %p", ctx));
-#endif
+	gmem_uvas_unmap_all(domain->pmap, true, NULL, NULL);
 }
 
 static void
@@ -951,14 +906,7 @@ iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(
 	domain = ctx->domain;
 	atomic_add_long(&ctx->unloads, 1);
 
-	TAILQ_INIT(&entries);
-	IOMMU_DOMAIN_LOCK(domain);
-	TAILQ_CONCAT(&entries, &map->map_entries, dmamap_link);
-	IOMMU_DOMAIN_UNLOCK(domain);
-	THREAD_NO_SLEEPING();
-	iommu_domain_unload(domain, &entries, false);
-	THREAD_SLEEPING_OK();
-	KASSERT(TAILQ_EMPTY(&entries), ("lazy iommu_ctx_unload %p", ctx));
+	gmem_uvas_unmap_all(domain->pmap, false, NULL, NULL);
 }
 
 static void
@@ -1095,11 +1043,6 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 	map = (struct bus_dmamap_iommu *)map1;
 	waitok = (flags & BUS_DMA_NOWAIT) != 0;
 
-	// entry = iommu_map_alloc_entry(domain, waitok ? 0 : IOMMU_PGF_WAITOK);
-	// if (entry == NULL)
-	// 	return (ENOMEM);
-	// entry->start = start;
-	// entry->end = start + length;
 	ma = malloc(sizeof(vm_page_t) * atop(length), M_TEMP, waitok ?
 	    M_WAITOK : M_NOWAIT);
 	if (ma == NULL) {
@@ -1113,50 +1056,12 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 
 	error = gmem_mmap_eager(domain->uvas, domain->pmap, &start, length, GMEM_UVAS_ENTRY_READ |
 	    ((flags & BUS_DMA_NOWRITE) ? 0 : GMEM_UVAS_ENTRY_WRITE),
-	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, &entry);
+	    (waitok ? GMEM_MF_CANWAIT : 0) | GMEM_UVA_ALLOC_FIXED, ma, true, &entry);
 
-	// error = iommu_map_region(domain, entry, IOMMU_MAP_ENTRY_READ |
-	//     ((flags & BUS_DMA_NOWRITE) ? 0 : IOMMU_MAP_ENTRY_WRITE),
-	//     waitok ? IOMMU_MF_CANWAIT : 0, ma);
-
-	// if (start != entry->start) {
-	// 	panic("Inconsistent gmem va allocation, uvas %p, gmem start:%lx, iommu start:%lx, size:%lx",
-	// 		domain->uvas, start, entry->start, length);
-	// }
-
-	if (error == 0) {
-		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_INSERT_TAIL(&map->map_entries, entry, dmamap_link);
-		entry->flags |= IOMMU_MAP_ENTRY_MAP;
-		IOMMU_DOMAIN_UNLOCK(domain);
-	} 
-	// else {
-		// iommu_domain_unload_entry(domain, entry, true);
-	// }
 	for (i = 0; i < atop(length); i++)
 		vm_page_putfake(ma[i]);
 	free(ma, M_TEMP);
 	return (error);
-}
-
-static void
-iommu_domain_unload_task(void *arg, int pending)
-{
-	struct iommu_domain *domain;
-	struct gmem_uvas_entries_tailq entries;
-
-	domain = arg;
-	TAILQ_INIT(&entries);
-
-	for (;;) {
-		IOMMU_DOMAIN_LOCK(domain);
-		TAILQ_SWAP(&domain->unload_entries, &entries,
-		    gmem_uvas_entry, dmamap_link);
-		IOMMU_DOMAIN_UNLOCK(domain);
-		if (TAILQ_EMPTY(&entries))
-			break;
-		iommu_domain_unload(domain, &entries, true);
-	}
 }
 
 void
@@ -1167,9 +1072,6 @@ iommu_domain_init(struct iommu_unit *unit, struct iommu_domain *domain,
 	domain->ops = ops;
 	domain->iommu = unit;
 
-	TASK_INIT(&domain->unload_task, 0, iommu_domain_unload_task, domain);
-	// RB_INIT(&domain->rb_root);
-	TAILQ_INIT(&domain->unload_entries);
 	mtx_init(&domain->lock, "iodom", NULL, MTX_DEF);
 }
 

@@ -936,7 +936,7 @@ dmar_rmrr_iter(ACPI_DMAR_HEADER *dmarh, void *arg)
 			/* The RMRR entry end address is inclusive. */
 			entry->end = resmem->EndAddress;
 			TAILQ_INSERT_TAIL(ria->rmrr_entries, entry,
-			    dmamap_link);
+			    mapped_entry);
 		}
 	}
 
@@ -1098,30 +1098,6 @@ dmar_instantiate_rmrr_ctxs(struct iommu_unit *unit)
 #include <ddb/ddb.h>
 #include <ddb/db_lex.h>
 
-// static void
-// dmar_print_domain_entry(const struct iommu_map_entry *entry)
-// {
-// 	struct iommu_map_entry *l, *r;
-
-// 	db_printf(
-// 	    "    start %jx end %jx first %jx last %jx free_down %jx flags %x ",
-// 	    entry->start, entry->end, entry->first, entry->last,
-// 	    entry->free_down, entry->flags);
-// 	db_printf("left ");
-// 	l = RB_LEFT(entry, rb_entry);
-// 	if (l == NULL)
-// 		db_printf("NULL ");
-// 	else
-// 		db_printf("%jx ", l->start);
-// 	db_printf("right ");
-// 	r = RB_RIGHT(entry, rb_entry);
-// 	if (r == NULL)
-// 		db_printf("NULL");
-// 	else
-// 		db_printf("%jx", r->start);
-// 	db_printf("\n");
-// }
-
 static void
 dmar_print_ctx(struct dmar_ctx *ctx)
 {
@@ -1133,44 +1109,6 @@ dmar_print_ctx(struct dmar_ctx *ctx)
 	    pci_get_function(ctx->context.tag->owner), ctx->refs,
 	    ctx->context.flags, ctx->context.loads, ctx->context.unloads);
 }
-
-// static void
-// dmar_print_domain(struct dmar_domain *domain, bool show_mappings)
-// {
-// 	struct iommu_domain *iodom;
-// 	struct iommu_map_entry *entry;
-// 	struct dmar_ctx *ctx;
-
-// 	iodom = DOM2IODOM(domain);
-
-// 	db_printf(
-// 	    "  @%p dom %d mgaw %d agaw %d pglvl %d end %jx refs %d\n"
-// 	    "   ctx_cnt %d flags %x pgobj %p map_ents %u\n",
-// 	    domain, domain->domain, domain->mgaw, domain->agaw, domain->pglvl,
-// 	    (uintmax_t)domain->iodom.end, domain->refs, domain->ctx_cnt,
-// 	    domain->iodom.flags, domain->pgtbl_obj, domain->iodom.entries_cnt);
-// 	if (!LIST_EMPTY(&domain->contexts)) {
-// 		db_printf("  Contexts:\n");
-// 		LIST_FOREACH(ctx, &domain->contexts, link)
-// 			dmar_print_ctx(ctx);
-// 	}
-// 	if (!show_mappings)
-// 		return;
-// 	db_printf("    mapped:\n");
-// 	RB_FOREACH(entry, iommu_gas_entries_tree, &iodom->rb_root) {
-// 		dmar_print_domain_entry(entry);
-// 		if (db_pager_quit)
-// 			break;
-// 	}
-// 	if (db_pager_quit)
-// 		return;
-// 	db_printf("    unloading:\n");
-// 	TAILQ_FOREACH(entry, &domain->iodom.unload_entries, dmamap_link) {
-// 		dmar_print_domain_entry(entry);
-// 		if (db_pager_quit)
-// 			break;
-// 	}
-// }
 
 DB_FUNC(dmar_domain, db_dmar_print_domain, db_show_table, CS_OWN, NULL)
 {

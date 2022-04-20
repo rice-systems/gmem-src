@@ -193,5 +193,6 @@ gmem_mmu_ops_t intel_iommu_ops = {
 	.mmu_pmap_enter = intel_iommu_pmap_enter,
 	.mmu_pmap_release = intel_iommu_pmap_release,
 	.mmu_pmap_protect = intel_iommu_pmap_protect,
-	.mmu_tlb_invl = intel_iommu_tlb_invl
+	.mmu_tlb_invl = intel_iommu_tlb_invl,
+	.mmu_pmap_kill = gmem_mmu_pmap_kill_generic,
 };

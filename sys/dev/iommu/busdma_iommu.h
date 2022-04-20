@@ -55,7 +55,6 @@ struct bus_dmamap_iommu {
 	struct memdesc mem;
 	bus_dmamap_callback_t *callback;
 	void *callback_arg;
-	struct gmem_uvas_entries_tailq map_entries;
 	TAILQ_ENTRY(bus_dmamap_iommu) delay_link;
 	bool locked;
 	bool cansleep;

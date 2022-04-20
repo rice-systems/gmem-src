@@ -77,14 +77,9 @@ struct iommu_domain {
 	struct iommu_unit *iommu;	/* (c) */
 	const struct iommu_domain_map_ops *ops;
 	struct mtx lock;		/* (c) */
-	struct task unload_task;	/* (c) */
 	u_int entries_cnt;		/* (d) */
-	struct gmem_uvas_entries_tailq unload_entries; /* (d) Entries to
-							 unload */
-	// struct iommu_gas_entries_tree rb_root; /* (d) */
 	iommu_gaddr_t end;		/* (c) Highest address + 1 in
 					   the guest AS */
-	// struct gmem_uvas_entry *first_place, *last_place; /* (d) */
 	struct gmem_uvas_entry *msi_entry; /* (d) Arch-specific */
 	iommu_gaddr_t msi_base;		/* (d) Arch-specific */
 	vm_paddr_t msi_phys;		/* (d) Arch-specific */
@@ -150,8 +145,6 @@ void iommu_free_ctx_locked(struct iommu_unit *iommu, struct iommu_ctx *ctx);
 struct iommu_ctx *iommu_get_ctx(struct iommu_unit *, device_t dev,
     uint16_t rid, bool id_mapped, bool rmrr_init);
 struct iommu_unit *iommu_find(device_t dev, bool verbose);
-void iommu_domain_unload(struct iommu_domain *domain,
-    struct gmem_uvas_entries_tailq *entries, bool cansleep);
 
 struct iommu_ctx *iommu_instantiate_ctx(struct iommu_unit *iommu,
     device_t dev, bool rmrr);

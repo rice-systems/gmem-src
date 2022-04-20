@@ -255,7 +255,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 	TAILQ_INIT(&rmrr_entries);
 	dmar_dev_parse_rmrr(domain, dev_domain, dev_busno, dev_path,
 	    dev_path_len, &rmrr_entries);
-	TAILQ_FOREACH_SAFE(entry, &rmrr_entries, dmamap_link, entry1) {
+	TAILQ_FOREACH_SAFE(entry, &rmrr_entries, mapped_entry, entry1) {
 		/*
 		 * VT-d specification requires that the start of an
 		 * RMRR entry is 4k-aligned.  Buggy BIOSes put
@@ -297,7 +297,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 		gend = entry->end;
 		error1 = gmem_mmap_eager(domain->iodom.uvas, domain->iodom.pmap, &gstart, gend - gstart, 
 			GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
-		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, &entry);
+		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, false, &entry);
 
 		/*
 		 * Non-failed RMRR entries are owned by context rb
@@ -321,7 +321,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 				    error1);
 				error = error1;
 			}
-			TAILQ_REMOVE(&rmrr_entries, entry, dmamap_link);
+			TAILQ_REMOVE(&rmrr_entries, entry, mapped_entry);
 			gmem_uvas_free_entry((DOM2IODOM(domain))->uvas, entry);
 		}
 		for (i = 0; i < size; i++)
@@ -508,8 +508,6 @@ dmar_domain_destroy(struct dmar_domain *domain)
 
 	iodom = DOM2IODOM(domain);
 
-	KASSERT(TAILQ_EMPTY(&domain->iodom.unload_entries),
-	    ("unfinished unloads %p", domain));
 	KASSERT(LIST_EMPTY(&domain->contexts),
 	    ("destroying dom %p with contexts", domain));
 	KASSERT(domain->ctx_cnt == 0,
@@ -904,24 +902,6 @@ dmar_find_ctx_locked(struct dmar_unit *dmar, uint16_t rid)
 	return (NULL);
 }
 
-void
-dmar_domain_unload(struct dmar_domain *domain,
-    struct gmem_uvas_entries_tailq *entries, bool cansleep)
-{
-	struct dmar_unit *unit;
-	struct iommu_domain *iodom;
-	struct gmem_uvas_entry *entry, *entry1;
-
-	iodom = DOM2IODOM(domain);
-	unit = DOM2DMAR(domain);
-
-	TAILQ_FOREACH_SAFE(entry, entries, dmamap_link, entry1) {
-		TAILQ_REMOVE(entries, entry, dmamap_link);
-		gmem_uvas_unmap(iodom->pmap, entry, 1, NULL, NULL);
-	}
-	return;
-}
-
 struct iommu_ctx *
 iommu_get_ctx(struct iommu_unit *iommu, device_t dev, uint16_t rid,
     bool id_mapped, bool rmrr_init)
@@ -956,15 +936,4 @@ iommu_free_ctx(struct iommu_ctx *context)
 	ctx = IOCTX2CTX(context);
 
 	dmar_free_ctx(ctx);
-}
-
-void
-iommu_domain_unload(struct iommu_domain *iodom,
-    struct gmem_uvas_entries_tailq *entries, bool cansleep)
-{
-	struct dmar_domain *domain;
-
-	domain = IODOM2DOM(iodom);
-
-	dmar_domain_unload(domain, entries, cansleep);
 }
