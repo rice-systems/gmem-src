@@ -118,7 +118,7 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	struct dmar_domain *domain;
 	struct dmar_unit *unit;
 	uint64_t pflags;
-	int error, pglvl;
+	int error, pglvl = 0;
 
 	pflags = ((prot & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
 	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
@@ -136,7 +136,7 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
     FINISH_STATS(MAP, size >> 12);
     if ((va <= 0x6d000 && 0x6d000 < va + size) || (va <= 0x6b000 && 0x6b000 < va + size)) {
     	printf("[intel_iommu.c] mapping va %lx - %lx, pte of 0x6b000 is %lx\n",
-    		va, va + size, x86_translate(domain, 0x6b000, pglvl));
+    		va, va + size, x86_translate(domain, 0x6b000, &pglvl));
     }
 	if (error != 0)
 		return (error);
