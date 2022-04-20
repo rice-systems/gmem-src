@@ -572,7 +572,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 {
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-	struct gmem_uvas_entry *entry, *entry1;
+	struct gmem_uvas_entry *entry;
 	iommu_gaddr_t size;
 	bus_size_t buflen1;
 	int error, idx, gas_flags, seg;
@@ -892,7 +892,6 @@ iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(
 	struct bus_dmamap_iommu *map;
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
-	struct gmem_uvas_entries_tailq entries;
 
 	tag = (struct bus_dma_tag_iommu *)dmat;
 	map = (struct bus_dmamap_iommu *)map1;
