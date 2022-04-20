@@ -497,7 +497,7 @@ iommu_bus_dmamap_destroy(bus_dma_tag_t dmat, bus_dmamap_t map1)
 
 		// TODO delete this
 		GMEM_UVAS_LOCK(domain->uvas);
-		if (!TAILQ_EMPTY(&domain->pmap->mapped_entries)) {
+		if (!TAILQ_EMPTY(&domain->uvas->mapped_entries)) {
 			GMEM_UVAS_UNLOCK(domain->uvas);
 			return (EBUSY);
 		}
