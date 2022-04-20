@@ -686,7 +686,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		IOMMU_DOMAIN_LOCK(domain);
 		TAILQ_CONCAT(&ext_entries, &map->map_entries, mapped_entry);
 		IOMMU_DOMAIN_UNLOCK(domain);
-		gmem_uvas_unmap_external(domain->pmap, ext_entries, true, NULL, NULL);
+		gmem_uvas_unmap_external(domain->pmap, &ext_entries, true, NULL, NULL);
 	}
 	return (error);
 }
