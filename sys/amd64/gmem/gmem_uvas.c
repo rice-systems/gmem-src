@@ -84,7 +84,6 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 {
 	dev_pmap_t *pmap = (dev_pmap_t *) arg;
 	struct gmem_uvas_entries_tailq entries_to_unmap;
-	gmem_uvas_entry_t *entry;
 
 	TAILQ_INIT(&entries_to_unmap);
 	GMEM_UVAS_LOCK(pmap->uvas);
