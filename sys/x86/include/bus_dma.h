@@ -114,7 +114,7 @@ _bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map, const char *file, const
 
 	if (map != NULL) {
 		tc = (struct bus_dma_tag_common *)dmat;
-		printf("[%s]: %s #%d\n", *file, *func, *line);
+		printf("[%s]: %s #%d\n", file, func, *line);
 		tc->impl->map_unload(dmat, map);
 	}
 }
