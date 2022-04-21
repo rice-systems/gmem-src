@@ -11,6 +11,11 @@
 #ifndef _GMEM_UVAS_H_
 #define	_GMEM_UVAS_H_
 
+#include <sys/param.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/queue.h>
+#include <sys/taskqueue.h>
 #include <sys/vmem.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
