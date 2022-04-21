@@ -1829,16 +1829,16 @@ iflib_txsd_free(if_ctx_t ctx, iflib_txq_t txq, int i)
 	if (txq->ift_sds.ifsd_map != NULL) {
 		bus_dmamap_sync(txq->ift_buf_tag,
 		    txq->ift_sds.ifsd_map[i], BUS_DMASYNC_POSTWRITE);
-		// bus_dmamap_unload(txq->ift_buf_tag, txq->ift_sds.ifsd_map[i]);
-		bus_dmamap_unload_async(txq->ift_buf_tag, txq->ift_sds.ifsd_map[i], NULL, NULL);
+		bus_dmamap_unload(txq->ift_buf_tag, txq->ift_sds.ifsd_map[i]);
+		// bus_dmamap_unload_async(txq->ift_buf_tag, txq->ift_sds.ifsd_map[i], NULL, NULL);
 	}
 	if (txq->ift_sds.ifsd_tso_map != NULL) {
 		bus_dmamap_sync(txq->ift_tso_buf_tag,
 		    txq->ift_sds.ifsd_tso_map[i], BUS_DMASYNC_POSTWRITE);
-		// bus_dmamap_unload(txq->ift_tso_buf_tag,
-		//     txq->ift_sds.ifsd_tso_map[i]);
-		bus_dmamap_unload_async(txq->ift_tso_buf_tag,
-		    txq->ift_sds.ifsd_tso_map[i], NULL, NULL);
+		bus_dmamap_unload(txq->ift_tso_buf_tag,
+		    txq->ift_sds.ifsd_tso_map[i]);
+		// bus_dmamap_unload_async(txq->ift_tso_buf_tag,
+		//     txq->ift_sds.ifsd_tso_map[i], NULL, NULL);
 	}
 	m_freem(*mp);
 	DBG_COUNTER_INC(tx_frees);
@@ -3636,14 +3636,18 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				bus_dmamap_sync(txq->ift_tso_buf_tag,
 				    txq->ift_sds.ifsd_tso_map[cidx],
 				    BUS_DMASYNC_POSTWRITE);
-				bus_dmamap_unload(txq->ift_tso_buf_tag,
-				    txq->ift_sds.ifsd_tso_map[cidx]);
+				// bus_dmamap_unload(txq->ift_tso_buf_tag,
+				//     txq->ift_sds.ifsd_tso_map[cidx]);
+				bus_dmamap_unload_async(txq->ift_tso_buf_tag,
+				    txq->ift_sds.ifsd_tso_map[cidx], NULL, NULL);
 			} else {
 				bus_dmamap_sync(txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[cidx],
 				    BUS_DMASYNC_POSTWRITE);
-				bus_dmamap_unload(txq->ift_buf_tag,
-				    txq->ift_sds.ifsd_map[cidx]);
+				// bus_dmamap_unload(txq->ift_buf_tag,
+				//     txq->ift_sds.ifsd_map[cidx]);
+				bus_dmamap_unload_async(txq->ift_buf_tag,
+				    txq->ift_sds.ifsd_map[cidx], NULL, NULL);
 			}
 			/* XXX we don't support any drivers that batch packets yet */
 			MPASS(m->m_nextpkt == NULL);
