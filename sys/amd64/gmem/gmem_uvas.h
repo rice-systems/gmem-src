@@ -280,6 +280,8 @@ struct dev_pmap
 	// 2. What happens when multiple devices share the same type of mmu?
 	struct gmem_mmu_ops *mmu_ops;
 
+	struct task unmap_task;
+
 	// Device-specific page table data to be operated by gmem_mmu_ops
 	// can include a child_pmap for nested translation
 	// can also store the implementation of mmu_ops

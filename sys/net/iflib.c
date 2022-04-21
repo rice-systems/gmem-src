@@ -2695,8 +2695,8 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	}
 
 	if (unload && irf->irf_len != 0) {
+		printf("[iflib_rxeof] unloading\n");
 		bus_dmamap_unload(fl->ifl_buf_tag, map);
-
 		// asynchornously unload dmamaps
 		// bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 	}

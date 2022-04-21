@@ -80,6 +80,21 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
+static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
+{
+	dev_pmap_t *pmap = (dev_pmap_t *) arg;
+	struct gmem_uvas_entries_tailq entries_to_unmap;
+	gmem_uvas_entry_t *entry;
+
+	TAILQ_INIT(&entries_to_unmap);
+	GMEM_UVAS_LOCK(pmap->uvas);
+	TAILQ_CONCAT(&entries_to_unmap, pmap->uvas->unmap_queue, mapped_entry);
+	GMEM_UVAS_UNLOCK(pmap->uvas);
+	if (!TAILQ_EMPTY(&entries_to_unmap)) {
+		pmap->mmu_ops->mmu_pmap_kill(pmap, &entries_to_unmap);
+	}
+}
+
 // Four modes to use uvas:
 // 	1. private: pmap is NULL && replicate == false
 //  2. shared: uvas and pmap are both not NULL, replicate == false
@@ -110,6 +125,8 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		pmap->mmu_ops = dev->mmu_ops;
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
+
+		TASK_INIT(&pmap->unmap_task, 0, gmem_uvas_generic_unmap_handler, pmap);
 
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
@@ -416,6 +433,7 @@ gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries
 		GMEM_UVAS_LOCK(pmap->uvas);
 		TAILQ_CONCAT(&pmap->uvas->unmap_queue, ext_entries, mapped_entry);
 		GMEM_UVAS_UNLOCK(pmap->uvas);
+		taskqueue_enqueue(taskqueue_thread, &pmap->unmap_task);
 	}
 	return GMEM_OK;
 }

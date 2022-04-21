@@ -901,7 +901,7 @@ _iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1, bool wait, void 
 	domain = ctx->domain;
 	atomic_add_long(&ctx->unloads, 1);
 
-
+	printf("unloading domain %p, pmap %p\n", ctx->domain, ctx->domain->pmap);
 	TAILQ_INIT(&ext_entries);
 	IOMMU_DOMAIN_LOCK(domain);
 	TAILQ_CONCAT(&ext_entries, &map->map_entries, mapped_entry);
