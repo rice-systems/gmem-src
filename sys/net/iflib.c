@@ -2698,9 +2698,9 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	}
 
 	if (unload && irf->irf_len != 0) {
-		bus_dmamap_unload(fl->ifl_buf_tag, map);
+		// bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
-		// bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
+		bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
