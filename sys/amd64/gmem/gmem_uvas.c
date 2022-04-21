@@ -88,7 +88,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 
 	TAILQ_INIT(&entries_to_unmap);
 	GMEM_UVAS_LOCK(pmap->uvas);
-	TAILQ_CONCAT(&entries_to_unmap, pmap->uvas->unmap_queue, mapped_entry);
+	TAILQ_CONCAT(&entries_to_unmap, &pmap->uvas->unmap_queue, mapped_entry);
 	GMEM_UVAS_UNLOCK(pmap->uvas);
 	if (!TAILQ_EMPTY(&entries_to_unmap)) {
 		pmap->mmu_ops->mmu_pmap_kill(pmap, &entries_to_unmap);
