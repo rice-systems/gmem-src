@@ -1646,6 +1646,7 @@ ahci_dmasetprd(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	/* Fill S/G table */
 	prd = &ctp->prd_tab[0];
 	for (i = 0; i < nsegs; i++) {
+		printf("[ahci.c] loading iova 0x%lx\n", segs[i].ds_addr);
 		prd[i].dba = htole64(segs[i].ds_addr);
 		prd[i].dbc = htole32((segs[i].ds_len - 1) & AHCI_PRD_MASK);
 	}
