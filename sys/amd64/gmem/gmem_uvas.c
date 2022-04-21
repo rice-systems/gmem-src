@@ -432,7 +432,7 @@ gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries
 		GMEM_UVAS_LOCK(pmap->uvas);
 		TAILQ_CONCAT(&pmap->uvas->unmap_queue, ext_entries, mapped_entry);
 		GMEM_UVAS_UNLOCK(pmap->uvas);
-		taskqueue_enqueue(taskqueue_thread, &pmap->unmap_task);
+		// taskqueue_enqueue(taskqueue_thread, &pmap->unmap_task);
 	}
 	return GMEM_OK;
 }
