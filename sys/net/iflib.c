@@ -128,12 +128,6 @@ __FBSDID("$FreeBSD$");
  */
 MALLOC_DEFINE(M_IFLIB, "iflib", "ifnet library");
 
-#define bus_dmamap_unload(x, y) \
-{ \
-	printf("[iflib.c] line %d\n", __LINE__); \
-	bus_dmamap_unload(x, y); \
-} \
-
 #define	IFLIB_RXEOF_MORE (1U << 0)
 #define	IFLIB_RXEOF_EMPTY (2U << 0)
 
