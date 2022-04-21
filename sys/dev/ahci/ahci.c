@@ -1646,7 +1646,7 @@ ahci_dmasetprd(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	/* Fill S/G table */
 	prd = &ctp->prd_tab[0];
 	for (i = 0; i < nsegs; i++) {
-		printf("[ahci.c] loading iova 0x%lx\n", segs[i].ds_addr);
+		// printf("[ahci.c] loading iova 0x%lx\n", segs[i].ds_addr);
 		prd[i].dba = htole64(segs[i].ds_addr);
 		prd[i].dbc = htole32((segs[i].ds_len - 1) & AHCI_PRD_MASK);
 	}
@@ -2009,7 +2009,7 @@ ahci_end_transaction(struct ahci_slot *slot, enum ahci_err_type et)
 		bus_dmamap_sync(ch->dma.data_tag, slot->dma.data_map,
 		    (ccb->ccb_h.flags & CAM_DIR_IN) ?
 		    BUS_DMASYNC_POSTREAD : BUS_DMASYNC_POSTWRITE);
-		// bus_dmamap_unload(ch->dma.data_tag, slot->dma.data_map);
+		bus_dmamap_unload(ch->dma.data_tag, slot->dma.data_map);
 		// bus_dmamap_unload_async(ch->dma.data_tag, slot->dma.data_map, NULL, NULL);
 	}
 	if (et != AHCI_ERR_NONE)
@@ -2275,7 +2275,6 @@ ahci_process_read_log(struct ahci_channel *ch, union ccb *ccb)
 			ch->numhslots--;
 		}
 	}
-	printf("[ahci.c] free ccb\n");
 	free(ccb->ataio.data_ptr, M_AHCI);
 	xpt_free_ccb(ccb);
 	xpt_release_simq(ch->sim, TRUE);

@@ -127,7 +127,6 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 	intel_iommu_pgtable_t *pgtable = pmap->data;
 	int error;
 
-	printf("[intel_iommu.c] unmapping va %lx - %lx\n", va, va + size);
 	// destroy mappings
 	START_STATS;
 	error = domain_unmap_buf(pgtable->domain, va, size);

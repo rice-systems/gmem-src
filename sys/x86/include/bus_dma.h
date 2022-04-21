@@ -107,8 +107,8 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
  * Release the mapping held by map.
  */
 static inline void
-_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map, const char *file, const char *func, const int line)
-// bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map)
+// _bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map, const char *file, const char *func, const int line)
+bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map)
 {
 	struct bus_dma_tag_common *tc;
 
