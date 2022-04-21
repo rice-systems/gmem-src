@@ -2009,7 +2009,7 @@ ahci_end_transaction(struct ahci_slot *slot, enum ahci_err_type et)
 		bus_dmamap_sync(ch->dma.data_tag, slot->dma.data_map,
 		    (ccb->ccb_h.flags & CAM_DIR_IN) ?
 		    BUS_DMASYNC_POSTREAD : BUS_DMASYNC_POSTWRITE);
-		bus_dmamap_unload(ch->dma.data_tag, slot->dma.data_map);
+		// bus_dmamap_unload(ch->dma.data_tag, slot->dma.data_map);
 		// bus_dmamap_unload_async(ch->dma.data_tag, slot->dma.data_map, NULL, NULL);
 	}
 	if (et != AHCI_ERR_NONE)
