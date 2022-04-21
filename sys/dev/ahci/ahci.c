@@ -2008,7 +2008,7 @@ ahci_end_transaction(struct ahci_slot *slot, enum ahci_err_type et)
 		bus_dmamap_sync(ch->dma.data_tag, slot->dma.data_map,
 		    (ccb->ccb_h.flags & CAM_DIR_IN) ?
 		    BUS_DMASYNC_POSTREAD : BUS_DMASYNC_POSTWRITE);
-		bus_dmamap_unload(ch->dma.data_tag, slot->dma.data_map);
+		bus_dmamap_unload_async(ch->dma.data_tag, slot->dma.data_map, 0, 0);
 	}
 	if (et != AHCI_ERR_NONE)
 		ch->eslots |= (1 << slot->slot);
@@ -2273,6 +2273,7 @@ ahci_process_read_log(struct ahci_channel *ch, union ccb *ccb)
 			ch->numhslots--;
 		}
 	}
+	printf("[ahci.c] free ccb\n");
 	free(ccb->ataio.data_ptr, M_AHCI);
 	xpt_free_ccb(ccb);
 	xpt_release_simq(ch->sim, TRUE);
