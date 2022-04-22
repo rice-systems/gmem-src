@@ -510,7 +510,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
 		if (req->entry != NULL) {
 			entry = req->entry;
-			gmem_uvas_free_span(entry->uvas, entry);
+			// gmem_uvas_free_span(entry->uvas, entry);
 		}
 		if (req->cb != NULL)
 			req->cb(req->cb_args);
