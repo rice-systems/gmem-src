@@ -471,7 +471,7 @@ static inline void enqueue_unmap_req(
 	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
 		// automatically dispatch based on a threshold policy
 		// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
-		gmem_uvas_dispatch_unmap_requests(uvas, false);
+		gmem_uvas_dispatch_unmap_requests(uvas, true);
 	} 
 	else
 		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
