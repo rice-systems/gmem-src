@@ -527,6 +527,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 				// printf("[async_unmap] enqueued %d, processed %d\n", enqueued_pages, dispatched_pages);
 			}
 		}
+		atomic_add_int(&consumed_req, 1);
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
