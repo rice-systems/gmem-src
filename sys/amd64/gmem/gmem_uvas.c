@@ -439,7 +439,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas);
 	else
-		taskqueue_enqueue(taskqueue_thread, uvas->unmap_task);
+		taskqueue_enqueue(taskqueue_thread, &uvas->unmap_task);
 }
 
 static inline void enqueue_unmap_req(
@@ -479,7 +479,7 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	// We are waiting for the pending async unmap flush in a giant lock, be quick my ass.
 	if(uvas->working)
-		taskqueue_drain(taskqueue_thread, uvas->unmap_task);
+		taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
 	if (uvas->unmap_pages > 0) {
 		printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
 		if (uvas->working)
