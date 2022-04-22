@@ -133,7 +133,7 @@ struct gmem_vma_format
 };
 
 TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
-TAILQ_HEAD(unmap_task_tailq, unmap_request)
+TAILQ_HEAD(unmap_task_tailq, unmap_request);
 
 struct gmem_uvas // VM counterpart: struct vm_map
 {
@@ -277,7 +277,7 @@ struct unmap_request
 	gmem_uvas_entry_t *entry;
 	void (* cb(void *));
 	void *cb_args;
-	TAILQ_ENTRY(struct unmap_request) next;
+	TAILQ_ENTRY(unmap_request) next;
 };
 
 // device-dependent mapping data
