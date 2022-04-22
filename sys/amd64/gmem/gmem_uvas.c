@@ -498,7 +498,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	gmem_uvas_entry_t *entry;
 
 	// unmap all mmus
-	TAILQ_FOREACH(&uvas->dev_pmap_header, pmap, unified_pmap_list) {
+	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
 		TAILQ_FOREACH(&uvas->unmap_workspace, req, next) {
 			entry = req->entry;
 			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
@@ -526,7 +526,7 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 	dev_pmap_t *pmap;
 	if (wait) {
 		// The termination will be sync
-		TAILQ_FOREACH(&uvas->dev_pmap_header, pmap, unified_pmap_list)
+		TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list)
 			pmap->mmu_ops->mmu_pmap_kill(pmap, ext_entries);
 
 		TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {

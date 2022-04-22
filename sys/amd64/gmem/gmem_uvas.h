@@ -350,6 +350,7 @@ gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *s
 // Generic pmap kill function
 gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 
+void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas);
 
 gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entries_tailq *ext_entries, 
 	int wait, void (* unmap_callback(void *)), void *callback_args);
