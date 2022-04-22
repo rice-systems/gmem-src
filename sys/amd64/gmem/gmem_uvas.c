@@ -490,6 +490,7 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 }
 
+static int free_cnt = 0;
 static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 {
 	gmem_uvas_t *uvas = (gmem_uvas_t *) arg;
@@ -514,8 +515,10 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			gmem_uvas_free_span(entry->uvas, entry);
 		}
 		if (req->cb != NULL) {
-			printf("[unmap_async] executing callabck function\n");
 			req->cb(req->cb_args);
+			atomic_add_int(&free_cnt, 1);
+			if (free_cnt % 1000 == 0)
+				printf("[async_unmap] processed %d free cbs\n", free_cnt);
 		}
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
