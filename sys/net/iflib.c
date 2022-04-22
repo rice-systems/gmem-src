@@ -3610,8 +3610,7 @@ defrag_failed:
 
 static void mfree_cb(void *args)
 {
-	struct mbuf *m = (struct mbuf *) args;
-	m_freem(m);
+	m_freem((struct mbuf *) args);
 }
 
 static void
