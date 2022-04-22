@@ -3610,7 +3610,7 @@ defrag_failed:
 
 static void mfree_cb(void *args)
 {
-	m_freem((struct mbuf *) args);
+	// m_freem((struct mbuf *) args);
 	// printf("mbuf freed\n");
 }
 
@@ -3658,7 +3658,7 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 			atomic_add_int(&free_cnt, 1);
 			// if (free_cnt % 1000 == 0)
 			// 	printf("[iflib] submitted %d free cb\n", free_cnt);
-			// m_freem(m);
+			m_freem(m);
 			ifsd_m[cidx] = NULL;
 #if MEMORY_LOGGING
 			txq->ift_dequeued++;
