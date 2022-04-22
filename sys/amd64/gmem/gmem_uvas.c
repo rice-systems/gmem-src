@@ -508,8 +508,10 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 
 	// free va space and process callbacks
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
-		entry = req->entry;
-		gmem_uvas_free_span(entry->uvas, entry);
+		if (req->entry != NULL) {
+			entry = req->entry;
+			gmem_uvas_free_span(entry->uvas, entry);
+		}
 		if (req->cb != NULL)
 			req->cb(req->cb_args);
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);

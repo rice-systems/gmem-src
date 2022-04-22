@@ -1830,15 +1830,12 @@ iflib_txsd_free(if_ctx_t ctx, iflib_txq_t txq, int i)
 		bus_dmamap_sync(txq->ift_buf_tag,
 		    txq->ift_sds.ifsd_map[i], BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(txq->ift_buf_tag, txq->ift_sds.ifsd_map[i]);
-		// bus_dmamap_unload_async(txq->ift_buf_tag, txq->ift_sds.ifsd_map[i], NULL, NULL);
 	}
 	if (txq->ift_sds.ifsd_tso_map != NULL) {
 		bus_dmamap_sync(txq->ift_tso_buf_tag,
 		    txq->ift_sds.ifsd_tso_map[i], BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(txq->ift_tso_buf_tag,
 		    txq->ift_sds.ifsd_tso_map[i]);
-		// bus_dmamap_unload_async(txq->ift_tso_buf_tag,
-		//     txq->ift_sds.ifsd_tso_map[i], NULL, NULL);
 	}
 	m_freem(*mp);
 	DBG_COUNTER_INC(tx_frees);
@@ -2700,7 +2697,7 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	if (unload && irf->irf_len != 0) {
 		// bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
-		bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
+		// bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
