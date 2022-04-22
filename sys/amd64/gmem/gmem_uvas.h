@@ -323,7 +323,7 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 // gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
 // 	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags);
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wait,
-	void (* unmap_callback(void *)),
+	void (* unmap_callback)(void *),
 	void *callback_args);
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection);
@@ -353,7 +353,7 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entri
 void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas);
 
 gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entries_tailq *ext_entries, 
-	int wait, void (* unmap_callback(void *)), void *callback_args);
+	int wait, void (* unmap_callback)(void *), void *callback_args);
 gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
-	void (* unmap_callback(void *)), void *callback_args);
+	void (* unmap_callback)(void *), void *callback_args);
 #endif

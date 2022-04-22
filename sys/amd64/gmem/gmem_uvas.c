@@ -368,7 +368,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 
 // eager device uses buffer granualrity so that we do not support split operations.
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wait,
-	void (* unmap_callback(void *)), void *callback_args)
+	void (* unmap_callback)(void *), void *callback_args)
 {
 	KASSERT(pmap != NULL, "The pmap to unmap is NULL!");
 
@@ -402,7 +402,7 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entri
 
 // munmap all for program termination or whatever.
 gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
-	void (* unmap_callback(void *)), void *callback_args)
+	void (* unmap_callback)(void *), void *callback_args)
 {
 	GMEM_UVAS_LOCK(uvas);
 	gmem_uvas_unmap_external(uvas, &uvas->mapped_entries, wait, unmap_callback, callback_args);
@@ -520,7 +520,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 
 // munmap all for program termination or whatever.
 gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entries_tailq *ext_entries, 
-	int wait, void (* unmap_callback(void *)), void *callback_args)
+	int wait, void (* unmap_callback)(void *), void *callback_args)
 {
 	gmem_uvas_entry_t *entry, *entry1;
 	dev_pmap_t *pmap;

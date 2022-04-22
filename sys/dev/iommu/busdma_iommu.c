@@ -887,7 +887,7 @@ iommu_bus_dmamap_complete(bus_dma_tag_t dmat, bus_dmamap_t map1,
  * On amd64, we assume that sf allocation cannot fail.
  */
 static inline void
-_iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1, bool wait, void (* cb(void *)), void *args)
+_iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1, bool wait, void (* cb)(void *), void *args)
 {
 	struct bus_dma_tag_iommu *tag;
 	struct bus_dmamap_iommu *map;
@@ -915,7 +915,7 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 }
 
 static void
-iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb(void *)), void *args)
+iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb)(void *), void *args)
 {
 	_iommu_bus_dmamap_unload(dmat, map1, false, cb, args);
 }
