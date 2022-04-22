@@ -157,7 +157,7 @@ static gmem_error_t intel_iommu_init(struct gmem_mmu_ops* ops)
 	return GMEM_OK;
 }
 
-static gmem_error_t intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *entry)
+static void intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *entry)
 {
 	struct dmar_domain *domain = ((intel_iommu_pgtable_t *) pmap->data)->domain;
 	struct dmar_unit *unit = ((intel_iommu_pgtable_t *) pmap->data)->dmar;
@@ -172,7 +172,6 @@ static gmem_error_t intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *en
 		    true);
 		DMAR_UNLOCK(unit);
 	}
-	return GMEM_OK;
 }
 
 static inline void intel_iommu_tlb_inv_domain(dev_pmap_t *pmap)

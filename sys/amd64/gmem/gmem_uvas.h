@@ -257,7 +257,7 @@ struct gmem_mmu_ops
 	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
 	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
 		vm_prot_t new_prot);
-	gmem_error_t (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t *entry);
+	void (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t *entry);
 	gmem_error_t (*mmu_tlb_flush)(struct gmem_uvas_entries_tailq *entries);
 	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 	void (*mmu_tlb_invl_coalesced)(dev_pmap_t *pmap, struct unmap_task_tailq *reqs, uint32_t req_cnt);
