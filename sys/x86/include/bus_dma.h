@@ -120,7 +120,7 @@ bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map)
 }
 
 static inline void
-bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map, void (*cb(void *)), void *args)
+bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map, void (*cb)(void *), void *args)
 {
 	struct bus_dma_tag_common *tc;
 
