@@ -520,7 +520,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			gmem_uvas_free_span(entry->uvas, entry);
 		}
 		if (req->cb != NULL) {
-			req->cb(req->cb_args);
+			(*req->cb)(req->cb_args);
 			atomic_add_int(&free_cnt, 1);
 			// if (free_cnt % 1000 == 0) {
 			// 	printf("[async_unmap] processed %d free cbs\n", free_cnt);

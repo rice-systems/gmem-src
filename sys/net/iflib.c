@@ -3611,7 +3611,7 @@ defrag_failed:
 static void mfree_cb(void *args)
 {
 	m_freem((struct mbuf *) args);
-	// printf("hello callback\n");
+	printf("mbuf freed\n");
 }
 
 static int free_cnt = 0;
