@@ -445,7 +445,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 static inline void enqueue_unmap_req(
 	gmem_uvas_t *uvas, 
 	struct gmem_uvas_entries_tailq *ext_entries,
-	void (* unmap_callback(void *)), 
+	void (* unmap_callback)(void *),
 	void *callback_args)
 {
 	struct unmap_request *req;

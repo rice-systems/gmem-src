@@ -275,7 +275,7 @@ struct dev_pmap_replica
 struct unmap_request
 {
 	gmem_uvas_entry_t *entry;
-	void (* cb(void *));
+	void (* cb)(void *args);
 	void *cb_args;
 	TAILQ_ENTRY(unmap_request) next;
 };
