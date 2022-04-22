@@ -426,12 +426,12 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 {
 	if (uvas->working)
 		panic("dispatching unmap request task concurrently\n");
-	if (!TAILQ_EMPTY(uvas->unmap_workspace))
+	if (!TAILQ_EMPTY(&uvas->unmap_workspace))
 		panic("uvas workspace not empty\n");
 
 	uvas->working = true;
 
-	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, unmap_request);
+	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	uvas->unmap_pages = 0;
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
@@ -439,10 +439,10 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas);
 	else
-		taskqueue_enqueue(taskqueue_thread, unmap_task);
+		taskqueue_enqueue(taskqueue_thread, uvas->unmap_task);
 }
 
-static inline enqueue_unmap_req(
+static inline void enqueue_unmap_req(
 	gmem_uvas_t *uvas, 
 	struct gmem_uvas_entries_tailq *ext_entries,
 	void (* unmap_callback(void *)), 
