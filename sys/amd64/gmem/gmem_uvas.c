@@ -411,10 +411,10 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-#define uvas_insert_unmap_req(uvas, req)
+#define uvas_insert_unmap_req(uvas, req) \
 { \
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
-	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
 	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
 } \
@@ -437,7 +437,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 
 	if (wait)
-		gmem_uvas_generic_unmap_handler((void *) uvas);
+		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 	else
 		taskqueue_enqueue(taskqueue_thread, &uvas->unmap_task);
 }
