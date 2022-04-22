@@ -513,8 +513,10 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			entry = req->entry;
 			gmem_uvas_free_span(entry->uvas, entry);
 		}
-		if (req->cb != NULL)
+		if (req->cb != NULL) {
+			printf("[unmap_async] executing callabck function\n");
 			req->cb(req->cb_args);
+		}
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
