@@ -419,7 +419,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
 } \
 
-#define unmap_coalesce_threshold 1024
+#define unmap_coalesce_threshold 10240
 
 
 static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wait)
@@ -466,7 +466,7 @@ static inline void enqueue_unmap_req(
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
 		// automatically dispatch based on a threshold policy
-		printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
+		// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
 		gmem_uvas_dispatch_unmap_requests(uvas, false);
 	} 
 	else
