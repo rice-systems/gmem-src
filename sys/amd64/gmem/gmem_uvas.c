@@ -499,7 +499,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
-		TAILQ_FOREACH(&uvas->unmap_workspace, req, next) {
+		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
 			entry = req->entry;
 			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 		}
@@ -507,7 +507,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	}
 
 	// free va space and process callbacks
-	TAILQ_FOREACH(&uvas->unmap_workspace, req, next) {
+	TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
 		entry = req->entry;
 		gmem_uvas_free_span(entry->uvas, entry);
 		if (req->cb != NULL)
