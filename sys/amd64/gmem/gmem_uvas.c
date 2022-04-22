@@ -527,7 +527,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
 
-	if (dispatched_pages % 1024 == 0)
+	if (free_cnt % 1000 == 0)
 		printf("[async_unmap] enqueued %d, processed %d\n", enqueued_pages, dispatched_pages);
 	// The work has been done. We can dispatch another work now.
 	uvas->working = false;
