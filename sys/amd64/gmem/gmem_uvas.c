@@ -513,6 +513,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		if (req->cb != NULL)
 			req->cb(req->cb_args);
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
+		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
 
 	// The work has been done. We can dispatch another work now.
