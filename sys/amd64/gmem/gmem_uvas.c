@@ -411,12 +411,12 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-static int enqueued_pages = 0, dispatched_pages = 0;
+static int generated_req = 0, consumed_req = 0, dispatched_pages = 0, unmapped_pages = 0;
 #define uvas_insert_unmap_req(uvas, req) \
 { \
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
 	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
-	enqueued_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
+	generated_req ++; \
 	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
 } \
@@ -435,6 +435,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 	uvas->unmap_working_pages = uvas->unmap_pages;
+	dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 
@@ -453,6 +454,8 @@ static inline void enqueue_unmap_req(
 	struct unmap_request *req;
 	gmem_uvas_entry_t *entry, *entry1;
 
+	printf("[enqueue_unmap_req] generated req %d, consumed req %d\n", generated_req, consumed_req);
+
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
 		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
@@ -463,7 +466,6 @@ static inline void enqueue_unmap_req(
 	}
 	req->cb = unmap_callback;
 	req->cb_args = callback_args;
-
 
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
@@ -514,7 +516,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
 		if (req->entry != NULL) {
 			entry = req->entry;
-			dispatched_pages += (entry->end - entry->start) >> 12;
+			unmapped_pages += (entry->end - entry->start) >> 12;
 			gmem_uvas_free_span(entry->uvas, entry);
 		}
 		if (req->cb != NULL) {
@@ -522,13 +524,15 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			atomic_add_int(&free_cnt, 1);
 			if (free_cnt % 1000 == 0) {
 				printf("[async_unmap] processed %d free cbs\n", free_cnt);
-				printf("[async_unmap] enqueued %d, processed %d\n", enqueued_pages, dispatched_pages);
+				// printf("[async_unmap] enqueued %d, processed %d\n", enqueued_pages, dispatched_pages);
 			}
 		}
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-	
+
+	if (dispatched_pages != unmapped_pages)
+		panic("inconsistent handling dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
 	// The work has been done. We can dispatch another work now.
 	uvas->working = false;
 }
