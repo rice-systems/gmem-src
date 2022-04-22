@@ -254,6 +254,24 @@ dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 }
 
 void
+dmar_qi_invalidate_domain(struct dmar_domain *domain)
+{
+	struct dmar_unit *unit;
+	struct iommu_qi_genseq gseq;
+
+	unit = domain->dmar;
+	DMAR_LOCK(unit);
+	dmar_qi_ensure(unit, 2);
+	dmar_qi_emit(unit, DMAR_IQ_DESCR_CTX_INV | DMAR_IQ_DESCR_IOTLB_DOM |
+		DMAR_IQ_DESCR_IOTLB_DW | DMAR_IQ_DESCR_IOTLB_DR,
+		DMAR_IQ_DESCR_IOTLB_DID(domain->domain), 0);
+	dmar_qi_emit_wait_seq(unit, &gseq, true);
+	dmar_qi_advance_tail(unit);
+	dmar_qi_wait_for_seq(unit, &gseq, false);
+	DMAR_UNLOCK(unit);
+}
+
+void
 dmar_qi_invalidate_ctx_glob_locked(struct dmar_unit *unit)
 {
 	struct iommu_qi_genseq gseq;

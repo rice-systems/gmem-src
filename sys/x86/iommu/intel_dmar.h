@@ -253,6 +253,8 @@ int dmar_init_qi(struct dmar_unit *unit);
 void dmar_fini_qi(struct dmar_unit *unit);
 void dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t start,
     iommu_gaddr_t size, bool emit_wait);
+void dmar_qi_invalidate_domain(struct dmar_domain *domain);
+void domain_flush_iotlb_domain(struct dmar_domain *domain);
 void dmar_qi_invalidate_ctx_glob_locked(struct dmar_unit *unit);
 void dmar_qi_invalidate_iotlb_glob_locked(struct dmar_unit *unit);
 void dmar_qi_invalidate_iec_glob(struct dmar_unit *unit);

@@ -643,6 +643,21 @@ domain_flush_iotlb_sync(struct dmar_domain *domain, iommu_gaddr_t base,
 	DMAR_UNLOCK(unit);
 }
 
+void
+domain_flush_iotlb_domain(struct dmar_domain *domain)
+{
+	struct dmar_unit *unit;
+	uint64_t iotlbr;
+	int iro;
+
+	unit = domain->dmar;
+	iro = DMAR_ECAP_IRO(unit->hw_ecap) * 16;
+	DMAR_LOCK(unit);
+	iotlbr = domain_wait_iotlb_flush(unit, DMAR_IOTLB_IIRG_DOM |
+	    DMAR_IOTLB_DID(domain->domain), iro);
+	DMAR_UNLOCK(unit);
+}
+
 
 // TODO: remove them
 const struct iommu_domain_map_ops dmar_domain_map_ops = {

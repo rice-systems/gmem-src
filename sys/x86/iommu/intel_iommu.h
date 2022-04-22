@@ -62,4 +62,5 @@ domain_map_buf(struct dmar_domain *domain, vm_offset_t base,
 extern int domain_unmap_buf(struct dmar_domain *domain,
     iommu_gaddr_t base, iommu_gaddr_t size);
 
+
 #endif

@@ -64,6 +64,9 @@ extern struct hist instrument_hist[MAXPGCNT];
 		} \
 	} \
 
+#define GMEM_UVAS_LOCK_UNMAP_REQ(x) mtx_lock(&(x)->unmap_task_lock)
+#define GMEM_UVAS_UNLOCK_UNMAP_REQ(x) mtx_unlock(&(x)->unmap_task_lock)
+
 #define GMEM_UVAS_LOCK(x) mtx_lock(&(x)->lock)
 #define GMEM_UVAS_UNLOCK(x) mtx_unlock(&(x)->lock)
 #define GMEM_UVAS_ASSERT_LOCKED(x) mtx_assert(&(x)->lock, MA_OWNED)
@@ -130,13 +133,14 @@ struct gmem_vma_format
 };
 
 TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
+TAILQ_HEAD(unmap_task_tailq, unmap_request)
 
 struct gmem_uvas // VM counterpart: struct vm_map
 {
-	struct mtx lock;
+	struct mtx lock, unmap_task_lock;
 
 	// List of mapped entries
-	struct gmem_uvas_entries_tailq mapped_entries, unmap_queue;
+	struct gmem_uvas_entries_tailq mapped_entries;
 
 	// Whether this uvas needs lookup of its entries
 	// This determines whether it uses vmem or rb-tree to allocate/free uvas entries.
@@ -161,6 +165,14 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 	// A uvas may be used by multiple pmaps (mmus)
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;
+
+	// immutable
+	struct task unmap_task;
+
+	// list of unmap requests, protected by unmap_task_lock
+	struct unmap_task_tailq unmap_requests, unmap_workspace;
+	uint32_t unmap_pages, unmap_working_pages;
+	bool working;
 
 	// TODO: remove this. use what you have in pmap.
 	// Otherwise we are coupling the uvas with a specific device.
@@ -248,6 +260,7 @@ struct gmem_mmu_ops
 	gmem_error_t (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t *entry);
 	gmem_error_t (*mmu_tlb_flush)(struct gmem_uvas_entries_tailq *entries);
 	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
+	void (*mmu_tlb_invl_coalesced)(dev_pmap_t *pmap, struct unmap_task_tailq *reqs, uint32_t req_cnt);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
@@ -257,6 +270,14 @@ struct dev_pmap_replica
 {
 	uint8_t npmaps;
 	struct dev_pmap **replicated_pmaps;
+};
+
+struct unmap_request
+{
+	gmem_uvas_entry_t *entry;
+	void (* cb(void *));
+	void *cb_args;
+	TAILQ_ENTRY(struct unmap_request) next;
 };
 
 // device-dependent mapping data
@@ -284,8 +305,6 @@ struct dev_pmap
 	// 1. Could it change dynamically?
 	// 2. What happens when multiple devices share the same type of mmu?
 	struct gmem_mmu_ops *mmu_ops;
-
-	struct task unmap_task;
 
 	// Device-specific page table data to be operated by gmem_mmu_ops
 	// can include a child_pmap for nested translation
@@ -332,8 +351,8 @@ gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *s
 gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 
 
-gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries, 
+gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entries_tailq *ext_entries, 
 	int wait, void (* unmap_callback(void *)), void *callback_args);
-gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
+gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	void (* unmap_callback(void *)), void *callback_args);
 #endif

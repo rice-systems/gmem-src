@@ -39,13 +39,16 @@
 #include <amd64/gmem/gmem_rb_tree.h>
 
 static uma_zone_t gmem_uvas_entry_zone;
+static uma_zone_t gmem_uvas_unmap_requests_zone;
 
 static void
 gmem_uvas_zone_init(void)
 {
-
 	gmem_uvas_entry_zone = uma_zcreate("GMEM_UVAS_ENTRY",
 	    sizeof(struct gmem_uvas_entry), NULL, NULL,
+	    NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NODUMP);
+	gmem_uvas_unmap_requests_zone = uma_zcreate("GMEM_UVAS_UNMAP_REQUEST",
+	    sizeof(struct unmap_request), NULL, NULL,
 	    NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NODUMP);
 }
 SYSINIT(gmem_uvas, SI_SUB_DRIVERS, SI_ORDER_FIRST, gmem_uvas_zone_init, NULL);
@@ -80,20 +83,6 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
-static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
-{
-	dev_pmap_t *pmap = (dev_pmap_t *) arg;
-	struct gmem_uvas_entries_tailq entries_to_unmap;
-
-	TAILQ_INIT(&entries_to_unmap);
-	GMEM_UVAS_LOCK(pmap->uvas);
-	TAILQ_CONCAT(&entries_to_unmap, &pmap->uvas->unmap_queue, mapped_entry);
-	GMEM_UVAS_UNLOCK(pmap->uvas);
-	if (!TAILQ_EMPTY(&entries_to_unmap)) {
-		pmap->mmu_ops->mmu_pmap_kill(pmap, &entries_to_unmap);
-	}
-}
-
 // Four modes to use uvas:
 // 	1. private: pmap is NULL && replicate == false
 //  2. shared: uvas and pmap are both not NULL, replicate == false
@@ -116,6 +105,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// allocate and create the uvas
 		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
+		mtx_init(&uvas->unmap_task_lock, "uvas unmap", NULL, MTX_DEF);
 
 		// initialize pmap
 		pmap->ndevices = 1;
@@ -125,15 +115,18 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
 
-		TASK_INIT(&pmap->unmap_task, 0, gmem_uvas_generic_unmap_handler, pmap);
+		TASK_INIT(&uvas->unmap_task, 0, gmem_uvas_generic_unmap_handler, uvas);
 
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
 		// initialize uvas
 		TAILQ_INIT(&uvas->mapped_entries);
-		TAILQ_INIT(&uvas->unmap_queue);
+		TAILQ_INIT(&uvas->unmap_requests);
+		TAILQ_INIT(&uvas->unmap_workspace);
 		TAILQ_INIT(&uvas->dev_pmap_header);
+		uvas->unmap_pages = 0;
+		uvas->working = false;
 
 		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
@@ -398,41 +391,150 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 
 gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries) 
 {
-	gmem_uvas_entry_t *entry, *entry1;
-	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
-		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
-
+	gmem_uvas_entry_t *entry;
+	TAILQ_FOREACH(entry, ext_entries, mapped_entry) {
 		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
-		gmem_uvas_free_span(entry->uvas, entry);
 	}
 	return GMEM_OK;
 }
 
 // munmap all for program termination or whatever.
-gmem_error_t gmem_uvas_unmap_all(dev_pmap_t *pmap, int wait,
+gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	void (* unmap_callback(void *)), void *callback_args)
 {
-	GMEM_UVAS_LOCK(pmap->uvas);
-	gmem_uvas_unmap_external(pmap, &pmap->uvas->mapped_entries, wait, unmap_callback, callback_args);
-	GMEM_UVAS_UNLOCK(pmap->uvas);
+	GMEM_UVAS_LOCK(uvas);
+	gmem_uvas_unmap_external(uvas, &uvas->mapped_entries, wait, unmap_callback, callback_args);
+	GMEM_UVAS_UNLOCK(uvas);
 
 	return GMEM_OK;
 }
 
+#define uvas_insert_unmap_req(uvas, req)
+{ \
+	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
+	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
+	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
+} \
+
+#define unmap_coalesce_threshold 1024
+
+
+static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wait)
+{
+	if (uvas->working)
+		panic("dispatching unmap request task concurrently\n");
+	if (!TAILQ_EMPTY(uvas->unmap_workspace))
+		panic("uvas workspace not empty\n");
+
+	uvas->working = true;
+
+	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, unmap_request);
+	uvas->unmap_working_pages = uvas->unmap_pages;
+	uvas->unmap_pages = 0;
+	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+
+	if (wait)
+		gmem_uvas_generic_unmap_handler((void *) uvas);
+	else
+		taskqueue_enqueue(taskqueue_thread, unmap_task);
+}
+
+static inline enqueue_unmap_req(
+	gmem_uvas_t *uvas, 
+	struct gmem_uvas_entries_tailq *ext_entries,
+	void (* unmap_callback(void *)), 
+	void *callback_args)
+{
+	struct unmap_request *req;
+	gmem_uvas_entry_t *entry, *entry1;
+
+	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
+		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
+		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
+		req->entry = entry;
+		req->cb = NULL;
+		req->cb_args = NULL;
+		uvas_insert_unmap_req(uvas, req);
+	}
+	req->cb = unmap_callback;
+	req->cb_args = callback_args;
+
+
+	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
+	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
+		// automatically dispatch based on a threshold policy
+		printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
+		gmem_uvas_dispatch_unmap_requests(uvas, false);
+	} 
+	else
+		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+}
+
+// Force all enqueued unmap requests to be done, used as a barrier to flush async_unmap.
+void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
+{
+	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
+	// We are waiting for the pending async unmap flush in a giant lock, be quick my ass.
+	if(uvas->working)
+		taskqueue_drain(taskqueue_thread, uvas->unmap_task);
+	if (uvas->unmap_pages > 0) {
+		printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
+		if (uvas->working)
+			panic("[drain_unmap] failed because another task is kicked\n");
+		gmem_uvas_dispatch_unmap_requests(uvas, true);
+	} 
+	else
+		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+}
+
+static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
+{
+	gmem_uvas_t *uvas = (gmem_uvas_t *) arg;
+	dev_pmap_t *pmap;
+	struct unmap_request *req;
+	gmem_uvas_entry_t *entry;
+
+	// unmap all mmus
+	TAILQ_FOREACH(&uvas->dev_pmap_header, pmap, unified_pmap_list) {
+		TAILQ_FOREACH(&uvas->unmap_workspace, req, next) {
+			entry = req->entry;
+			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
+		}
+		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_workspace, uvas->unmap_working_pages);
+	}
+
+	// free va space and process callbacks
+	TAILQ_FOREACH(&uvas->unmap_workspace, req, next) {
+		entry = req->entry;
+		gmem_uvas_free_span(entry->uvas, entry);
+		if (req->cb != NULL)
+			req->cb(req->cb_args);
+	}
+
+	// The work has been done. We can dispatch another work now.
+	uvas->working = false;
+}
+
 // munmap all for program termination or whatever.
-gmem_error_t gmem_uvas_unmap_external(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries, 
+gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entries_tailq *ext_entries, 
 	int wait, void (* unmap_callback(void *)), void *callback_args)
 {
+	gmem_uvas_entry_t *entry, *entry1;
+	dev_pmap_t *pmap;
 	if (wait) {
 		// The termination will be sync
-		pmap->mmu_ops->mmu_pmap_kill(pmap, ext_entries);
+		TAILQ_FOREACH(&uvas->dev_pmap_header, pmap, unified_pmap_list)
+			pmap->mmu_ops->mmu_pmap_kill(pmap, ext_entries);
+
+		TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
+			TAILQ_REMOVE(ext_entries, entry, mapped_entry);
+			gmem_uvas_free_span(entry->uvas, entry);
+		}
 	} else {
 		// The unmap will be async
-		GMEM_UVAS_LOCK(pmap->uvas);
-		TAILQ_CONCAT(&pmap->uvas->unmap_queue, ext_entries, mapped_entry);
-		GMEM_UVAS_UNLOCK(pmap->uvas);
-		// taskqueue_enqueue(taskqueue_thread, &pmap->unmap_task);
+		enqueue_unmap_req(uvas, ext_entries, unmap_callback, callback_args);
 	}
 	return GMEM_OK;
 }
