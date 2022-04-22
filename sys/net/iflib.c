@@ -3643,7 +3643,7 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				// bus_dmamap_unload(txq->ift_tso_buf_tag,
 				//     txq->ift_sds.ifsd_tso_map[cidx]);
 				bus_dmamap_unload_async(txq->ift_tso_buf_tag,
-				    txq->ift_sds.ifsd_tso_map[cidx], m_freem, m);
+				    txq->ift_sds.ifsd_tso_map[cidx], &mfree_cb, m);
 			} else {
 				bus_dmamap_sync(txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[cidx],
@@ -3651,7 +3651,7 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				// bus_dmamap_unload(txq->ift_buf_tag,
 				//     txq->ift_sds.ifsd_map[cidx]);
 				bus_dmamap_unload_async(txq->ift_buf_tag,
-				    txq->ift_sds.ifsd_map[cidx], m_freem, m);
+				    txq->ift_sds.ifsd_map[cidx], &mfree_cb, m);
 			}
 			/* XXX we don't support any drivers that batch packets yet */
 			MPASS(m->m_nextpkt == NULL);
