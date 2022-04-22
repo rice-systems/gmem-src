@@ -520,15 +520,15 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		if (req->cb != NULL) {
 			req->cb(req->cb_args);
 			atomic_add_int(&free_cnt, 1);
-			if (free_cnt % 1000 == 0)
+			if (free_cnt % 1000 == 0) {
 				printf("[async_unmap] processed %d free cbs\n", free_cnt);
+				printf("[async_unmap] enqueued %d, processed %d\n", enqueued_pages, dispatched_pages);
+			}
 		}
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-
-	if (free_cnt % 1000 == 0)
-		printf("[async_unmap] enqueued %d, processed %d\n", enqueued_pages, dispatched_pages);
+	
 	// The work has been done. We can dispatch another work now.
 	uvas->working = false;
 }
