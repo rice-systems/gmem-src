@@ -3654,7 +3654,7 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 			}
 			/* XXX we don't support any drivers that batch packets yet */
 			MPASS(m->m_nextpkt == NULL);
-			// atomic_add_int(&free_cnt, 1);
+			atomic_add_int(&free_cnt, 1);
 			// if (free_cnt % 1000 == 0)
 			// 	printf("[iflib] submitted %d free cb\n", free_cnt);
 			m_freem(m);
