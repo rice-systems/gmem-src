@@ -502,15 +502,16 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
 			entry = req->entry;
 			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
+			pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		}
-		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_workspace, uvas->unmap_working_pages);
+		// pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_workspace, uvas->unmap_working_pages);
 	}
 
 	// free va space and process callbacks
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
 		if (req->entry != NULL) {
 			entry = req->entry;
-			// gmem_uvas_free_span(entry->uvas, entry);
+			gmem_uvas_free_span(entry->uvas, entry);
 		}
 		if (req->cb != NULL)
 			req->cb(req->cb_args);
