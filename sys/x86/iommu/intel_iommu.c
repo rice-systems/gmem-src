@@ -179,14 +179,14 @@ static inline void intel_iommu_tlb_inv_domain(dev_pmap_t *pmap)
 {
 	struct dmar_domain *domain = ((intel_iommu_pgtable_t *) pmap->data)->domain;
 
-	if (!unit->qi_enabled) {
+	if (!domain->unit->qi_enabled) {
 		domain_flush_iotlb_domain(domain);
 	} else {
 		dmar_qi_invalidate_domain(domain);
 	}
 }
 
-static void *intel_iommu_tlb_invl_coalesced(
+static void intel_iommu_tlb_invl_coalesced(
 	dev_pmap_t *pmap, 
 	struct unmap_task_tailq *reqs, 
 	uint32_t req_cnt)
@@ -198,7 +198,6 @@ static void *intel_iommu_tlb_invl_coalesced(
 		if (reqs != NULL)
 			intel_iommu_tlb_inv_domain(pmap);
 	}
-	return;
 }
 
 gmem_mmu_ops_t intel_iommu_ops = {
