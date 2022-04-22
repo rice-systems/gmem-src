@@ -40,6 +40,7 @@
 
 static uma_zone_t gmem_uvas_entry_zone;
 static uma_zone_t gmem_uvas_unmap_requests_zone;
+static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused);
 
 static void
 gmem_uvas_zone_init(void)
