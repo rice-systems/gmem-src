@@ -531,6 +531,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
 
+	printf("[handler] dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
 	if (dispatched_pages != unmapped_pages)
 		panic("inconsistent handling dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
 	// The work has been done. We can dispatch another work now.
