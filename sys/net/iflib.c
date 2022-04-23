@@ -2695,9 +2695,9 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	}
 
 	if (unload && irf->irf_len != 0) {
-		// bus_dmamap_unload(fl->ifl_buf_tag, map);
+		bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
-		bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
+		// bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
@@ -3640,27 +3640,25 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				bus_dmamap_sync(txq->ift_tso_buf_tag,
 				    txq->ift_sds.ifsd_tso_map[cidx],
 				    BUS_DMASYNC_POSTWRITE);
-				// bus_dmamap_unload(txq->ift_tso_buf_tag,
-				//     txq->ift_sds.ifsd_tso_map[cidx]);
-				// printf("[iflib enqueue] mbuf %p\n", m);
-				bus_dmamap_unload_async(txq->ift_tso_buf_tag,
-				    txq->ift_sds.ifsd_tso_map[cidx], &mfree_cb, m);
+				bus_dmamap_unload(txq->ift_tso_buf_tag,
+				    txq->ift_sds.ifsd_tso_map[cidx]);
+				// bus_dmamap_unload_async(txq->ift_tso_buf_tag,
+				//     txq->ift_sds.ifsd_tso_map[cidx], &mfree_cb, m);
 			} else {
 				bus_dmamap_sync(txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[cidx],
 				    BUS_DMASYNC_POSTWRITE);
-				// bus_dmamap_unload(txq->ift_buf_tag,
-				//     txq->ift_sds.ifsd_map[cidx]);
-				// printf("[iflib enqueue] mbuf %p\n", m);
-				bus_dmamap_unload_async(txq->ift_buf_tag,
-				    txq->ift_sds.ifsd_map[cidx], &mfree_cb, m);
+				bus_dmamap_unload(txq->ift_buf_tag,
+				    txq->ift_sds.ifsd_map[cidx]);
+				// bus_dmamap_unload_async(txq->ift_buf_tag,
+				//     txq->ift_sds.ifsd_map[cidx], &mfree_cb, m);
 			}
 			/* XXX we don't support any drivers that batch packets yet */
 			MPASS(m->m_nextpkt == NULL);
 			atomic_add_int(&free_cnt, 1);
 			// if (free_cnt % 1000 == 0)
 			// 	printf("[iflib] submitted %d free cb\n", free_cnt);
-			// m_freem(m);
+			m_freem(m);
 			ifsd_m[cidx] = NULL;
 #if MEMORY_LOGGING
 			txq->ift_dequeued++;
