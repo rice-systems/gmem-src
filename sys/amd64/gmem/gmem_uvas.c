@@ -434,14 +434,14 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 
-	struct unmap_request *req;
-	int dispatched = 0;
-	TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
-		dispatched += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
-	}
-	if (dispatched != uvas->unmap_pages)
-		panic("inconsistent dispatching with %d dispatched pages but %d pages to unmap\n",
-			dispatched, uvas->unmap_pages);
+	// struct unmap_request *req;
+	// int dispatched = 0;
+	// TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
+	// 	dispatched += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+	// }
+	// if (dispatched != uvas->unmap_pages)
+	// 	panic("inconsistent dispatching with %d dispatched pages but %d pages to unmap\n",
+	// 		dispatched, uvas->unmap_pages);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
@@ -511,10 +511,13 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	struct unmap_request *req, *req_tmp;
 	gmem_uvas_entry_t *entry;
 
+	int page1 = 0, page2 = 0;
+
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
 		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
 			entry = req->entry;
+			page1 += (entry->end - entry->start) >> GMEM_PAGE_SHIFT;
 			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 			pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		}
@@ -523,9 +526,8 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 
 	// free va space and process callbacks
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
-		if (req->entry != NULL) {
-			entry = req->entry;
-			unmapped_pages += (entry->end - entry->start) >> 12;
+		if ((entry = req->entry) != NULL) {
+			page2 += (entry->end - entry->start) >> GMEM_PAGE_SHIFT;
 			gmem_uvas_free_span(entry->uvas, entry);
 		}
 		if (req->cb != NULL) {
@@ -542,8 +544,11 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	}
 
 	// printf("[handler] dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
-	if (dispatched_pages != unmapped_pages)
-		panic("inconsistent handling dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
+	unmapped_pages += page1;
+	if (page1 != page2 || dispatched_pages != unmapped_pages)
+		panic("inconsistent handling dispatched %d, unmapped %d, page1 %d, page2 %d\n", 
+			dispatched_pages, unmapped_pages,
+			page1, page2);
 	// The work has been done. We can dispatch another work now.
 	uvas->working = false;
 }
