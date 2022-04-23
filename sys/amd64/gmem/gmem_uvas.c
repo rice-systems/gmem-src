@@ -419,7 +419,7 @@ static int generated_req = 0, consumed_req = 0;
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
 	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
 	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
-	printf("[async_unmap enqueue] %lu pages\n", (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT); \
+	// printf("[async_unmap enqueue] %lu pages\n", (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT); \
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
 } \
 
@@ -434,7 +434,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 		panic("uvas workspace not empty\n");
 
 	uvas->working = true;
-	printf("set working flag true %p\n", &uvas->working);
+	// printf("set working flag true %p\n", &uvas->working);
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 
@@ -447,7 +447,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 		panic("inconsistent dispatching with %d dispatched pages but %d pages to unmap\n",
 			dispatched, uvas->unmap_pages);
 
-	printf("[unmap_async] dispatching %d pages, ", uvas->unmap_pages);
+	// printf("[unmap_async] dispatching %d pages, ", uvas->unmap_pages);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	uvas->total_dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
@@ -486,7 +486,7 @@ static inline void enqueue_unmap_req(
 	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
 		// automatically dispatch based on a threshold policy
 		// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
-		printf("read working flag false %p\n", &uvas->working);
+		// printf("read working flag false %p\n", &uvas->working);
 		gmem_uvas_dispatch_unmap_requests(uvas, true);
 	} 
 	else
@@ -501,7 +501,7 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 	if(uvas->working)
 		taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
 	if (uvas->unmap_pages > 0) {
-		printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
+		// printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
 		if (uvas->working)
 			panic("[drain_unmap] failed because another task is kicked\n");
 		gmem_uvas_dispatch_unmap_requests(uvas, true);
@@ -550,7 +550,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
 
-	printf("unmapping %d pages, freed %d pages\n", page1, page2);
+	// printf("unmapping %d pages, freed %d pages\n", page1, page2);
 	// printf("[handler] dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
 	uvas->total_unmapped_pages += page1;
 	if (page1 != page2 || uvas->total_dispatched_pages != uvas->total_unmapped_pages)
@@ -558,7 +558,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			uvas->total_dispatched_pages, uvas->total_unmapped_pages,
 			page1, page2);
 	// The work has been done. We can dispatch another work now.
-	printf("set working flag false %p\n", &uvas->working);
+	// printf("set working flag false %p\n", &uvas->working);
 	uvas->working = false;
 }
 

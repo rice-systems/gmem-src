@@ -3611,7 +3611,7 @@ defrag_failed:
 static void mfree_cb(void *args)
 {
 	m_freem((struct mbuf *) args);
-	printf("[cb] free mbuf %p\n", args);
+	// printf("[cb] free mbuf %p\n", args);
 }
 
 static int free_cnt = 0;
@@ -3642,7 +3642,7 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				    BUS_DMASYNC_POSTWRITE);
 				// bus_dmamap_unload(txq->ift_tso_buf_tag,
 				//     txq->ift_sds.ifsd_tso_map[cidx]);
-				printf("[iflib enqueue] mbuf %p\n", m);
+				// printf("[iflib enqueue] mbuf %p\n", m);
 				bus_dmamap_unload_async(txq->ift_tso_buf_tag,
 				    txq->ift_sds.ifsd_tso_map[cidx], &mfree_cb, m);
 			} else {
@@ -3651,7 +3651,7 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				    BUS_DMASYNC_POSTWRITE);
 				// bus_dmamap_unload(txq->ift_buf_tag,
 				//     txq->ift_sds.ifsd_map[cidx]);
-				printf("[iflib enqueue] mbuf %p\n", m);
+				// printf("[iflib enqueue] mbuf %p\n", m);
 				bus_dmamap_unload_async(txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[cidx], &mfree_cb, m);
 			}
