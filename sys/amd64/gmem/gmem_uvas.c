@@ -436,7 +436,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 
 	struct unmap_request *req;
 	int dispatched = 0;
-	TAILQ_FOREACH(req, uvas->unmap_workspace, next) {
+	TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
 		dispatched += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
 	}
 	if (dispatched != uvas->unmap_pages)
