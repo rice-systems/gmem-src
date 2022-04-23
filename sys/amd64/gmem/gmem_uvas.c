@@ -577,6 +577,8 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 			TAILQ_REMOVE(ext_entries, entry, mapped_entry);
 			gmem_uvas_free_span(entry->uvas, entry);
 		}
+		if (unmap_callback != NULL)
+			(*unmap_callback)(callback_args);
 	} else {
 		// The unmap will be async
 		enqueue_unmap_req(uvas, ext_entries, unmap_callback, callback_args);

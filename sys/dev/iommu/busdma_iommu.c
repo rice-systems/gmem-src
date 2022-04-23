@@ -917,7 +917,8 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 static void
 iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb)(void *), void *args)
 {
-	_iommu_bus_dmamap_unload(dmat, map1, false, cb, args);
+	// _iommu_bus_dmamap_unload(dmat, map1, false, cb, args);
+	_iommu_bus_dmamap_unload(dmat, map1, true, cb, args);
 }
 
 static void
