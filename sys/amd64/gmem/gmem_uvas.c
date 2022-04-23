@@ -420,7 +420,7 @@ static int generated_req = 0, consumed_req = 0, dispatched_pages = 0, unmapped_p
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
 } \
 
-#define unmap_coalesce_threshold 1024
+#define unmap_coalesce_threshold 0
 
 
 static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wait)
