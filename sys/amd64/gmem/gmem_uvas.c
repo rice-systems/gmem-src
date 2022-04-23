@@ -417,7 +417,7 @@ static int generated_req = 0, consumed_req = 0, dispatched_pages = 0, unmapped_p
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
 	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
 	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
-	printf("[async_unmap enqueue] %d pages\n", (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT); \
+	printf("[async_unmap enqueue] %lu pages\n", (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT); \
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
 } \
 
