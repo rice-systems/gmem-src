@@ -432,6 +432,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 		panic("uvas workspace not empty\n");
 
 	uvas->working = true;
+	printf("set working flag true %p\n", &uvas->working);
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 
@@ -483,6 +484,7 @@ static inline void enqueue_unmap_req(
 	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
 		// automatically dispatch based on a threshold policy
 		// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
+		printf("read working flag false %p\n", &uvas->working);
 		gmem_uvas_dispatch_unmap_requests(uvas, true);
 	} 
 	else
@@ -554,6 +556,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			dispatched_pages, unmapped_pages,
 			page1, page2);
 	// The work has been done. We can dispatch another work now.
+	printf("set working flag false %p\n", &uvas->working);
 	uvas->working = false;
 }
 
