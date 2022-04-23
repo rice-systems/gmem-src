@@ -483,14 +483,22 @@ static inline void enqueue_unmap_req(
 	req->cb_args = callback_args;
 
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
-	if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
-		// automatically dispatch based on a threshold policy
-		// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
-		// printf("read working flag false %p\n", &uvas->working);
-		gmem_uvas_dispatch_unmap_requests(uvas, true);
-	} 
-	else
-		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
+	uvas->unmap_working_pages = uvas->unmap_pages;
+	uvas->total_dispatched_pages += uvas->unmap_working_pages;
+	uvas->unmap_pages = 0;
+	gmem_uvas_generic_unmap_handler((void *) uvas, 0);
+	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+
+	// GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
+	// if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
+	// 	// automatically dispatch based on a threshold policy
+	// 	// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
+	// 	// printf("read working flag false %p\n", &uvas->working);
+	// 	gmem_uvas_dispatch_unmap_requests(uvas, true);
+	// } 
+	// else
+	// 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 }
 
 // Force all enqueued unmap requests to be done, used as a barrier to flush async_unmap.
