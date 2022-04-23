@@ -107,6 +107,8 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
 		mtx_init(&uvas->unmap_task_lock, "uvas unmap", NULL, MTX_DEF);
+		uvas->total_dispatched_pages = 0;
+		uvas->total_unmapped_pages = 0;
 
 		// initialize pmap
 		pmap->ndevices = 1;
@@ -411,7 +413,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-static int generated_req = 0, consumed_req = 0, dispatched_pages = 0, unmapped_pages = 0;
+static int generated_req = 0, consumed_req = 0;
 #define uvas_insert_unmap_req(uvas, req) \
 { \
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
@@ -447,7 +449,7 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 
 	printf("[unmap_async] dispatching %d pages, ", uvas->unmap_pages);
 	uvas->unmap_working_pages = uvas->unmap_pages;
-	dispatched_pages += uvas->unmap_working_pages;
+	uvas->total_dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 
@@ -550,10 +552,10 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 
 	printf("unmapping %d pages, freed %d pages\n", page1, page2);
 	// printf("[handler] dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
-	unmapped_pages += page1;
-	if (page1 != page2 || dispatched_pages != unmapped_pages)
+	uvas->total_unmapped_pages += page1;
+	if (page1 != page2 || uvas->total_dispatched_pages != uvas->total_unmapped_pages)
 		panic("inconsistent handling dispatched %d, unmapped %d, page1 %d, page2 %d\n", 
-			dispatched_pages, unmapped_pages,
+			uvas->total_dispatched_pages, uvas->total_unmapped_pages,
 			page1, page2);
 	// The work has been done. We can dispatch another work now.
 	printf("set working flag false %p\n", &uvas->working);

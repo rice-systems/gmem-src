@@ -171,7 +171,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 	// list of unmap requests, protected by unmap_task_lock
 	struct unmap_task_tailq unmap_requests, unmap_workspace;
-	uint32_t unmap_pages, unmap_working_pages;
+	uint32_t unmap_pages, unmap_working_pages, total_dispatched_pages, total_unmapped_pages;
 	bool working;
 
 	// TODO: remove this. use what you have in pmap.
