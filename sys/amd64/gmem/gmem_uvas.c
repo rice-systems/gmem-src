@@ -433,6 +433,15 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 	uvas->working = true;
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
+
+	struct unmap_request *req;
+	int dispatched = 0;
+	TAILQ_FOREACH(req, uvas->unmap_workspace, next) {
+		dispatched += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+	}
+	if (dispatched != uvas->unmap_pages)
+		panic("inconsistent dispatching with %d dispatched pages but %d pages to unmap\n",
+			dispatched, uvas->unmap_pages);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
