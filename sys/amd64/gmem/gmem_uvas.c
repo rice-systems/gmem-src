@@ -483,12 +483,17 @@ static inline void enqueue_unmap_req(
 	req->cb_args = callback_args;
 
 	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
-	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
-	uvas->unmap_working_pages = uvas->unmap_pages;
-	uvas->total_dispatched_pages += uvas->unmap_working_pages;
-	uvas->unmap_pages = 0;
-	gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+	if (!uvas->working) {
+		uvas->working = true;
+		TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
+		uvas->unmap_working_pages = uvas->unmap_pages;
+		uvas->total_dispatched_pages += uvas->unmap_working_pages;
+		uvas->unmap_pages = 0;
+		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
+	}
+	else
+		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 
 	// GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	// if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
