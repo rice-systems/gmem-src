@@ -434,14 +434,16 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 
-	// struct unmap_request *req;
-	// int dispatched = 0;
-	// TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
-	// 	dispatched += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
-	// }
-	// if (dispatched != uvas->unmap_pages)
-	// 	panic("inconsistent dispatching with %d dispatched pages but %d pages to unmap\n",
-	// 		dispatched, uvas->unmap_pages);
+	struct unmap_request *req;
+	int dispatched = 0;
+	TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
+		dispatched += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+	}
+	if (dispatched != uvas->unmap_pages)
+		panic("inconsistent dispatching with %d dispatched pages but %d pages to unmap\n",
+			dispatched, uvas->unmap_pages);
+
+	printf("[unmap_async] dispatching %d pages, ", uvas->unmap_pages);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
@@ -543,6 +545,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
 
+	printf("unmapping %d pages, freed %d pages\n", page1, page2);
 	// printf("[handler] dispatched %d, unmapped %d\n", dispatched_pages, unmapped_pages);
 	unmapped_pages += page1;
 	if (page1 != page2 || dispatched_pages != unmapped_pages)
