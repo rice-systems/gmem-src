@@ -427,7 +427,7 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 	// UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
 
 	// Swap producer queue with the empty consumer queue
-	// UVAS_DEQUEUE_LOCK(uvas);
+	UVAS_DEQUEUE_LOCK(uvas);
 	// taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
 	
 	UVAS_ENQUEUE_LOCK(uvas);
@@ -525,7 +525,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
 	// printf("Unlocking...\n");
-	// UVAS_DEQUEUE_UNLOCK(uvas);
+	UVAS_DEQUEUE_UNLOCK(uvas);
 	// printf("Done\n");
 }
 
