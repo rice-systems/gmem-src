@@ -429,7 +429,6 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 	uvas->unmap_working_pages = uvas->unmap_pages;
-	uvas->total_dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
 
 	if (wait)
@@ -464,7 +463,6 @@ static inline void enqueue_unmap_req(
 		UVAS_DEQUEUE_LOCK(uvas);
 		TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 		uvas->unmap_working_pages = uvas->unmap_pages;
-		uvas->total_dispatched_pages += uvas->unmap_working_pages;
 		uvas->unmap_pages = 0;
 		UVAS_ENQUEUE_UNLOCK(uvas);
 		// Allow other producers when consumer is on.
