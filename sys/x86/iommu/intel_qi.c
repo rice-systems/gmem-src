@@ -251,6 +251,7 @@ dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 	}
 	dmar_qi_emit_wait_seq(unit, &pseq, emit_wait);
 	dmar_qi_advance_tail(unit);
+	dmar_qi_wait_for_seq(unit, &gseq, false);
 }
 
 void
