@@ -507,18 +507,15 @@ static inline void enqueue_unmap_req(
 // Force all enqueued unmap requests to be done, used as a barrier to flush async_unmap.
 void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 {
-	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	// We are waiting for the pending async unmap flush in a giant lock, be quick my ass.
-	if(uvas->working)
-		taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
-	if (uvas->unmap_pages > 0) {
-		// printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
-		if (uvas->working)
-			panic("[drain_unmap] failed because another task is kicked\n");
-		gmem_uvas_dispatch_unmap_requests(uvas, true);
-	} 
-	else
-		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+	// if(uvas->working)
+	// 	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
+	// if (uvas->unmap_pages > 0) {
+	// 	// printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
+	// 	if (uvas->working)
+	// 		panic("[drain_unmap] failed because another task is kicked\n");
+	// 	gmem_uvas_dispatch_unmap_requests(uvas, true);
+	// } 
 }
 
 static int free_cnt = 0;
