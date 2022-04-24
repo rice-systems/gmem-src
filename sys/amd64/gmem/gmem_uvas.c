@@ -427,7 +427,8 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 	UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
 
 	// Swap producer queue with the empty consumer queue
-	UVAS_DEQUEUE_LOCK(uvas);
+	// UVAS_DEQUEUE_LOCK(uvas);
+	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
 	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
 		"The consumer queue is not empty before swapping\n");
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
@@ -501,8 +502,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	struct unmap_request *req, *req_tmp;
 	gmem_uvas_entry_t *entry;
 
-	printf("Entering unmap handler\n");
-	UVAS_DEQUEUE_ASSERT_LOCKED(uvas);
+	// printf("Entering unmap handler\n");
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
 		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
@@ -513,7 +513,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_workspace, uvas->unmap_working_pages);
 	}
 
-	printf("Going to free memory\n");
+	// printf("Going to free memory\n");
 	// free va space and process callbacks
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
 		if ((entry = req->entry) != NULL)
@@ -523,9 +523,9 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-	printf("Unlocking...\n");
-	UVAS_DEQUEUE_UNLOCK(uvas);
-	printf("Done\n");
+	// printf("Unlocking...\n");
+	// UVAS_DEQUEUE_UNLOCK(uvas);
+	// printf("Done\n");
 }
 
 // munmap all for program termination or whatever.
