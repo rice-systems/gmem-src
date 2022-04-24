@@ -424,19 +424,21 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 // ENQUEUE must be locked
 static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 {
-	UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
+	// UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
 
 	// Swap producer queue with the empty consumer queue
 	// UVAS_DEQUEUE_LOCK(uvas);
 	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
+	
+	UVAS_ENQUEUE_LOCK(uvas);
 	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
 		"The consumer queue is not empty before swapping\n");
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	uvas->unmap_pages = 0;
-
 	// Allow other producers when consumer is on.
 	UVAS_ENQUEUE_UNLOCK(uvas);
+
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 	else
@@ -464,7 +466,6 @@ static inline void enqueue_unmap_req(
 	req->cb = unmap_callback;
 	req->cb_args = callback_args;
 
-	UVAS_ENQUEUE_LOCK(uvas);
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
 		gmem_uvas_dispatch_unmap_task(uvas, false);
 	} else
