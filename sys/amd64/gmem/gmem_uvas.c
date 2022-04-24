@@ -465,7 +465,7 @@ static inline void enqueue_unmap_req(
 
 	UVAS_ENQUEUE_LOCK(uvas);
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
-		gmem_uvas_dispatch_unmap_task(uvas, true);
+		gmem_uvas_dispatch_unmap_task(uvas, false);
 	} else
 		UVAS_ENQUEUE_UNLOCK(uvas);
 
