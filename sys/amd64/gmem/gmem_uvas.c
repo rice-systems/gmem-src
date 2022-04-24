@@ -130,7 +130,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		TAILQ_INIT(&uvas->unmap_workspace);
 		TAILQ_INIT(&uvas->dev_pmap_header);
 		uvas->unmap_pages = 0;
-		uvas->working = false;
 
 		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
