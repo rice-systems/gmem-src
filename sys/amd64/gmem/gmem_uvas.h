@@ -67,10 +67,12 @@ extern struct hist instrument_hist[MAXPGCNT];
 #define UVAS_ENQUEUE_LOCK(x)    mtx_lock(&(x)->enqueue_lock)
 #define UVAS_ENQUEUE_UNLOCK(x)  mtx_unlock(&(x)->enqueue_lock)
 #define UVAS_ENQUEUE_TRYLOCK(x) mtx_trylock(&(x)->enqueue_lock)
+#define UVAS_ENQUEUE_ASSERT_LOCKED(x) mtx_assert(&(x)->enqueue_lock, MA_OWNED)
 
 #define UVAS_DEQUEUE_LOCK(x)    mtx_lock(&(x)->dequeue_lock)
 #define UVAS_DEQUEUE_UNLOCK(x)  mtx_unlock(&(x)->dequeue_lock)
 #define UVAS_DEQUEUE_TRYLOCK(x) mtx_trylock(&(x)->dequeue_lock)
+#define UVAS_DEQUEUE_ASSERT_LOCKED(x) mtx_assert(&(x)->dequeue_lock, MA_OWNED)
 
 #define GMEM_UVAS_LOCK(x) mtx_lock(&(x)->lock)
 #define GMEM_UVAS_UNLOCK(x) mtx_unlock(&(x)->lock)

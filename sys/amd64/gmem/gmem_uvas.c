@@ -421,16 +421,21 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 
 #define unmap_coalesce_threshold 1024
 
-
-static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wait)
+// ENQUEUE must be locked
+static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 {
-	if (!TAILQ_EMPTY(&uvas->unmap_workspace))
-		panic("uvas workspace not empty\n");
+	UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
 
+	// Swap producer queue with the empty consumer queue
+	UVAS_DEQUEUE_LOCK(uvas);
+	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
+		"The consumer queue is not empty before swapping\n");
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	uvas->unmap_pages = 0;
 
+	// Allow other producers when consumer is on.
+	UVAS_ENQUEUE_UNLOCK(uvas);
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 	else
@@ -460,14 +465,7 @@ static inline void enqueue_unmap_req(
 
 	UVAS_ENQUEUE_LOCK(uvas);
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
-		UVAS_DEQUEUE_LOCK(uvas);
-		TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
-		uvas->unmap_working_pages = uvas->unmap_pages;
-		uvas->unmap_pages = 0;
-		UVAS_ENQUEUE_UNLOCK(uvas);
-		// Allow other producers when consumer is on.
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-		UVAS_DEQUEUE_UNLOCK(uvas);
+		gmem_uvas_dispatch_unmap_task(uvas, true);
 	} else
 		UVAS_ENQUEUE_UNLOCK(uvas);
 
@@ -476,7 +474,7 @@ static inline void enqueue_unmap_req(
 	// 	// automatically dispatch based on a threshold policy
 	// 	// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
 	// 	// printf("read working flag false %p\n", &uvas->working);
-	// 	gmem_uvas_dispatch_unmap_requests(uvas, true);
+	// 	gmem_uvas_dispatch_unmap_task(uvas, true);
 	// } 
 	// else
 	// 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
@@ -492,7 +490,7 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 	// 	// printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
 	// 	if (uvas->working)
 	// 		panic("[drain_unmap] failed because another task is kicked\n");
-	// 	gmem_uvas_dispatch_unmap_requests(uvas, true);
+	// 	gmem_uvas_dispatch_unmap_task(uvas, true);
 	// } 
 }
 
@@ -503,6 +501,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	struct unmap_request *req, *req_tmp;
 	gmem_uvas_entry_t *entry;
 
+	UVAS_DEQUEUE_ASSERT_LOCKED(uvas);
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
 		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
@@ -522,6 +521,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
+	UVAS_DEQUEUE_UNLOCK(uvas);
 }
 
 // munmap all for program termination or whatever.
