@@ -496,7 +496,6 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 	// } 
 }
 
-static int free_cnt = 0;
 static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 {
 	gmem_uvas_t *uvas = (gmem_uvas_t *) arg;
