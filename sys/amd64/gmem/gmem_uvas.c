@@ -501,6 +501,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 	struct unmap_request *req, *req_tmp;
 	gmem_uvas_entry_t *entry;
 
+	printf("Entering unmap handler\n");
 	UVAS_DEQUEUE_ASSERT_LOCKED(uvas);
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
@@ -512,6 +513,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_workspace, uvas->unmap_working_pages);
 	}
 
+	printf("Going to free memory\n");
 	// free va space and process callbacks
 	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
 		if ((entry = req->entry) != NULL)
@@ -521,7 +523,9 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
+	printf("Unlocking...\n");
 	UVAS_DEQUEUE_UNLOCK(uvas);
+	printf("Done\n");
 }
 
 // munmap all for program termination or whatever.
