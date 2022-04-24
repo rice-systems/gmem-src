@@ -489,8 +489,9 @@ static inline void enqueue_unmap_req(
 		uvas->unmap_working_pages = uvas->unmap_pages;
 		uvas->total_dispatched_pages += uvas->unmap_working_pages;
 		uvas->unmap_pages = 0;
-		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
+		uvas->working = false;
+		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 	}
 	else
 		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
@@ -572,7 +573,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 			page1, page2);
 	// The work has been done. We can dispatch another work now.
 	// printf("set working flag false %p\n", &uvas->working);
-	uvas->working = false;
+	// uvas->working = false;
 }
 
 // munmap all for program termination or whatever.
