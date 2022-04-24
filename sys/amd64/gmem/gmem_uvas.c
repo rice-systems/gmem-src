@@ -108,8 +108,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
 		mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
 		mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
-		uvas->total_dispatched_pages = 0;
-		uvas->total_unmapped_pages = 0;
 
 		// initialize pmap
 		pmap->ndevices = 1;
