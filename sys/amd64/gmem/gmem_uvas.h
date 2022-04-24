@@ -15,7 +15,6 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/queue.h>
-#include <sys/taskqueue.h>
 #include <sys/vmem.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
@@ -172,9 +171,6 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 	// A uvas may be used by multiple pmaps (mmus)
 	TAILQ_HEAD(dev_pmap_tailq, dev_pmap) dev_pmap_header;
-
-	// immutable
-	struct task unmap_task;
 
 	// enqueue_lock
 	struct unmap_task_tailq unmap_requests;

@@ -117,8 +117,6 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
 
-		TASK_INIT(&uvas->unmap_task, 0, gmem_uvas_generic_unmap_handler, uvas);
-
 		// use mmu callback to initialize device-specific data
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
@@ -450,19 +448,16 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-	// UVAS_DEQUEUE_UNLOCK(uvas);
+	UVAS_DEQUEUE_UNLOCK(uvas);
 }
 
 // ENQUEUE must be locked
 static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 {
-	// UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
-
-	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
+	UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
 
 	// Swap producer queue with the empty consumer queue
-	UVAS_ENQUEUE_LOCK(uvas);
-	// UVAS_DEQUEUE_LOCK(uvas);
+	UVAS_DEQUEUE_LOCK(uvas);
 
 	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
 		"The consumer queue is not empty before swapping\n");
@@ -475,7 +470,8 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 	else
-		taskqueue_enqueue(taskqueue_thread, &uvas->unmap_task);
+		// TODO: replace it with waking a kernel thread
+		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 }
 
 static inline void enqueue_unmap_req(
@@ -499,21 +495,12 @@ static inline void enqueue_unmap_req(
 	req->cb = unmap_callback;
 	req->cb_args = callback_args;
 
+	UVAS_ENQUEUE_LOCK(uvas);
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
 		gmem_uvas_dispatch_unmap_task(uvas, false);
 	} 
-	// else
-	// 	UVAS_ENQUEUE_UNLOCK(uvas);
-
-	// GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
-	// if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
-	// 	// automatically dispatch based on a threshold policy
-	// 	// printf("[dispatch] we have %u pages to unmap\n", uvas->unmap_pages);
-	// 	// printf("read working flag false %p\n", &uvas->working);
-	// 	gmem_uvas_dispatch_unmap_task(uvas, true);
-	// } 
-	// else
-	// 	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+	else
+		UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
 // munmap all for program termination or whatever.
