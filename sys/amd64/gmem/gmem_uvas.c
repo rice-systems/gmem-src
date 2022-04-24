@@ -439,7 +439,7 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 	else
-		taskqueue_enqueue_fast(taskqueue_fast, &uvas->unmap_task);
+		taskqueue_enqueue(taskqueue_fast, &uvas->unmap_task);
 }
 
 static inline void enqueue_unmap_req(
