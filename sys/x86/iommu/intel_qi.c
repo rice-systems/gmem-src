@@ -233,7 +233,7 @@ void
 dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
     iommu_gaddr_t size, bool emit_wait)
 {
-	struct iommu_qi_genseq pseq;
+	struct iommu_qi_genseq gseq;
 	struct dmar_unit *unit;
 	iommu_gaddr_t isize;
 	int am;
@@ -249,7 +249,7 @@ dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 		    DMAR_IQ_DESCR_IOTLB_DID(domain->domain),
 		    base | am);
 	}
-	dmar_qi_emit_wait_seq(unit, &pseq, emit_wait);
+	dmar_qi_emit_wait_seq(unit, &gseq, emit_wait);
 	dmar_qi_advance_tail(unit);
 	dmar_qi_wait_for_seq(unit, &gseq, false);
 }
