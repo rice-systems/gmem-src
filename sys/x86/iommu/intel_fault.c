@@ -264,7 +264,7 @@ int
 dmar_init_fault_log(struct dmar_unit *unit)
 {
 
-	mtx_init(&unit->fault_lock, "dmarflt", NULL, MTX_SPIN);
+	mtx_init(&unit->fault_lock, "dmarflt", NULL, MTX_DEF);
 	unit->fault_log_size = 256; /* 128 fault log entries */
 	TUNABLE_INT_FETCH("hw.dmar.fault_log_size", &unit->fault_log_size);
 	if (unit->fault_log_size % 2 != 0)
@@ -273,7 +273,7 @@ dmar_init_fault_log(struct dmar_unit *unit)
 	    M_DEVBUF, M_WAITOK | M_ZERO);
 
 	TASK_INIT(&unit->fault_task, 0, dmar_fault_task, unit);
-	unit->fault_taskqueue = taskqueue_create_fast("dmarff", M_WAITOK,
+	unit->fault_taskqueue = taskqueue_create("dmarff", M_WAITOK,
 	    taskqueue_thread_enqueue, &unit->fault_taskqueue);
 	taskqueue_start_threads(&unit->fault_taskqueue, 1, PI_AV,
 	    "dmar%d fault taskq", unit->iommu.unit);

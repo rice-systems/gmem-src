@@ -188,8 +188,8 @@ struct dmar_unit {
 #define	DMAR_UNLOCK(dmar)	mtx_unlock(&(dmar)->iommu.lock)
 #define	DMAR_ASSERT_LOCKED(dmar) mtx_assert(&(dmar)->iommu.lock, MA_OWNED)
 
-#define	DMAR_FAULT_LOCK(dmar)	mtx_lock_spin(&(dmar)->fault_lock)
-#define	DMAR_FAULT_UNLOCK(dmar)	mtx_unlock_spin(&(dmar)->fault_lock)
+#define	DMAR_FAULT_LOCK(dmar)	mtx_lock(&(dmar)->fault_lock)
+#define	DMAR_FAULT_UNLOCK(dmar)	mtx_unlock(&(dmar)->fault_lock)
 #define	DMAR_FAULT_ASSERT_LOCKED(dmar) mtx_assert(&(dmar)->fault_lock, MA_OWNED)
 
 #define	DMAR_IS_COHERENT(dmar)	(((dmar)->hw_ecap & DMAR_ECAP_C) != 0)
