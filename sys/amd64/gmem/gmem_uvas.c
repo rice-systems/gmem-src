@@ -428,7 +428,7 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 
 	// Swap producer queue with the empty consumer queue
 	// UVAS_DEQUEUE_LOCK(uvas);
-	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
+	// taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
 	
 	UVAS_ENQUEUE_LOCK(uvas);
 	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
