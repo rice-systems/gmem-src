@@ -64,8 +64,12 @@ extern struct hist instrument_hist[MAXPGCNT];
 		} \
 	} \
 
-#define GMEM_UVAS_LOCK_UNMAP_REQ(x) mtx_lock(&(x)->unmap_task_lock)
-#define GMEM_UVAS_UNLOCK_UNMAP_REQ(x) mtx_unlock(&(x)->unmap_task_lock)
+#define UVAS_ENQUEUE_LOCK(x) mtx_lock(&(x)->enqueue_lock)
+#define UVAS_ENQUEUE_UNLOCK(x) mtx_unlock(&(x)->enqueue_lock)
+
+#define UVAS_DEQUEUE_LOCK(x) mtx_lock(&(x)->dequeue_lock)
+#define UVAS_DEQUEUE_UNLOCK(x) mtx_unlock(&(x)->dequeue_lock)
+#define UVAS_DEQUEUE_TRYLOCK(x) mtx_trylock(&(x)->dequeue_lock)
 
 #define GMEM_UVAS_LOCK(x) mtx_lock(&(x)->lock)
 #define GMEM_UVAS_UNLOCK(x) mtx_unlock(&(x)->lock)
@@ -137,7 +141,7 @@ TAILQ_HEAD(unmap_task_tailq, unmap_request);
 
 struct gmem_uvas // VM counterpart: struct vm_map
 {
-	struct mtx lock, unmap_task_lock;
+	struct mtx lock, enqueue_lock, dequeue_lock;
 
 	// List of mapped entries
 	struct gmem_uvas_entries_tailq mapped_entries;
@@ -169,10 +173,12 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	// immutable
 	struct task unmap_task;
 
-	// list of unmap requests, protected by unmap_task_lock
-	struct unmap_task_tailq unmap_requests, unmap_workspace;
+	// enqueue_lock
+	struct unmap_task_tailq unmap_requests;
+
+	// dequeue_lock
+	struct unmap_task_tailq unmap_workspace;
 	uint32_t unmap_pages, unmap_working_pages, total_dispatched_pages, total_unmapped_pages;
-	bool working;
 
 	// TODO: remove this. use what you have in pmap.
 	// Otherwise we are coupling the uvas with a specific device.

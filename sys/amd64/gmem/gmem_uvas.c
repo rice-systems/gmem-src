@@ -106,7 +106,8 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// allocate and create the uvas
 		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
-		mtx_init(&uvas->unmap_task_lock, "uvas unmap", NULL, MTX_DEF);
+		mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
+		mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
 		uvas->total_dispatched_pages = 0;
 		uvas->total_unmapped_pages = 0;
 
@@ -417,10 +418,10 @@ static int generated_req = 0, consumed_req = 0;
 // printf("[async_unmap enqueue] %lu pages\n", (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT);
 #define uvas_insert_unmap_req(uvas, req) \
 { \
-	GMEM_UVAS_LOCK_UNMAP_REQ(uvas); \
+	UVAS_ENQUEUE_LOCK(uvas); \
 	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
 	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
-	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas); \
+	UVAS_ENQUEUE_UNLOCK(uvas); \
 } \
 
 #define unmap_coalesce_threshold 1024
@@ -428,13 +429,8 @@ static int generated_req = 0, consumed_req = 0;
 
 static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wait)
 {
-	if (uvas->working)
-		panic("dispatching unmap request task concurrently\n");
 	if (!TAILQ_EMPTY(&uvas->unmap_workspace))
 		panic("uvas workspace not empty\n");
-
-	uvas->working = true;
-	// printf("set working flag true %p\n", &uvas->working);
 
 	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 
@@ -451,7 +447,6 @@ static inline void gmem_uvas_dispatch_unmap_requests(gmem_uvas_t *uvas, bool wai
 	uvas->unmap_working_pages = uvas->unmap_pages;
 	uvas->total_dispatched_pages += uvas->unmap_working_pages;
 	uvas->unmap_pages = 0;
-	GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 
 	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
@@ -469,7 +464,7 @@ static inline void enqueue_unmap_req(
 	gmem_uvas_entry_t *entry, *entry1;
 
 	// printf("[enqueue_unmap_req] generated req %d, consumed req %d\n", generated_req, consumed_req);
-
+	// ext_entries is assumed to be a private copy that requires no locks.
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
 		atomic_add_int(&generated_req, 1);
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
@@ -482,22 +477,21 @@ static inline void enqueue_unmap_req(
 	req->cb = unmap_callback;
 	req->cb_args = callback_args;
 
-	GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
-	if (!uvas->working && uvas->unmap_pages > unmap_coalesce_threshold) {
-		uvas->working = true;
-		TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
-		uvas->unmap_working_pages = uvas->unmap_pages;
-		uvas->total_dispatched_pages += uvas->unmap_working_pages;
-		uvas->unmap_pages = 0;
-		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-
-		GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
-		uvas->working = false;
-		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+	if (UVAS_DEQUEUE_TRYLOCK(uvas)) {
+		if (UVAS_ENQUEUE_TRYLOCK(uvas)) {
+			if (uvas->unmap_pages > unmap_coalesce_threshold) {
+				TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
+				uvas->unmap_working_pages = uvas->unmap_pages;
+				uvas->total_dispatched_pages += uvas->unmap_working_pages;
+				uvas->unmap_pages = 0;
+				UVAS_ENQUEUE_UNLOCK(uvas);
+				// Allow other producers when consumer is on.
+				gmem_uvas_generic_unmap_handler((void *) uvas, 0);
+			} else
+				UVAS_ENQUEUE_UNLOCK(uvas);
+		}
+		UVAS_DEQUEUE_UNLOCK(uvas);
 	}
-	else
-		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 
 	// GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	// if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
