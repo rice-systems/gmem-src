@@ -426,10 +426,11 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 {
 	// UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
 
+	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
+
 	// Swap producer queue with the empty consumer queue
 	UVAS_ENQUEUE_LOCK(uvas);
 	UVAS_DEQUEUE_LOCK(uvas);
-	// taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
 
 	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
 		"The consumer queue is not empty before swapping\n");
@@ -439,10 +440,10 @@ static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 	// Allow other producers when consumer is on.
 	UVAS_ENQUEUE_UNLOCK(uvas);
 
-	// if (wait)
+	if (wait)
 		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-	// else
-		// taskqueue_enqueue(taskqueue_thread, &uvas->unmap_task);
+	else
+		taskqueue_enqueue(taskqueue_thread, &uvas->unmap_task);
 }
 
 static inline void enqueue_unmap_req(
@@ -525,9 +526,7 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-	// printf("Unlocking...\n");
-	UVAS_DEQUEUE_UNLOCK(uvas);
-	// printf("Done\n");
+	// UVAS_DEQUEUE_UNLOCK(uvas);
 }
 
 // munmap all for program termination or whatever.
