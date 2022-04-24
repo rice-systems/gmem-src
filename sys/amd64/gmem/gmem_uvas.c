@@ -451,7 +451,6 @@ static inline void enqueue_unmap_req(
 
 	// ext_entries is assumed to be a private copy that requires no locks.
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
-		atomic_add_int(&generated_req, 1);
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
 		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
 		req->entry = entry;

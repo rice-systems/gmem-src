@@ -179,7 +179,7 @@ struct gmem_uvas // VM counterpart: struct vm_map
 
 	// dequeue_lock
 	struct unmap_task_tailq unmap_workspace;
-	uint32_t unmap_pages, unmap_working_pages, total_dispatched_pages, total_unmapped_pages;
+	uint32_t unmap_pages, unmap_working_pages;
 
 	// TODO: remove this. use what you have in pmap.
 	// Otherwise we are coupling the uvas with a specific device.
