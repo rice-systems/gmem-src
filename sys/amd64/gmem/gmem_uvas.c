@@ -489,9 +489,12 @@ static inline void enqueue_unmap_req(
 		uvas->unmap_working_pages = uvas->unmap_pages;
 		uvas->total_dispatched_pages += uvas->unmap_working_pages;
 		uvas->unmap_pages = 0;
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
+		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
+
+		GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 		uvas->working = false;
+		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
 	}
 	else
 		GMEM_UVAS_UNLOCK_UNMAP_REQ(uvas);
