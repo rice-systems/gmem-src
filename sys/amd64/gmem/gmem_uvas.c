@@ -476,22 +476,21 @@ static inline void enqueue_unmap_req(
 	req->cb = unmap_callback;
 	req->cb_args = callback_args;
 
-	if (UVAS_DEQUEUE_TRYLOCK(uvas)) {
-		UVAS_ENQUEUE_LOCK(uvas);
-		if (uvas->unmap_pages > unmap_coalesce_threshold) {
-			if(uvas->unmap_pages > 100000)
-				printf("[uvas] we have %u pages in the producer queue\n", uvas->unmap_pages);
-			TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
-			uvas->unmap_working_pages = uvas->unmap_pages;
-			uvas->total_dispatched_pages += uvas->unmap_working_pages;
-			uvas->unmap_pages = 0;
-			UVAS_ENQUEUE_UNLOCK(uvas);
-			// Allow other producers when consumer is on.
-			gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-		} else
-			UVAS_ENQUEUE_UNLOCK(uvas);
+	UVAS_ENQUEUE_LOCK(uvas);
+	if (uvas->unmap_pages > unmap_coalesce_threshold) {
+		if(uvas->unmap_pages > 100000)
+			printf("[uvas] we have %u pages in the producer queue\n", uvas->unmap_pages);
+		TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
+		uvas->unmap_working_pages = uvas->unmap_pages;
+		uvas->total_dispatched_pages += uvas->unmap_working_pages;
+		uvas->unmap_pages = 0;
+		UVAS_ENQUEUE_UNLOCK(uvas);
+		UVAS_DEQUEUE_LOCK(uvas);
+		// Allow other producers when consumer is on.
+		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 		UVAS_DEQUEUE_UNLOCK(uvas);
-	}
+	} else
+		UVAS_ENQUEUE_UNLOCK(uvas);
 
 	// GMEM_UVAS_LOCK_UNMAP_REQ(uvas);
 	// if (uvas->unmap_pages > unmap_coalesce_threshold && !uvas->working) {
