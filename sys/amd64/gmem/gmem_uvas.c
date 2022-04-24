@@ -479,7 +479,7 @@ static inline void enqueue_unmap_req(
 	if (UVAS_DEQUEUE_TRYLOCK(uvas)) {
 		UVAS_ENQUEUE_LOCK(uvas);
 		if (uvas->unmap_pages > unmap_coalesce_threshold) {
-			printf("[uvas] we have %lu pages in the producer queue\n", uvas->unmap_pages);
+			printf("[uvas] we have %u pages in the producer queue\n", uvas->unmap_pages);
 			TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
 			uvas->unmap_working_pages = uvas->unmap_pages;
 			uvas->total_dispatched_pages += uvas->unmap_working_pages;
