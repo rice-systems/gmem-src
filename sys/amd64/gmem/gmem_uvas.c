@@ -29,6 +29,7 @@
 #include <sys/vmem.h>
 #include <sys/vmmeter.h>
 #include <sys/sched.h>
+#include <sys/kthread.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
@@ -452,7 +453,6 @@ static inline void enqueue_unmap_req(
 {
 	struct unmap_request *req;
 	gmem_uvas_entry_t *entry, *entry1;
-	bool wakeup = false;
 
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
