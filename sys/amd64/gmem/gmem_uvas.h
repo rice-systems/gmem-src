@@ -68,10 +68,10 @@ extern struct hist instrument_hist[MAXPGCNT];
 #define UVAS_ENQUEUE_TRYLOCK(x) mtx_trylock(&(x)->enqueue_lock)
 #define UVAS_ENQUEUE_ASSERT_LOCKED(x) mtx_assert(&(x)->enqueue_lock, MA_OWNED)
 
-#define UVAS_DEQUEUE_LOCK(x)    mtx_lock(&(x)->dequeue_lock)
-#define UVAS_DEQUEUE_UNLOCK(x)  mtx_unlock(&(x)->dequeue_lock)
-#define UVAS_DEQUEUE_TRYLOCK(x) mtx_trylock(&(x)->dequeue_lock)
-#define UVAS_DEQUEUE_ASSERT_LOCKED(x) mtx_assert(&(x)->dequeue_lock, MA_OWNED)
+// #define UVAS_DEQUEUE_LOCK(x)    mtx_lock(&(x)->dequeue_lock)
+// #define UVAS_DEQUEUE_UNLOCK(x)  mtx_unlock(&(x)->dequeue_lock)
+// #define UVAS_DEQUEUE_TRYLOCK(x) mtx_trylock(&(x)->dequeue_lock)
+// #define UVAS_DEQUEUE_ASSERT_LOCKED(x) mtx_assert(&(x)->dequeue_lock, MA_OWNED)
 
 #define GMEM_UVAS_LOCK(x) mtx_lock(&(x)->lock)
 #define GMEM_UVAS_UNLOCK(x) mtx_unlock(&(x)->lock)
@@ -143,7 +143,7 @@ TAILQ_HEAD(unmap_task_tailq, unmap_request);
 
 struct gmem_uvas // VM counterpart: struct vm_map
 {
-	struct mtx lock, enqueue_lock, dequeue_lock;
+	struct mtx lock, enqueue_lock;
 
 	// List of mapped entries
 	struct gmem_uvas_entries_tailq mapped_entries;
@@ -176,12 +176,10 @@ struct gmem_uvas // VM counterpart: struct vm_map
 	struct unmap_task_tailq unmap_requests;
 
 	// dequeue_lock
-	struct unmap_task_tailq unmap_workspace;
-	uint32_t unmap_pages, unmap_working_pages;
+	// struct unmap_task_tailq unmap_workspace;
+	uint32_t unmap_pages; //, unmap_working_pages;
 
-	// TODO: remove this. use what you have in pmap.
-	// Otherwise we are coupling the uvas with a specific device.
-	// void *dev_data;
+	int async_unmap_proc;
 };
 
 // IOMMU:

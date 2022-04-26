@@ -107,7 +107,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
 		mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
-		mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
+		// mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
 
 		// initialize pmap
 		pmap->ndevices = 1;
@@ -126,6 +126,9 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		TAILQ_INIT(&uvas->unmap_workspace);
 		TAILQ_INIT(&uvas->dev_pmap_header);
 		uvas->unmap_pages = 0;
+
+		// Need a flag to enable uvas daemon?
+		gmem_uvas_async_unmap_start(uvas);
 
 		// insert pmap to uvas pmap list
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
@@ -409,69 +412,34 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-#define uvas_insert_unmap_req(uvas, req) \
-{ \
-	UVAS_ENQUEUE_LOCK(uvas); \
-	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
-	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
-	UVAS_ENQUEUE_UNLOCK(uvas); \
-} \
-
 #define unmap_coalesce_threshold 1024
 
-
-static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
+static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
-	gmem_uvas_t *uvas = (gmem_uvas_t *) arg;
 	dev_pmap_t *pmap;
 	struct unmap_request *req, *req_tmp;
 	gmem_uvas_entry_t *entry;
 
-	// printf("Entering unmap handler\n");
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
-		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
+		TAILQ_FOREACH(req, &uvas->unmap_requests, next) {
 			entry = req->entry;
 			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
 			// pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		}
-		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_workspace, uvas->unmap_working_pages);
+		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_requests, uvas->unmap_pages);
 	}
 
-	// printf("Going to free memory\n");
 	// free va space and process callbacks
-	TAILQ_FOREACH_SAFE(req, &uvas->unmap_workspace, next, req_tmp) {
+	TAILQ_FOREACH_SAFE(req, &uvas->unmap_requests, next, req_tmp) {
 		if ((entry = req->entry) != NULL)
 			gmem_uvas_free_span(entry->uvas, entry);
 		if (req->cb != NULL)
 			(*req->cb)(req->cb_args);
-		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
+		TAILQ_REMOVE(&uvas->unmap_requests, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-	UVAS_DEQUEUE_UNLOCK(uvas);
-}
-
-// ENQUEUE must be locked
-static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
-{
-	UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
-
-	// Swap producer queue with the empty consumer queue
-	UVAS_DEQUEUE_LOCK(uvas);
-
-	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
-		"The consumer queue is not empty before swapping\n");
-	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
-	uvas->unmap_working_pages = uvas->unmap_pages;
 	uvas->unmap_pages = 0;
-	// Allow other producers when consumer is on.
-	UVAS_ENQUEUE_UNLOCK(uvas);
-
-	if (wait)
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-	else
-		// TODO: replace it with waking a kernel thread
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 }
 
 static inline void enqueue_unmap_req(
@@ -482,24 +450,31 @@ static inline void enqueue_unmap_req(
 {
 	struct unmap_request *req;
 	gmem_uvas_entry_t *entry, *entry1;
+	bool wakeup = false;
 
-	// ext_entries is assumed to be a private copy that requires no locks.
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
 		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
 		req->entry = entry;
-		req->cb = NULL;
-		req->cb_args = NULL;
-		uvas_insert_unmap_req(uvas, req);
+		if (!TAILQ_EMPTY(ext_entries)) {
+			req->cb = NULL;
+			req->cb_args = NULL;
+		} else {
+			req->cb = unmap_callback;
+			req->cb_args = callback_args;
+		}
+		UVAS_ENQUEUE_LOCK(uvas);
+		uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+		TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next);
+		UVAS_ENQUEUE_UNLOCK(uvas);
 	}
-	req->cb = unmap_callback;
-	req->cb_args = callback_args;
 
 	UVAS_ENQUEUE_LOCK(uvas);
+	// If the queue is full, drop the lock and wakup the async thread.
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
-		gmem_uvas_dispatch_unmap_task(uvas, false);
-	} 
-	else
+		UVAS_ENQUEUE_UNLOCK(uvas);
+		wakeup(&uvas->async_unmap_proc);
+	} else
 		UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
@@ -530,15 +505,10 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 // Force all enqueued unmap requests to be done, used as a barrier to flush async_unmap.
 void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 {
-	// We are waiting for the pending async unmap flush in a giant lock, be quick my ass.
-	// if(uvas->working)
-	// 	taskqueue_drain(taskqueue_thread, &uvas->unmap_task);
-	// if (uvas->unmap_pages > 0) {
-	// 	// printf("[dispatch forced] we have %u pages to unmap\n", uvas->unmap_pages);
-	// 	if (uvas->working)
-	// 		panic("[drain_unmap] failed because another task is kicked\n");
-	// 	gmem_uvas_dispatch_unmap_task(uvas, true);
-	// } 
+	UVAS_ENQUEUE_LOCK(uvas);
+	// Clear all pending unmap requests immediately.
+	gmem_uvas_generic_unmap_handler(uvas);
+	UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
@@ -605,4 +575,41 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     if (entry_ret != NULL)
         *entry_ret = entry;
     return (0);
+}
+
+static wakeup_time = 100; // 100 runs per 1 second
+static void
+gmem_uvas_async_unmap(gmem_uvas_t *uvas)
+{
+	UVAS_ENQUEUE_LOCK(uvas);
+	for (;;)
+	{
+		// periodically cleanup the unmap request queue. (10ms)
+		gmem_uvas_generic_unmap_handler(uvas);
+		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
+		    "uvas", 1 * hz / wakeup_time);
+	}
+	UVAS_ENQUEUE_UNLOCK(uvas);
+}
+
+static void
+gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
+{
+	int error;
+	struct proc *p;
+	struct thread *td;
+
+	error = kproc_create(gmem_uvas_async_unmap, uvas, &p, RFSTOPPED, 0,
+		"uvas");
+	if (error)
+		panic("uvas async daemon: error %d\n", error);
+	td = FIRST_THREAD_IN_PROC(p);
+	thread_lock(td);
+
+	/* We're an idle task, don't count us in the load. */
+	td->td_flags |= TDF_NOLOAD;
+	sched_class(td, PRI_IDLE);
+	sched_prio(td, PRI_MAX_IDLE);
+	sched_add(td, SRQ_BORING);
+	thread_unlock(td);
 }
