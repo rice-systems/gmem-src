@@ -416,7 +416,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-#define unmap_coalesce_threshold 1024
+#define unmap_coalesce_threshold 10000
 
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
