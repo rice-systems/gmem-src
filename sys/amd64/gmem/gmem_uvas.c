@@ -30,6 +30,7 @@
 #include <sys/vmmeter.h>
 #include <sys/sched.h>
 #include <sys/kthread.h>
+#include <sys/unistd.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
