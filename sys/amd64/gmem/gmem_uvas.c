@@ -42,7 +42,7 @@
 static uma_zone_t gmem_uvas_entry_zone;
 static uma_zone_t gmem_uvas_unmap_requests_zone;
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas);
-static void gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
+static void gmem_uvas_async_unmap_start(gmem_uvas_t *uvas);
 
 static void
 gmem_uvas_zone_init(void)
@@ -579,7 +579,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     return (0);
 }
 
-static wakeup_time = 100; // 100 runs per 1 second
+static int wakeup_time = 100; // 100 runs per 1 second
 static void
 gmem_uvas_async_unmap(gmem_uvas_t *uvas)
 {
