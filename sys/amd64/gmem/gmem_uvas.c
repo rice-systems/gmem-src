@@ -582,8 +582,9 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
 
 static int wakeup_time = 100; // 100 runs per 1 second
 static void
-gmem_uvas_async_unmap(gmem_uvas_t *uvas)
+gmem_uvas_async_unmap(void *args)
 {
+	gmem_uvas_t *uvas = (gmem_uvas_t *)args;
 	UVAS_ENQUEUE_LOCK(uvas);
 	for (;;)
 	{
@@ -602,7 +603,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 	struct proc *p;
 	struct thread *td;
 
-	error = kproc_create(gmem_uvas_async_unmap, uvas, &p, RFSTOPPED, 0,
+	error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, RFSTOPPED, 0,
 		"uvas");
 	if (error)
 		panic("uvas async daemon: error %d\n", error);
