@@ -28,6 +28,7 @@
 #include <sys/buf.h>
 #include <sys/vmem.h>
 #include <sys/vmmeter.h>
+#include <sys/sched.h>
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
