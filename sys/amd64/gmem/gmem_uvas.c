@@ -475,8 +475,9 @@ static inline void enqueue_unmap_req(
 	UVAS_ENQUEUE_LOCK(uvas);
 	// If the queue is full, drop the lock and wakup the async thread.
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
+		gmem_uvas_generic_unmap_handler(uvas);
 		UVAS_ENQUEUE_UNLOCK(uvas);
-		wakeup(&uvas->async_unmap_proc);
+		// wakeup(&uvas->async_unmap_proc);
 	} else
 		UVAS_ENQUEUE_UNLOCK(uvas);
 }
