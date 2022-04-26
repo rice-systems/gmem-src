@@ -586,19 +586,19 @@ static int wakeup_time = 10; // 10 runs per 1 second
 static void
 gmem_uvas_async_unmap(void *args)
 {
-	gmem_uvas_t *uvas = (gmem_uvas_t *)args;
-	UVAS_ENQUEUE_LOCK(uvas);
-	for (;;)
-	{
-		// periodically cleanup the unmap request queue. (10ms)
-		if (uvas->unmap_pages > 0) {
-			printf("[async daemon] handling %d pages\n", uvas->unmap_pages);
-			gmem_uvas_generic_unmap_handler(uvas);
-		}
-		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
-		    "uvas", 1 * hz / wakeup_time);
-	}
-	UVAS_ENQUEUE_UNLOCK(uvas);
+	// gmem_uvas_t *uvas = (gmem_uvas_t *)args;
+	// UVAS_ENQUEUE_LOCK(uvas);
+	// for (;;)
+	// {
+	// 	// periodically cleanup the unmap request queue. (10ms)
+	// 	if (uvas->unmap_pages > 0) {
+	// 		printf("[async daemon] handling %d pages\n", uvas->unmap_pages);
+	// 		gmem_uvas_generic_unmap_handler(uvas);
+	// 	}
+	// 	msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
+	// 	    "uvas", 1 * hz / wakeup_time);
+	// }
+	// UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
 static void
