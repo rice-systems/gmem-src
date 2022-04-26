@@ -41,7 +41,8 @@
 
 static uma_zone_t gmem_uvas_entry_zone;
 static uma_zone_t gmem_uvas_unmap_requests_zone;
-static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused);
+static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas);
+static void gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 
 static void
 gmem_uvas_zone_init(void)
@@ -124,7 +125,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		// initialize uvas
 		TAILQ_INIT(&uvas->mapped_entries);
 		TAILQ_INIT(&uvas->unmap_requests);
-		TAILQ_INIT(&uvas->unmap_workspace);
+		// TAILQ_INIT(&uvas->unmap_workspace);
 		TAILQ_INIT(&uvas->dev_pmap_header);
 		uvas->unmap_pages = 0;
 
