@@ -591,8 +591,10 @@ gmem_uvas_async_unmap(void *args)
 	for (;;)
 	{
 		// periodically cleanup the unmap request queue. (10ms)
-		if (uvas->unmap_pages > 0)
+		if (uvas->unmap_pages > 0) {
+			printf("[async daemon] handling %d pages\n", uvas->unmap_pages);
 			gmem_uvas_generic_unmap_handler(uvas);
+		}
 		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
 		    "uvas", 1 * hz / wakeup_time);
 	}
