@@ -510,7 +510,8 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 {
 	UVAS_ENQUEUE_LOCK(uvas);
 	// Clear all pending unmap requests immediately.
-	gmem_uvas_generic_unmap_handler(uvas);
+	if (uvas->unmap_pages > 0)
+		gmem_uvas_generic_unmap_handler(uvas);
 	UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
@@ -589,7 +590,8 @@ gmem_uvas_async_unmap(void *args)
 	for (;;)
 	{
 		// periodically cleanup the unmap request queue. (10ms)
-		gmem_uvas_generic_unmap_handler(uvas);
+		if (uvas->unmap_pages > 0)
+			gmem_uvas_generic_unmap_handler(uvas);
 		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
 		    "uvas", 1 * hz / wakeup_time);
 	}
