@@ -573,6 +573,13 @@ TASKQGROUP_DEFINE(if_config_tqg, 1, 1);
 #endif /* !INVARIANTS */
 #endif
 
+int async_rx_unmap = 1, async_tx_unmap = 1;
+SYSCTL_INT(_vm_gmem, OID_AUTO, async_rx_unmap, CTLFLAG_RW,
+    &async_rx_unmap, 0,
+    "use async unmap DMA KPI for rx path");
+SYSCTL_INT(_vm_gmem, OID_AUTO, async_tx_unmap, CTLFLAG_RW,
+    &async_tx_unmap, 0,
+    "use async unmap DMA KPI for tx path");
 static SYSCTL_NODE(_net, OID_AUTO, iflib, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "iflib driver parameters");
 
@@ -2697,7 +2704,10 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	if (unload && irf->irf_len != 0) {
 		// bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
-		bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
+		if (async_rx_unmap)
+			bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
+		else
+			bus_dmamap_unload(fl->ifl_buf_tag, map);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))

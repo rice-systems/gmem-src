@@ -417,8 +417,10 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-#define unmap_coalesce_threshold 1024
-static int tlb_coalescing_threshold = 100;
+int unmap_coalesce_threshold = 1024
+int tlb_coalescing_threshold = 100;
+int enable_async = 1;
+int wakeup_time = 1; // 1 runs per 1 second
 
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
@@ -514,7 +516,7 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 {
 	gmem_uvas_entry_t *entry, *entry1;
 	dev_pmap_t *pmap;
-	if (wait) {
+	if (wait || !enable_async) {
 		// The termination will be sync
 		TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list)
 			pmap->mmu_ops->mmu_pmap_kill(pmap, ext_entries);
@@ -608,7 +610,6 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     return (0);
 }
 
-static int wakeup_time = 1; // 1 runs per 1 second
 static void
 gmem_uvas_async_unmap(void *args)
 {
@@ -655,3 +656,23 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 	sched_add(td, SRQ_BORING);
 	thread_unlock(td);
 }
+
+
+// int unmap_coalesce_threshold = 1024
+// int tlb_coalescing_threshold = 100;
+// int enable_async = 1;
+// int wakeup_time = 1; // 1 runs per 1 second
+static SYSCTL_NODE(_vm, OID_AUTO, gmem, CTLFLAG_RD | CTLFLAG_MPSAFE,
+    NULL, "");
+SYSCTL_INT(_vm_gmem, OID_AUTO, unmap_coalesce_threshold, CTLFLAG_RW,
+    &unmap_coalesce_threshold, 0,
+    "unmap requests coalescing threshold");
+SYSCTL_INT(_vm_gmem, OID_AUTO, tlb_coalesce_threshold, CTLFLAG_RW,
+    &tlb_coalescing_threshold, 0,
+    "TLB invl coalescing threshold");
+SYSCTL_INT(_vm_gmem, OID_AUTO, enable_unmap_async, CTLFLAG_RW,
+    &enable_async, 0,
+    "enable async unmap");
+SYSCTL_INT(_vm_gmem, OID_AUTO, wakeup_time, CTLFLAG_RW,
+    &wakeup_time, 0,
+    "async unmap wakeup frequency");
