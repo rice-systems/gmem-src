@@ -489,24 +489,11 @@ static inline void enqueue_unmap_req(
 	UVAS_ENQUEUE_LOCK(uvas);
 	uvas->unmap_pages += pages;
 	TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
-
-	// If the producer queue is full, swap it to the consumer queue 
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
-		// Wait if there are pending consumer tasks
-		UVAS_DEQUEUE_LOCK(uvas);
-
-		// refill the consumer queue
-		refill_consumer(uvas);
-
-		// allow other threads to refill the producer queue
 		UVAS_ENQUEUE_UNLOCK(uvas);
-
-		// we don't have to wait for the consumer queue to finish here. TODO: wakeup the async thread to do it.
-		gmem_uvas_generic_unmap_handler(uvas);
-		UVAS_DEQUEUE_UNLOCK(uvas);
-
-		// wakeup(&uvas->async_unmap_proc);
-	} else
+		wakeup(&uvas->async_unmap_proc);
+	}
+	else
 		UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
@@ -614,39 +601,50 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
 static void
 gmem_uvas_async_unmap(void *args)
 {
-	// gmem_uvas_t *uvas = (gmem_uvas_t *)args;
-	// UVAS_DEQUEUE_LOCK(uvas);
-	// for (;;)
-	// {
-	// 	// periodically cleanup the unmap request queue. (10ms)
-	// 	if (uvas->unmap_pages > 0) {
-	// 		// printf("[async daemon] handling %d pages\n", uvas->unmap_pages);
-	// 		gmem_uvas_generic_unmap_handler(uvas);
-	// 	}
-	// 	msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
-	// 	    "uvas", 1 * hz / wakeup_time);
-	// }
-	// UVAS_DEQUEUE_UNLOCK(uvas);
+	gmem_uvas_t *uvas = (gmem_uvas_t *)args;
+	UVAS_ENQUEUE_LOCK(uvas);
+	for (;;)
+	{
+		// Either we are timed out and need to clean up pending unmap requests,
+		// or we are kicked to clean up the fullfiled producer queue
+		if (uvas->unmap_pages > 0) {
+			// Wait if there are pending consumer tasks
+			UVAS_DEQUEUE_LOCK(uvas); // perhaps this is no longer necessary
+
+			// refill the consumer queue
+			refill_consumer(uvas);
+
+			// allow other threads to refill the producer queue while cleaning up the pending consumer tasks
+			UVAS_ENQUEUE_UNLOCK(uvas);
+			gmem_uvas_generic_unmap_handler(uvas);
+			UVAS_ENQUEUE_LOCK(uvas);
+
+			UVAS_DEQUEUE_UNLOCK(uvas); // perhaps this is no longer necessary
+		}
+		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
+		    "uvas", 1 * hz / wakeup_time);
+	}
+	UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
 static void
 gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 {
-	// int error;
-	// struct proc *p;
-	// struct thread *td;
+	int error;
+	struct proc *p;
+	struct thread *td;
 
-	// error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, RFSTOPPED, 0,
-	// 	"uvas");
-	// if (error)
-	// 	panic("uvas async daemon: error %d\n", error);
-	// td = FIRST_THREAD_IN_PROC(p);
-	// thread_lock(td);
+	error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, RFSTOPPED, 0,
+		"uvas");
+	if (error)
+		panic("uvas async daemon: error %d\n", error);
+	td = FIRST_THREAD_IN_PROC(p);
+	thread_lock(td);
 
-	// /* We're an idle task, don't count us in the load. */
-	// td->td_flags |= TDF_NOLOAD;
-	// sched_class(td, PRI_IDLE);
-	// sched_prio(td, PRI_MAX_IDLE);
-	// sched_add(td, SRQ_BORING);
-	// thread_unlock(td);
+	/* We're an idle task, don't count us in the load. */
+	td->td_flags |= TDF_NOLOAD;
+	sched_class(td, PRI_IDLE);
+	sched_prio(td, PRI_MAX_IDLE);
+	sched_add(td, SRQ_BORING);
+	thread_unlock(td);
 }
