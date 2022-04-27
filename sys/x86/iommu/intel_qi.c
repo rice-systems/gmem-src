@@ -251,7 +251,7 @@ dmar_qi_invalidate_locked(struct dmar_domain *domain, iommu_gaddr_t base,
 	}
 	dmar_qi_emit_wait_seq(unit, &gseq, emit_wait);
 	dmar_qi_advance_tail(unit);
-	dmar_qi_wait_for_seq(unit, &gseq, false);
+	dmar_qi_wait_for_seq(unit, &gseq, true);
 }
 
 void
@@ -268,7 +268,7 @@ dmar_qi_invalidate_domain(struct dmar_domain *domain)
 		DMAR_IQ_DESCR_IOTLB_DID(domain->domain), 0);
 	dmar_qi_emit_wait_seq(unit, &gseq, true);
 	dmar_qi_advance_tail(unit);
-	dmar_qi_wait_for_seq(unit, &gseq, false);
+	dmar_qi_wait_for_seq(unit, &gseq, true);
 	DMAR_UNLOCK(unit);
 }
 
