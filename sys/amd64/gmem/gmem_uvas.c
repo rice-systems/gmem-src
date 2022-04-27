@@ -409,14 +409,6 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	return GMEM_OK;
 }
 
-#define uvas_insert_unmap_req(uvas, req) \
-{ \
-	UVAS_ENQUEUE_LOCK(uvas); \
-	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT; \
-	TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next); \
-	UVAS_ENQUEUE_UNLOCK(uvas); \
-} \
-
 #define unmap_coalesce_threshold 1024
 
 
@@ -448,30 +440,11 @@ static void gmem_uvas_generic_unmap_handler(void *arg, int pending __unused)
 		TAILQ_REMOVE(&uvas->unmap_workspace, req, next);
 		uma_zfree(gmem_uvas_unmap_requests_zone, req);
 	}
-	UVAS_DEQUEUE_UNLOCK(uvas);
 }
 
 // ENQUEUE must be locked
 static inline void gmem_uvas_dispatch_unmap_task(gmem_uvas_t *uvas, bool wait)
 {
-	UVAS_ENQUEUE_ASSERT_LOCKED(uvas);
-
-	// Swap producer queue with the empty consumer queue
-	UVAS_DEQUEUE_LOCK(uvas);
-
-	KASSERT(TAILQ_EMPTY(&uvas->unmap_workspace), 
-		"The consumer queue is not empty before swapping\n");
-	TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
-	uvas->unmap_working_pages = uvas->unmap_pages;
-	uvas->unmap_pages = 0;
-	// Allow other producers when consumer is on.
-	UVAS_ENQUEUE_UNLOCK(uvas);
-
-	if (wait)
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
-	else
-		// TODO: replace it with waking a kernel thread
-		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
 }
 
 static inline void enqueue_unmap_req(
@@ -482,22 +455,37 @@ static inline void enqueue_unmap_req(
 {
 	struct unmap_request *req;
 	gmem_uvas_entry_t *entry, *entry1;
+	struct unmap_task_tailq request_q;
+	int pages = 0;
 
 	// ext_entries is assumed to be a private copy that requires no locks.
+	TAILQ_INIT(&request_q);
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
 		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
+		pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
 		req->entry = entry;
 		req->cb = NULL;
-		req->cb_args = NULL;
-		uvas_insert_unmap_req(uvas, req);
+		TAILQ_INSERT_TAIL(&request_q, req, next);
 	}
 	req->cb = unmap_callback;
 	req->cb_args = callback_args;
 
 	UVAS_ENQUEUE_LOCK(uvas);
+	TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
+	uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
-		gmem_uvas_dispatch_unmap_task(uvas, false);
+
+		// Swap producer queue with the empty consumer queue
+		UVAS_DEQUEUE_LOCK(uvas);
+		TAILQ_CONCAT(&uvas->unmap_workspace, &uvas->unmap_requests, next);
+		uvas->unmap_working_pages = uvas->unmap_pages;
+		uvas->unmap_pages = 0;
+		// Allow other producers when consumer is on.
+		UVAS_ENQUEUE_UNLOCK(uvas);
+
+		gmem_uvas_generic_unmap_handler((void *) uvas, 0);
+		UVAS_DEQUEUE_UNLOCK(uvas);
 	} 
 	else
 		UVAS_ENQUEUE_UNLOCK(uvas);
