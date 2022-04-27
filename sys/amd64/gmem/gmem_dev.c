@@ -39,13 +39,6 @@
 static gmem_devmap_t gmem_devmap_store;
 #define gmem_devmap (&gmem_devmap_store)
 
-static SYSCTL_NODE(_vm, OID_AUTO, gmem, CTLFLAG_RD, 0, "GMEM Info");
-
-static int gmem_inited = 0;
-SYSCTL_INT(_vm_gmem, OID_AUTO, gmem_init, CTLFLAG_RD,
-    &gmem_inited, 0,
-    "Whether gmem is initialized");
-
 static void gmem_dev_init(void);
 SYSINIT(gmem_dev_init, SI_SUB_DRIVERS - 1, SI_ORDER_FIRST, gmem_dev_init, NULL);
 
@@ -57,9 +50,6 @@ static void gmem_dev_init(void)
 	gmem_devmap->unr = new_unrhdr(0, MAXNGMEMDEV - 1, NULL);
 	for (i = 0; i < MAXNGMEMDEV; i ++)
 		gmem_devmap->dev[i] = NULL;
-
-	gmem_inited = 1;
-	printf("GMEM DEV INIT PASS\n");
 }
 
 // allocate a device in gmem_devmap
