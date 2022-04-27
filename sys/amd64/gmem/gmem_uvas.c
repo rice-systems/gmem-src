@@ -493,7 +493,7 @@ static inline void enqueue_unmap_req(
 	// If the producer queue is full, swap it to the consumer queue 
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
 		// Wait if there are pending consumer tasks
-		UVAS_DEQUEUE_LOCK(uvas)
+		UVAS_DEQUEUE_LOCK(uvas);
 
 		// refill the consumer queue
 		refill_consumer(uvas);
