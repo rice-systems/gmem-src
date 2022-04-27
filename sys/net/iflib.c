@@ -576,10 +576,10 @@ TASKQGROUP_DEFINE(if_config_tqg, 1, 1);
 int async_rx_unmap = 1, async_tx_unmap = 1;
 static SYSCTL_NODE(_net, OID_AUTO, iflib, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "iflib driver parameters");
-SYSCTL_INT(_net, OID_AUTO, async_rx_unmap, CTLFLAG_RW,
+SYSCTL_INT(_net_iflib, OID_AUTO, async_rx_unmap, CTLFLAG_RW,
     &async_rx_unmap, 0,
     "use async unmap DMA KPI for rx path");
-SYSCTL_INT(_net, OID_AUTO, async_tx_unmap, CTLFLAG_RW,
+SYSCTL_INT(_net_iflib, OID_AUTO, async_tx_unmap, CTLFLAG_RW,
     &async_tx_unmap, 0,
     "use async unmap DMA KPI for tx path");
 
