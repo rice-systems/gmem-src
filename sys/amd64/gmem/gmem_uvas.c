@@ -490,6 +490,12 @@ static inline void enqueue_unmap_req(
 	uvas->unmap_pages += pages;
 	TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
+		// The producer queue is full, make sure to swap everything to the consumer queue
+		// If the consumer queue has pending tasks, we will wait for them to be finished
+		UVAS_DEQUEUE_LOCK(uvas);
+		refill_consumer(uvas);
+		UVAS_DEQUEUE_UNLOCK(uvas);
+
 		UVAS_ENQUEUE_UNLOCK(uvas);
 		wakeup(&uvas->async_unmap_proc);
 	}
@@ -607,20 +613,20 @@ gmem_uvas_async_unmap(void *args)
 	{
 		// Either we are timed out and need to clean up pending unmap requests,
 		// or we are kicked to clean up the fullfiled producer queue
+		UVAS_DEQUEUE_LOCK(uvas);
 		if (uvas->unmap_pages > 0) {
-			// Wait if there are pending consumer tasks
-			UVAS_DEQUEUE_LOCK(uvas); // perhaps this is no longer necessary
-
 			// refill the consumer queue
 			refill_consumer(uvas);
+		}
 
-			// allow other threads to refill the producer queue while cleaning up the pending consumer tasks
+		// allow other threads to refill the producer queue while cleaning up the pending consumer tasks
+		if (uvas->unmap_working_pages > 0) {
 			UVAS_ENQUEUE_UNLOCK(uvas);
 			gmem_uvas_generic_unmap_handler(uvas);
 			UVAS_ENQUEUE_LOCK(uvas);
-
-			UVAS_DEQUEUE_UNLOCK(uvas); // perhaps this is no longer necessary
 		}
+		UVAS_DEQUEUE_UNLOCK(uvas);
+
 		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
 		    "uvas", 1 * hz / wakeup_time);
 	}
