@@ -454,25 +454,25 @@ static inline void enqueue_unmap_req(
 {
 	struct unmap_request *req;
 	gmem_uvas_entry_t *entry, *entry1;
+	struct unmap_task_tailq request_q;
+	int pages = 0;
 
+	TAILQ_INIT(&request_q);
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
 		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
 		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
 		req->entry = entry;
-		if (!TAILQ_EMPTY(ext_entries)) {
-			req->cb = NULL;
-			req->cb_args = NULL;
-		} else {
-			req->cb = unmap_callback;
-			req->cb_args = callback_args;
-		}
-		UVAS_ENQUEUE_LOCK(uvas);
-		uvas->unmap_pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
-		TAILQ_INSERT_TAIL(&uvas->unmap_requests, req, next);
-		UVAS_ENQUEUE_UNLOCK(uvas);
+		req->cb = NULL;
+		// req->cb_args = NULL;
+		pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+		TAILQ_INSERT_TAIL(&request_q, req, next);
 	}
+	req->cb = unmap_callback;
+	req->cb_args = callback_args;
 
 	UVAS_ENQUEUE_LOCK(uvas);
+	uvas->unmap_pages += pages;
+	TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
 	// If the queue is full, drop the lock and wakup the async thread.
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
 		gmem_uvas_generic_unmap_handler(uvas);
