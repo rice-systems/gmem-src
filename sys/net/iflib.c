@@ -574,14 +574,14 @@ TASKQGROUP_DEFINE(if_config_tqg, 1, 1);
 #endif
 
 int async_rx_unmap = 1, async_tx_unmap = 1;
-SYSCTL_INT(_vm_gmem, OID_AUTO, async_rx_unmap, CTLFLAG_RW,
-    &async_rx_unmap, 0,
-    "use async unmap DMA KPI for rx path");
-SYSCTL_INT(_vm_gmem, OID_AUTO, async_tx_unmap, CTLFLAG_RW,
-    &async_tx_unmap, 0,
-    "use async unmap DMA KPI for tx path");
 static SYSCTL_NODE(_net, OID_AUTO, iflib, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "iflib driver parameters");
+SYSCTL_INT(_net, OID_AUTO, async_rx_unmap, CTLFLAG_RW,
+    &async_rx_unmap, 0,
+    "use async unmap DMA KPI for rx path");
+SYSCTL_INT(_net, OID_AUTO, async_tx_unmap, CTLFLAG_RW,
+    &async_tx_unmap, 0,
+    "use async unmap DMA KPI for tx path");
 
 /*
  * XXX need to ensure that this can't accidentally cause the head to be moved backwards 
