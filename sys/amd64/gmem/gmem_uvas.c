@@ -417,6 +417,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 }
 
 #define unmap_coalesce_threshold 1024
+static int tlb_coalescing_threshold = 100;
 
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
@@ -424,14 +425,17 @@ static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 	struct unmap_request *req, *req_tmp;
 	gmem_uvas_entry_t *entry;
 
+	bool tlb_coalesce = uvas->unmap_pages >= tlb_coalescing_threshold ? true : false;
 	// unmap all mmus
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
 		TAILQ_FOREACH(req, &uvas->unmap_requests, next) {
 			entry = req->entry;
 			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
-			// pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+			if (!tlb_coalesce)
+				pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
 		}
-		pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap, &uvas->unmap_requests, uvas->unmap_pages);
+		if (tlb_coalesce)
+			pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap);
 	}
 
 	// free va space and process callbacks
@@ -582,23 +586,23 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     return (0);
 }
 
-// static int wakeup_time = 10; // 10 runs per 1 second
+static int wakeup_time = 10; // 10 runs per 1 second
 static void
 gmem_uvas_async_unmap(void *args)
 {
-	// gmem_uvas_t *uvas = (gmem_uvas_t *)args;
-	// UVAS_ENQUEUE_LOCK(uvas);
-	// for (;;)
-	// {
-	// 	// periodically cleanup the unmap request queue. (10ms)
-	// 	if (uvas->unmap_pages > 0) {
-	// 		printf("[async daemon] handling %d pages\n", uvas->unmap_pages);
-	// 		gmem_uvas_generic_unmap_handler(uvas);
-	// 	}
-	// 	msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
-	// 	    "uvas", 1 * hz / wakeup_time);
-	// }
-	// UVAS_ENQUEUE_UNLOCK(uvas);
+	gmem_uvas_t *uvas = (gmem_uvas_t *)args;
+	UVAS_ENQUEUE_LOCK(uvas);
+	for (;;)
+	{
+		// periodically cleanup the unmap request queue. (10ms)
+		if (uvas->unmap_pages > 0) {
+			// printf("[async daemon] handling %d pages\n", uvas->unmap_pages);
+			gmem_uvas_generic_unmap_handler(uvas);
+		}
+		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
+		    "uvas", 1 * hz / wakeup_time);
+	}
+	UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
 static void

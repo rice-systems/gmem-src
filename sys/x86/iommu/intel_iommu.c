@@ -186,17 +186,9 @@ static inline void intel_iommu_tlb_inv_domain(dev_pmap_t *pmap)
 }
 
 static void intel_iommu_tlb_invl_coalesced(
-	dev_pmap_t *pmap, 
-	struct unmap_task_tailq *reqs, 
-	uint32_t req_cnt)
+	dev_pmap_t *pmap)
 {
-	if (req_cnt > 0)
-		intel_iommu_tlb_inv_domain(pmap);
-	else {
-		// TAILQ_FOREACH(reqs)
-		if (reqs != NULL)
-			intel_iommu_tlb_inv_domain(pmap);
-	}
+	intel_iommu_tlb_inv_domain(pmap);
 }
 
 gmem_mmu_ops_t intel_iommu_ops = {
