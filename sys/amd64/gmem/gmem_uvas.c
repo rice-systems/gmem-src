@@ -623,9 +623,11 @@ gmem_uvas_async_unmap(void *args)
 		if (uvas->unmap_working_pages > 0) {
 			UVAS_ENQUEUE_UNLOCK(uvas);
 			gmem_uvas_generic_unmap_handler(uvas);
+			UVAS_DEQUEUE_UNLOCK(uvas);
 			UVAS_ENQUEUE_LOCK(uvas);
 		}
-		UVAS_DEQUEUE_UNLOCK(uvas);
+		else
+			UVAS_DEQUEUE_UNLOCK(uvas);
 
 		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
 		    "uvas", 1 * hz / wakeup_time);
