@@ -453,7 +453,7 @@ static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 	uvas->unmap_working_pages = 0;
 }
 
-static inline void refill_consumer(gmem_uvas_t uvas)
+static inline void refill_consumer(gmem_uvas_t *uvas)
 {
 	UVAS_ASSERT_DEQUEUE_LOCKED(uvas);
 	UVAS_ASSERT_ENQUEUE_LOCKED(uvas);
