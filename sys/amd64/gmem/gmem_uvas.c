@@ -487,8 +487,6 @@ static inline void enqueue_unmap_req(
 	req->cb_args = callback_args;
 
 	UVAS_ENQUEUE_LOCK(uvas);
-	uvas->unmap_pages += pages;
-	TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
 	if (uvas->unmap_pages > unmap_coalesce_threshold) {
 		// The producer queue is full, make sure to swap everything to the consumer queue
 		// If the consumer queue has pending tasks, we will wait for them to be finished
@@ -496,11 +494,16 @@ static inline void enqueue_unmap_req(
 		refill_consumer(uvas);
 		UVAS_DEQUEUE_UNLOCK(uvas);
 
+		uvas->unmap_pages += pages;
+		TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
 		UVAS_ENQUEUE_UNLOCK(uvas);
 		wakeup(&uvas->async_unmap_proc);
 	}
-	else
+	else {
+		uvas->unmap_pages += pages;
+		TAILQ_CONCAT(&uvas->unmap_requests, &request_q, next);
 		UVAS_ENQUEUE_UNLOCK(uvas);
+	}
 }
 
 // munmap all for program termination or whatever.
