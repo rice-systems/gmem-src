@@ -597,7 +597,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
     return (0);
 }
 
-// static int wakeup_time = 10; // 10 runs per 1 second
+static int wakeup_time = 10; // 10 runs per 1 second
 static void
 gmem_uvas_async_unmap(void *args)
 {
