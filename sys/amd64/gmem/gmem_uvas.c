@@ -154,8 +154,9 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		} else {
 			uvas->allocator = VMEM;
 			// Currently we use the maximum available quantum cache (16)
+			// nextfit/bestfit/firstfit do not impact iommu netperf performance.
 			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-				alignment, alignment * 16, M_WAITOK | M_BESTFIT);
+				alignment, alignment * 16, M_WAITOK | M_FIRSTFIT);
 		}
 
 		*uvas_res = uvas;
@@ -418,7 +419,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 }
 
 int unmap_coalesce_threshold = 1024;
-int tlb_coalescing_threshold = 100;
+int tlb_coalescing_threshold = 5;
 int enable_async = 1;
 int wakeup_time = 1; // 1 runs per 1 second
 
