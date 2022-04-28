@@ -538,10 +538,23 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 {
 	UVAS_ENQUEUE_LOCK(uvas);
-	// Clear all pending unmap requests immediately.
-	if (uvas->unmap_pages > 0)
+
+	// If the producer queue is full, swap it to the consumer queue 
+	if (uvas->unmap_pages > 0) {
+		// Wait if there are pending consumer tasks
+		UVAS_DEQUEUE_LOCK(uvas);
+
+		// refill the consumer queue
+		refill_consumer(uvas);
+
+		// allow other threads to refill the producer queue
+		UVAS_ENQUEUE_UNLOCK(uvas);
+
+		// Someone has to process all the pending unmap requests, let's do it now.
 		gmem_uvas_generic_unmap_handler(uvas);
-	UVAS_ENQUEUE_UNLOCK(uvas);
+		UVAS_DEQUEUE_UNLOCK(uvas);
+	} else
+		UVAS_ENQUEUE_UNLOCK(uvas);
 }
 
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,

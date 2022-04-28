@@ -915,6 +915,19 @@ iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1)
 }
 
 static void
+iommu_bus_dmamap_unload_flush(bus_dma_tag_t dmat)
+{
+	struct bus_dma_tag_iommu *tag;
+	struct iommu_ctx *ctx;
+	struct iommu_domain *domain;
+
+	tag = (struct bus_dma_tag_iommu *)dmat;]
+	ctx = tag->ctx;
+	domain = ctx->domain;
+	gmem_uvas_drain_unmap_tasks(domain->uvas);
+}
+
+static void
 iommu_bus_dmamap_unload_async(bus_dma_tag_t dmat, bus_dmamap_t map1, void (* cb)(void *), void *args)
 {
 	_iommu_bus_dmamap_unload(dmat, map1, false, cb, args);
@@ -949,6 +962,7 @@ struct bus_dma_impl bus_dma_iommu_impl = {
 
 	// effectively it is an unmap function
 	.map_unload_async = iommu_bus_dmamap_unload_async,
+	.map_unload_flush = iommu_bus_dmamap_unload_flush,
 	.map_unload = iommu_bus_dmamap_unload,
 	.map_sync = iommu_bus_dmamap_sync,
 };

@@ -573,12 +573,15 @@ TASKQGROUP_DEFINE(if_config_tqg, 1, 1);
 #endif /* !INVARIANTS */
 #endif
 
-int async_rx_unmap = 1, async_tx_unmap = 1;
+int async_rx_unmap = 1, async_tx_unmap = 1, async_rx_flush;
 static SYSCTL_NODE(_net, OID_AUTO, iflib, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "iflib driver parameters");
 SYSCTL_INT(_net_iflib, OID_AUTO, async_rx_unmap, CTLFLAG_RW,
     &async_rx_unmap, 0,
     "use async unmap DMA KPI for rx path");
+SYSCTL_INT(_net_iflib, OID_AUTO, async_rx_flush, CTLFLAG_RW,
+    &async_rx_flush, 0,
+    "use async unmap flush DMA KPI for rx path");
 SYSCTL_INT(_net_iflib, OID_AUTO, async_tx_unmap, CTLFLAG_RW,
     &async_tx_unmap, 0,
     "use async unmap DMA KPI for tx path");
@@ -2981,7 +2984,8 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		iflib_get_ip_forwarding(&rxq->ifr_lc, &v4_forwarding, &v6_forwarding);
 
 	// TODO: This is the safest point to sync IOMMU unmaps.
-	bus_dmamap_unload_flush_all();
+	if (async_rx_flush)
+		bus_dmamap_unload_flush_tag(fl->ifl_buf_tag);
 
 	mt = mf = NULL;
 	while (mh != NULL) {
