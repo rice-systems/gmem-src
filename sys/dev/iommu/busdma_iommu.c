@@ -921,7 +921,7 @@ iommu_bus_dmamap_unload_flush(bus_dma_tag_t dmat)
 	struct iommu_ctx *ctx;
 	struct iommu_domain *domain;
 
-	tag = (struct bus_dma_tag_iommu *)dmat;]
+	tag = (struct bus_dma_tag_iommu *)dmat;
 	ctx = tag->ctx;
 	domain = ctx->domain;
 	gmem_uvas_drain_unmap_tasks(domain->uvas);
