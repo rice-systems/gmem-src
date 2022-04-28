@@ -155,7 +155,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 			uvas->allocator = VMEM;
 			// Currently we use the maximum available quantum cache (16)
 			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-				alignment, alignment * 16, M_WAITOK | M_NEXTFIT);
+				alignment, alignment * 16, M_WAITOK | M_BESTFIT);
 		}
 
 		*uvas_res = uvas;
