@@ -48,10 +48,11 @@ __FBSDID("$FreeBSD$");
 
 static MALLOC_DEFINE(M_IOMMU_TEST, "iommu_test", "IOMMU test pool");
 
-static int map(struct dmar_domain *domain, dmar_gaddr_t start, dmar_gaddr_t size,
+static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
     vm_page_t *pages, uint64_t pflags, int flags, bool contig)
 {
 	vm_offset_t i, last_i = 0;
+	int error;
 
 	// coalesce mapping requests
 	while(last_i * GMEM_PAGE_SIZE < size) {
@@ -68,6 +69,9 @@ static int map(struct dmar_domain *domain, dmar_gaddr_t start, dmar_gaddr_t size
 		error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
+
+		if (error != 0)
+			panic("domain_map_buf returns error: %d\n", error);
 
 		last_i = i + 1;
 	}
@@ -107,9 +111,9 @@ dmar_domain_destroy_fake(struct dmar_domain *domain)
 	// 	dmar_gas_fini_domain(domain);
 	// if ((domain->flags & DMAR_DOMAIN_PGTBL_INITED) != 0)
 		domain_free_pgtbl(domain);
-	mtx_destroy(&domain->dmar->lock);
+	// mtx_destroy(&domain->dmar->iommu.lock);
 	free(domain->dmar, M_IOMMU_TEST);
-	mtx_destroy(&domain->lock);
+	// mtx_destroy(&domain->lock);
 	free(domain, M_IOMMU_TEST);
 }
 
@@ -122,11 +126,11 @@ dmar_domain_alloc_fake(bool id_mapped)
 
 	id = 7;
 	fake_dmar = malloc(sizeof(*fake_dmar), M_IOMMU_TEST, M_WAITOK | M_ZERO);
-	mtx_init(&fake_dmar->lock, "fake_dmar", NULL, MTX_DEF);
+	// mtx_init(&fake_dmar->iommu.lock, "fake_dmar", NULL, MTX_DEF);
 
 	domain = malloc(sizeof(*domain), M_IOMMU_TEST, M_WAITOK | M_ZERO);
 	domain->domain = id;
-	mtx_init(&domain->lock, "fake_domain", NULL, MTX_DEF);
+	// mtx_init(&domain->lock, "fake_domain", NULL, MTX_DEF);
 	domain->dmar = fake_dmar;
 
 	/*
@@ -166,10 +170,10 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 {
 	struct dmar_domain *fake_domain;
 	int pglvl, pgtb_cnt;
-	dmar_gaddr_t va, va_start, pg0 = 1 << 12, pg1 = 1 << 21, pg2 = 1 << 30;
-	dmar_gaddr_t size = npages << PAGE_SHIFT;
+	vm_paddr_t va, va_start, pg0 = 1 << 12, pg1 = 1 << 21, pg2 = 1 << 30;
+	vm_paddr_t size = npages << PAGE_SHIFT;
 	int test_cases = 8;
-	dmar_gaddr_t test_start[8] = {0, pg0, pg1, pg0 + pg1, pg2, pg0 + pg2,
+	vm_paddr_t test_start[8] = {0, pg0, pg1, pg0 + pg1, pg2, pg0 + pg2,
 		pg1 + pg2, pg0 + pg1 + pg2};
 
 	uprintf("verification starts, # of page table pages: %d\n", dmar_tbl_pagecnt);
@@ -217,7 +221,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 				break;
 			}
 
-		if (domain_unmap_buf(fake_domain, va_start, size, DMAR_PGF_WAITOK)) {
+		if (domain_unmap_buf(fake_domain, va_start, size)) {
 			printf("error unmapping buffer\n");
 			return 1;
 		}
@@ -233,9 +237,9 @@ static int bench(vm_page_t *ma, unsigned long npages)
 {
 	struct dmar_domain *fake_domain;
 	int test_cases = 3, run = 30;
-	dmar_gaddr_t va_start, pg0 = 1 << 12, pg1 = 1 << 21, pg2 = 1 << 30;
-	dmar_gaddr_t maxsize = npages << PAGE_SHIFT, size, sizeshift;
-	dmar_gaddr_t test_start[3] = {pg0, pg1, pg2};
+	vm_paddr_t va_start, pg0 = 1 << 12, pg1 = 1 << 21, pg2 = 1 << 30;
+	vm_paddr_t maxsize = npages << PAGE_SHIFT, size, sizeshift;
+	vm_paddr_t test_start[3] = {pg0, pg1, pg2};
 	uint64_t delta, mean[3][34][2] = {{{0}}}, std[3][34][2] = {{{0}}}, sample[30][2];
 
 	fake_domain = dmar_domain_alloc_fake(false);
@@ -262,7 +266,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 				sample[try][0] = rdtscp() - delta;
 
 				delta = rdtscp();
-				if (domain_unmap_buf(fake_domain, va_start, size, DMAR_PGF_WAITOK)) {
+				if (domain_unmap_buf(fake_domain, va_start, size)) {
 					uprintf("error unmapping buffer\n");
 					break;
 				}
@@ -314,7 +318,7 @@ static int test_iommu(bool id_mapped)
 	vm_page_t m, *ma;
 	vm_object_t object;
 	vm_paddr_t high = 32ULL << 30;
-	dmar_gaddr_t size = npages << PAGE_SHIFT;
+	vm_paddr_t size = npages << PAGE_SHIFT;
 
 	object = vm_pager_allocate(OBJT_PHYS, NULL, size * 2, 0, 0, NULL);
 	VM_OBJECT_WLOCK(object);
