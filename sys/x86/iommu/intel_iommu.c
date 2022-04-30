@@ -97,7 +97,7 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
 	    ((prot & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
 	    ((prot & IOMMU_MAP_ENTRY_TM) != 0 ? DMAR_PTE_TM : 0);
-	pflags = DMAR_PTE_R | DMAR_PTE_W;
+	// pflags = DMAR_PTE_R | DMAR_PTE_W;
 
 	intel_iommu_pgtable_t *pgtable = pmap->data;
 	domain = pgtable->domain;
