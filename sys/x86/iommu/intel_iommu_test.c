@@ -180,7 +180,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 	uprintf("verification starts, # of page table pages: %d\n", dmar_tbl_pagecnt);
 	fake_domain = dmar_domain_alloc_fake(false);
 	pgtb_cnt = dmar_tbl_pagecnt;
-	for (int i = 0; i < test_cases; i ++) {
+	for (int i = 1; i < test_cases; i ++) {
 		va_start = test_start[i];
 		if (map(fake_domain, va_start, size, ma, 
 			DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true)) {
