@@ -182,7 +182,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 	for (int i = 0; i < test_cases; i ++) {
 		va_start = test_start[i];
 		if (map(fake_domain, va_start, size, ma, 
-			DMAR_PTE_R | DMAR_PTE_W, DMAR_PGF_WAITOK, true)) {
+			DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true)) {
 			printf("error mapping buffer\n");
 			return 1;
 		}
