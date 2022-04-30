@@ -631,17 +631,17 @@ gmem_uvas_async_unmap(void *args)
 	UVAS_ENQUEUE_LOCK(uvas);
 	for (;;)
 	{
-		if (uvas->unmap_pages > 0) {
-			// refill the consumer queue
-			UVAS_DEQUEUE_LOCK(uvas);
-			refill_consumer(uvas);
+		// if (uvas->unmap_pages > 0) {
+		// 	// refill the consumer queue
+		// 	UVAS_DEQUEUE_LOCK(uvas);
+		// 	refill_consumer(uvas);
 
-			// Someone has to process all the pending unmap requests, let's do it now.
-			UVAS_ENQUEUE_UNLOCK(uvas);
-			gmem_uvas_generic_unmap_handler(uvas);
-			UVAS_DEQUEUE_UNLOCK(uvas);
-			UVAS_ENQUEUE_LOCK(uvas);
-		}
+		// 	// Someone has to process all the pending unmap requests, let's do it now.
+		// 	UVAS_ENQUEUE_UNLOCK(uvas);
+		// 	gmem_uvas_generic_unmap_handler(uvas);
+		// 	UVAS_DEQUEUE_UNLOCK(uvas);
+		// 	UVAS_ENQUEUE_LOCK(uvas);
+		// }
 
 		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
 		    "uvas", 1 * hz / wakeup_time);
