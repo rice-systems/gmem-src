@@ -66,6 +66,8 @@ static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
 		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
+		printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
+			(i + 1 - last_i) * GMEM_PAGE_SIZE)
 		error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
@@ -87,7 +89,7 @@ static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int 
 	for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 		id = (va >> shift) & DMAR_PTEMASK;
 		if (lvl == domain->pglvl - 1)
-			printf("[pde val] %pmonitor\n", pte);
+			printf("[pde val] %p\n", pte);
 		pte = &pte[id];
 		if (*pte != 0) {
 			if ((*pte & DMAR_PTE_SP) != 0 || lvl == domain->pglvl - 1) {
