@@ -400,6 +400,7 @@ finish:
 						(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
 				size -= mapsize;
 				base += mapsize;
+				pa += mapsize;
 			}
 		}
 		i ++;
