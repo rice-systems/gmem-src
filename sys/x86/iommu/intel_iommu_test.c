@@ -139,16 +139,16 @@ dmar_domain_alloc_fake(bool id_mapped)
 	 * It is useful for the identity mapping, and less so for the
 	 * virtualized bus address space.
 	 */
-	domain->end = id_mapped ? ptoa(Maxmem) : BUS_SPACE_MAXADDR;
+	domain->iodom.end = id_mapped ? ptoa(Maxmem) : BUS_SPACE_MAXADDR;
 	// magic number stolen from existing hardware
 	fake_dmar->hw_cap = 0xd2008c20660462;
-	mgaw = dmar_maxaddr2mgaw(fake_dmar, domain->end, !id_mapped);
+	mgaw = dmar_maxaddr2mgaw(fake_dmar, domain->iodom.end, !id_mapped);
 	error = domain_set_agaw(domain, mgaw);
 	if (error != 0)
 		goto fail;
 	if (!id_mapped)
 		/* Use all supported address space for remapping. */
-		domain->end = 1ULL << (domain->agaw - 1);
+		domain->iodom.end = 1ULL << (domain->agaw - 1);
 
 	// dmar_gas_init_domain(domain);
 	// if (id_mapped) {
