@@ -194,8 +194,8 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 		va = va_start;
 		for (int j = 0; j < npages; j ++) {
 			if (x86_translate(fake_domain, va, &pglvl) != VM_PAGE_TO_PHYS(ma[j])) {
-				printf("mapping verification failed, va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
-					va, j, x86_translate(fake_domain, va, &pglvl), VM_PAGE_TO_PHYS(ma[j]));
+				printf("test case [%d]: mapping verification failed, va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
+					i, va, j, x86_translate(fake_domain, va, &pglvl), VM_PAGE_TO_PHYS(ma[j]));
 				return 1;
 			}
 			else
