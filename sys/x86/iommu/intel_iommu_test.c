@@ -193,8 +193,10 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 		int truth[3] = {0};
 		va = va_start;
 		for (int j = 0; j < npages; j ++) {
+			uprintf("test case [%d]: verbose mapping verification, va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
+				i, va, j, x86_translate(fake_domain, va, &pglvl), VM_PAGE_TO_PHYS(ma[j]));
 			if (x86_translate(fake_domain, va, &pglvl) != VM_PAGE_TO_PHYS(ma[j])) {
-				printf("test case [%d]: mapping verification failed, va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
+				uprintf("test case [%d]: mapping verification failed, va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
 					i, va, j, x86_translate(fake_domain, va, &pglvl), VM_PAGE_TO_PHYS(ma[j]));
 				return 1;
 			}
@@ -341,7 +343,7 @@ static int test_iommu(bool id_mapped)
 
 
 	verify_sp(ma, npages);
-	bench(ma, npages);
+	// bench(ma, npages);
 
 	free(ma, M_IOMMU_TEST);
 	vm_object_deallocate(object);
