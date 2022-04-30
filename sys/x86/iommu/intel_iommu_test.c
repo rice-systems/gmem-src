@@ -2,25 +2,25 @@
 __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/bus.h>
-#include <sys/kernel.h>
-#include <sys/lock.h>
+#include <sys/systm.h>
 #include <sys/malloc.h>
+#include <sys/bus.h>
+#include <sys/interrupt.h>
+#include <sys/kernel.h>
+#include <sys/ktr.h>
+#include <sys/lock.h>
 #include <sys/memdesc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
-#include <sys/queue.h>
-#include <sys/rman.h>
 #include <sys/rwlock.h>
-#include <sys/sched.h>
+#include <sys/rman.h>
 #include <sys/sf_buf.h>
 #include <sys/sysctl.h>
-#include <sys/systm.h>
 #include <sys/taskqueue.h>
-#include <sys/time.h>
 #include <sys/tree.h>
+#include <sys/uio.h>
 #include <sys/vmem.h>
-#include <dev/pci/pcivar.h>
+#include <sys/vmmeter.h>
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
@@ -28,16 +28,22 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 #include <vm/vm_map.h>
+#include <dev/pci/pcireg.h>
+#include <machine/atomic.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/intr_machdep.h>
 #include <machine/md_var.h>
-#include <x86/include/apicvar.h>
+#include <machine/specialreg.h>
 #include <x86/include/busdma_impl.h>
+#include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
-#include <x86/iommu/busdma_dmar.h>
-#include <dev/pci/pcireg.h>
 #include <x86/iommu/intel_dmar.h>
+
+#include <sys/gmem.h>
+#include <amd64/gmem/gmem_dev.h>
+#include <amd64/gmem/gmem_uvas.h>
+#include <x86/iommu/intel_iommu.h>
+
 #include <sys/module.h>
 
 static MALLOC_DEFINE(M_IOMMU_TEST, "iommu_test", "IOMMU test pool");
