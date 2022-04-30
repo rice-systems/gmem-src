@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD$");
 
 static MALLOC_DEFINE(M_IOMMU_TEST, "iommu_test", "IOMMU test pool");
 
-static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
+static void map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
     vm_page_t *pages, uint64_t pflags, int flags, bool contig)
 {
 	vm_offset_t i, last_i = 0;
