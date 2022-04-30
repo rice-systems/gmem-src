@@ -86,6 +86,8 @@ static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int 
 	dmar_pte_t *pte = (dmar_pte_t *) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
 	for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 		id = (va >> shift) & DMAR_PTEMASK;
+		if (lvl == doman->pglvl - 1)
+			printf("[pde val] %p\n", pte);
 		pte = &pte[id];
 		if (*pte != 0) {
 			if ((*pte & DMAR_PTE_SP) != 0 || lvl == domain->pglvl - 1) {
