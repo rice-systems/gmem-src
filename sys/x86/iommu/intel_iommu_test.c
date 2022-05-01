@@ -191,7 +191,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 			printf("error mapping buffer\n");
 			return 1;
 		}
-		uprintf("start verification\n");
+		uprintf("test case [%d], start verification\n", i);
 
 		// verify mapping
 		int pgcnt[3] = {0};
