@@ -2977,6 +2977,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 			mt = m;
 		}
 	}
+	printf("[rxeof] Done with budget\n");
 	// This is the secured point to sync IOMMU unmaps.
 	// if (async_rx_flush)
 	// 	bus_dmamap_unload_flush_tag(fl->ifl_buf_tag);
