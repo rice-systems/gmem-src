@@ -678,15 +678,15 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 // int wakeup_time = 1; // 1 runs per 1 second
 static SYSCTL_NODE(_vm, OID_AUTO, gmem, CTLFLAG_RD | CTLFLAG_MPSAFE,
     NULL, "");
-SYSCTL_INT(_vm_gmem, OID_AUTO, unmap_coalesce_threshold, CTLFLAG_RW,
+SYSCTL_INT(_vm_gmem, OID_AUTO, unmap_coalesce_threshold, CTLFLAG_RWTUN,
     &unmap_coalesce_threshold, 0,
     "unmap requests coalescing threshold");
-SYSCTL_INT(_vm_gmem, OID_AUTO, tlb_coalesce_threshold, CTLFLAG_RW,
+SYSCTL_INT(_vm_gmem, OID_AUTO, tlb_coalesce_threshold, CTLFLAG_RWTUN,
     &tlb_coalescing_threshold, 0,
     "TLB invl coalescing threshold");
-SYSCTL_INT(_vm_gmem, OID_AUTO, enable_unmap_async, CTLFLAG_RW,
+SYSCTL_INT(_vm_gmem, OID_AUTO, enable_unmap_async, CTLFLAG_RWTUN,
     &enable_async, 0,
     "enable async unmap");
-SYSCTL_INT(_vm_gmem, OID_AUTO, wakeup_time, CTLFLAG_RW,
+SYSCTL_INT(_vm_gmem, OID_AUTO, wakeup_time, CTLFLAG_RWTUN,
     &wakeup_time, 0,
     "async unmap wakeup frequency");
