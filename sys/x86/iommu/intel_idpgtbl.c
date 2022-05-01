@@ -577,8 +577,8 @@ domain_free_pgtbl(struct dmar_domain *domain)
 	/* Obliterate ref_counts */
 	DMAR_DOMAIN_LOCK(domain);
 	domain_pmap_destroy(domain, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-	domain->pglv0->ref_count = 0;
-	vm_wire_sub(1);
+	domain->pglv0->ref_count = 1;
+	dmar_pgfree_null(domain->pglv0);
 	DMAR_DOMAIN_UNLOCK(domain);
 }
 

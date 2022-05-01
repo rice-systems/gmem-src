@@ -184,14 +184,14 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 	uprintf("verification starts, # of page table pages: %d\n", dmar_tbl_pagecnt);
 	fake_domain = dmar_domain_alloc_fake(false);
 	pgtb_cnt = dmar_tbl_pagecnt;
-	for (int i = 1; i < test_cases; i ++) {
+	for (int i = 0; i < test_cases; i ++) {
 		va_start = test_start[i];
 		if (map(fake_domain, va_start, size, ma, 
 			DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true)) {
 			printf("error mapping buffer\n");
 			return 1;
 		}
-		uprintf("test case [%d], start verification\n", i);
+		uprintf("test case [%d], start verification...\n", i);
 
 		// verify mapping
 		int pgcnt[3] = {0};
@@ -233,6 +233,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 			printf("error unmapping buffer\n");
 			return 1;
 		}
+		uprintf("test case [%d] passed\n", i);
 	}
 	if (pgtb_cnt != dmar_tbl_pagecnt)
 		uprintf("page table count inconsistent: old %d, new %d\n", pgtb_cnt, dmar_tbl_pagecnt);
