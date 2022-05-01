@@ -2711,6 +2711,7 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 			bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 		else
 			bus_dmamap_unload(fl->ifl_buf_tag, map);
+		printf("[iflib] unload buf tag %p\n", fl->ifl_buf_tag);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
@@ -2732,7 +2733,8 @@ assemble_segments(iflib_rxq_t rxq, if_rxd_info_t ri, if_rxsd_t sd, int *pf_rv)
 	consumed = false;
 	*pf_rv = PFIL_PASS;
 	pf_rv_ptr = pf_rv;
-	do {
+	do { //rxq->ifr_fl[irf->irf_flid].ifl_buf_tag
+		printf("[iflib] assemble seg %d\n", i);
 		m = rxd_frag_to_sd(rxq, &ri->iri_frags[i], !consumed, sd,
 		    pf_rv_ptr, ri);
 
@@ -2798,6 +2800,7 @@ iflib_rxd_pkt_get(iflib_rxq_t rxq, if_rxd_info_t ri)
 	if (ri->iri_nfrags == 1 &&
 	    ri->iri_frags[0].irf_len != 0 &&
 	    ri->iri_frags[0].irf_len <= MIN(IFLIB_RX_COPY_THRESH, MHLEN)) {
+		printf("[iflib] assemble single seg\n");
 		m = rxd_frag_to_sd(rxq, &ri->iri_frags[0], false, &sd,
 		    &pf_rv, ri);
 		if (pf_rv != PFIL_PASS && pf_rv != PFIL_REALLOCED)
@@ -2974,6 +2977,10 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 			mt = m;
 		}
 	}
+	// This is the secured point to sync IOMMU unmaps.
+	// if (async_rx_flush)
+	// 	bus_dmamap_unload_flush_tag(fl->ifl_buf_tag);
+
 	CURVNET_RESTORE();
 	/* make sure that we can refill faster than drain */
 	for (i = 0, fl = &rxq->ifr_fl[0]; i < sctx->isc_nfl; i++, fl++)
@@ -2982,10 +2989,6 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 	lro_enabled = (if_getcapenable(ifp) & IFCAP_LRO);
 	if (lro_enabled)
 		iflib_get_ip_forwarding(&rxq->ifr_lc, &v4_forwarding, &v6_forwarding);
-
-	// TODO: This is the safest point to sync IOMMU unmaps.
-	if (async_rx_flush)
-		bus_dmamap_unload_flush_tag(fl->ifl_buf_tag);
 
 	mt = mf = NULL;
 	while (mh != NULL) {
