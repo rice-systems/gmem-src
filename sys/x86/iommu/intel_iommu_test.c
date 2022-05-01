@@ -191,6 +191,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 			printf("error mapping buffer\n");
 			return 1;
 		}
+		uprintf("start verification\n");
 
 		// verify mapping
 		int pgcnt[3] = {0};
@@ -320,7 +321,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 static int test_iommu(bool id_mapped)
 {
 	// test 8GB physical pages
-	unsigned long npages = 8 * 512 * 512;
+	unsigned long npages = 512; //8 * 512 * 512;
 	// struct dmar_domain* fake_domain;
 	vm_page_t m, *ma;
 	vm_object_t object;
