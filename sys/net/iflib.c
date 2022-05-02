@@ -5715,7 +5715,7 @@ iflib_queues_alloc(if_ctx_t ctx)
 			txq->ift_br_offset = 0;
 		}
 
-		if (iflib_txsd_alloc(txq, i == 0? NULL:ctx->ifc_txqs)) {
+		if (iflib_txsd_alloc(txq, NULL)) {
 			device_printf(dev, "Critical Failure setting up TX buffers\n");
 			err = ENOMEM;
 			goto err_tx_desc;
