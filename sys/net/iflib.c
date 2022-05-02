@@ -1921,6 +1921,7 @@ iflib_rxsd_alloc(iflib_rxq_t rxq)
 					 NULL,			/* lockfunc */
 					 NULL,			/* lockarg */
 					 &fl->ifl_buf_tag);
+		printf("[iflib_rxsd_alloc] create dma tag %p\n", fl->ifl_buf_tag);
 		if (err) {
 			device_printf(dev,
 			    "Unable to allocate RX DMA tag: %d\n", err);
@@ -2711,7 +2712,7 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 			bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 		else
 			bus_dmamap_unload(fl->ifl_buf_tag, map);
-		printf("[iflib] unload buf tag %p\n", fl->ifl_buf_tag);
+		// printf("[iflib] unload buf tag %p\n", fl->ifl_buf_tag);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
@@ -2734,7 +2735,7 @@ assemble_segments(iflib_rxq_t rxq, if_rxd_info_t ri, if_rxsd_t sd, int *pf_rv)
 	*pf_rv = PFIL_PASS;
 	pf_rv_ptr = pf_rv;
 	do { //rxq->ifr_fl[irf->irf_flid].ifl_buf_tag
-		printf("[iflib] assemble seg %d\n", i);
+		// printf("[iflib] assemble seg %d\n", i);
 		m = rxd_frag_to_sd(rxq, &ri->iri_frags[i], !consumed, sd,
 		    pf_rv_ptr, ri);
 
@@ -2977,7 +2978,7 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 			mt = m;
 		}
 	}
-	printf("[rxeof] Done with budget\n");
+	// printf("[iflib] Done with budget\n");
 	// This is the secured point to sync IOMMU unmaps.
 	// if (async_rx_flush)
 	// 	bus_dmamap_unload_flush_tag(fl->ifl_buf_tag);
