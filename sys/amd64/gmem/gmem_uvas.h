@@ -34,7 +34,9 @@
 #define VA_ALLOC      2
 #define VA_FREE       3
 #define TLB_INV       4
-#define STAT_COUNT    5
+#define _MAP          5
+#define _UNMAP        6
+#define STAT_COUNT    7
 #define MAXPGCNT      512
 
 // indexed by buffer size / 4KB

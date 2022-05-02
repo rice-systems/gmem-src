@@ -748,6 +748,12 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_printf(&sbuf, "UNMAP: %ld\n",
 		instrument_hist[1].latency[UNMAP] / instrument_hist[1].count[UNMAP]
 		);
+	sbuf_printf(&sbuf, "_MAP: %ld\n",
+		instrument_hist[1].latency[_MAP] / instrument_hist[1].count[_MAP]
+		);
+	sbuf_printf(&sbuf, "_UNMAP: %ld\n",
+		instrument_hist[1].latency[_UNMAP] / instrument_hist[1].count[_UNMAP]
+		);
 	sbuf_printf(&sbuf, "VA_ALLOC: %ld\n",
 		instrument_hist[1].latency[VA_ALLOC] / instrument_hist[1].count[VA_ALLOC]
 		);
@@ -756,6 +762,7 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 		);
 	error = sbuf_finish(&sbuf);
 	sbuf_delete(&sbuf);
+	hist_init();
 	return (error);
 }
 
