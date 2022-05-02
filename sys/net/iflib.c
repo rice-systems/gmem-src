@@ -1652,7 +1652,7 @@ _iflib_irq_alloc(if_ctx_t ctx, if_irq_t irq, int rid,
  *
  **********************************************************************/
 static int
-iflib_txsd_alloc(iflib_txq_t txq)
+iflib_txsd_alloc(iflib_txq_t txq, iflib_txq_t first_txq)
 {
 	if_ctx_t ctx = txq->ift_ctx;
 	if_shared_ctx_t sctx = ctx->ifc_sctx;
@@ -1678,6 +1678,9 @@ iflib_txsd_alloc(iflib_txq_t txq)
 	/*
 	 * Set up DMA tags for TX buffers.
 	 */
+	if (first_txq != NULL)
+		txq->ift_buf_tag = first_txq->ift_buf_tag;
+	else
 	if ((err = bus_dma_tag_create(bus_get_dma_tag(dev),
 			       1, 0,			/* alignment, bounds */
 			       BUS_SPACE_MAXADDR,	/* lowaddr */
@@ -1696,6 +1699,9 @@ iflib_txsd_alloc(iflib_txq_t txq)
 		goto fail;
 	}
 	tso = (if_getcapabilities(ctx->ifc_ifp) & IFCAP_TSO) != 0;
+	if (tso && first_txq != NULL)
+		txq->ift_tso_buf_tag = first_txq->ift_tso_buf_tag;
+	else
 	if (tso && (err = bus_dma_tag_create(bus_get_dma_tag(dev),
 			       1, 0,			/* alignment, bounds */
 			       BUS_SPACE_MAXADDR,	/* lowaddr */
@@ -1893,7 +1899,7 @@ iflib_txq_setup(iflib_txq_t txq)
  *
  **********************************************************************/
 static int
-iflib_rxsd_alloc(iflib_rxq_t rxq)
+iflib_rxsd_alloc(iflib_rxq_t rxq, iflib_rxq_t first_rxq)
 {
 	if_ctx_t ctx = rxq->ifr_ctx;
 	if_shared_ctx_t sctx = ctx->ifc_sctx;
@@ -1910,23 +1916,29 @@ iflib_rxsd_alloc(iflib_rxq_t rxq)
 		fl->ifl_size = scctx->isc_nrxd[rxq->ifr_fl_offset]; /* this isn't necessarily the same */
 		/* Set up DMA tag for RX buffers. */
 		if (i == 0) {
-			err = bus_dma_tag_create(bus_get_dma_tag(dev), /* parent */
-						 1, 0,			/* alignment, bounds */
-						 BUS_SPACE_MAXADDR,	/* lowaddr */
-						 BUS_SPACE_MAXADDR,	/* highaddr */
-						 NULL, NULL,		/* filter, filterarg */
-						 sctx->isc_rx_maxsize,	/* maxsize */
-						 sctx->isc_rx_nsegments,	/* nsegments */
-						 sctx->isc_rx_maxsegsize,	/* maxsegsize */
-						 0,			/* flags */
-						 NULL,			/* lockfunc */
-						 NULL,			/* lockarg */
-						 &fl->ifl_buf_tag);
-			printf("[iflib_rxsd_alloc] create dma tag %p\n", fl->ifl_buf_tag);
-			if (err) {
-				device_printf(dev,
-				    "Unable to allocate RX DMA tag: %d\n", err);
-				goto fail;
+			if (first_rxq != NULL) {
+				fl->ifl_buf_tag = first_rxq->ifr_fl->ifl_buf_tag;
+				printf("[iflib_rxsd_alloc inheret the same dma tag %p\n", fl->ifl_buf_tag);
+			}
+			else {
+				err = bus_dma_tag_create(bus_get_dma_tag(dev), /* parent */
+							 1, 0,			/* alignment, bounds */
+							 BUS_SPACE_MAXADDR,	/* lowaddr */
+							 BUS_SPACE_MAXADDR,	/* highaddr */
+							 NULL, NULL,		/* filter, filterarg */
+							 sctx->isc_rx_maxsize,	/* maxsize */
+							 sctx->isc_rx_nsegments,	/* nsegments */
+							 sctx->isc_rx_maxsegsize,	/* maxsegsize */
+							 0,			/* flags */
+							 NULL,			/* lockfunc */
+							 NULL,			/* lockarg */
+							 &fl->ifl_buf_tag);
+				printf("[iflib_rxsd_alloc] create dma tag %p\n", fl->ifl_buf_tag);
+				if (err) {
+					device_printf(dev,
+					    "Unable to allocate RX DMA tag: %d\n", err);
+					goto fail;
+				}
 			}
 		} else {
 			fl->ifl_buf_tag = rxq->ifr_fl->ifl_buf_tag;
@@ -5703,7 +5715,7 @@ iflib_queues_alloc(if_ctx_t ctx)
 			txq->ift_br_offset = 0;
 		}
 
-		if (iflib_txsd_alloc(txq)) {
+		if (iflib_txsd_alloc(txq, i == 0? NULL:ctx->ifc_txqs)) {
 			device_printf(dev, "Critical Failure setting up TX buffers\n");
 			err = ENOMEM;
 			goto err_tx_desc;
@@ -5772,7 +5784,7 @@ iflib_queues_alloc(if_ctx_t ctx)
 			fl[j].ifl_rxd_size = scctx->isc_rxd_size[j];
 		}
 		/* Allocate receive buffers for the ring */
-		if (iflib_rxsd_alloc(rxq)) {
+		if (iflib_rxsd_alloc(rxq, i == 0? NULL:ctx->ifc_rxqs)) {
 			device_printf(dev,
 			    "Critical Failure setting up receive buffers\n");
 			err = ENOMEM;
