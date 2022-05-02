@@ -2801,7 +2801,7 @@ iflib_rxd_pkt_get(iflib_rxq_t rxq, if_rxd_info_t ri)
 	if (ri->iri_nfrags == 1 &&
 	    ri->iri_frags[0].irf_len != 0 &&
 	    ri->iri_frags[0].irf_len <= MIN(IFLIB_RX_COPY_THRESH, MHLEN)) {
-		printf("[iflib] assemble single seg\n");
+		// printf("[iflib] assemble single seg\n");
 		m = rxd_frag_to_sd(rxq, &ri->iri_frags[0], false, &sd,
 		    &pf_rv, ri);
 		if (pf_rv != PFIL_PASS && pf_rv != PFIL_REALLOCED)
