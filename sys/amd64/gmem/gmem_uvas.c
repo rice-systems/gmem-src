@@ -422,6 +422,7 @@ int unmap_coalesce_threshold = 1024;
 int tlb_coalescing_threshold = 5;
 int enable_async = 1;
 int wakeup_time = 1; // 1 runs per 1 second
+int instrument = 1;
 
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
@@ -690,3 +691,6 @@ SYSCTL_INT(_vm_gmem, OID_AUTO, enable_unmap_async, CTLFLAG_RWTUN,
 SYSCTL_INT(_vm_gmem, OID_AUTO, wakeup_time, CTLFLAG_RWTUN,
     &wakeup_time, 0,
     "async unmap wakeup frequency");
+SYSCTL_INT(_vm_gmem, OID_AUTO, instrument, CTLFLAG_RWTUN,
+    &instrument, 0,
+    "instrumentation switch");
