@@ -196,7 +196,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 		// verify mapping
 		int pgcnt[3] = {0};
 		int truth[3] = {0};
-		uint64_t time, delta;
+		uint64_t time = 0, delta;
 		va = va_start;
 		for (int j = 0; j < npages; j ++) {
 			delta = rdtscp();
@@ -211,7 +211,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 				pgcnt[pglvl] ++;
 			va += DMAR_PAGE_SIZE;
 		}
-		uprintf("Avg x86 page walk cost: %d\n", time / npages);
+		uprintf("Avg x86 page walk cost: %lu\n", time / npages);
 
 		// calculate the expected # of superpages
 
