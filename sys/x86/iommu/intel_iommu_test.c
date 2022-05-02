@@ -175,7 +175,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 {
 	struct dmar_domain *fake_domain;
 	int pglvl, pgtb_cnt;
-	vm_paddr_t va, va_start, pg0 = 1 << 12, pg1 = 1 << 21, pg2 = 1 << 30;
+	vm_paddr_t va, va_start, pa, pg0 = 1 << 12, pg1 = 1 << 21, pg2 = 1 << 30;
 	vm_paddr_t size = npages << PAGE_SHIFT;
 	int test_cases = 8;
 	vm_paddr_t test_start[8] = {0, pg0, pg1, pg0 + pg1, pg2, pg0 + pg2,
@@ -196,19 +196,22 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 		// verify mapping
 		int pgcnt[3] = {0};
 		int truth[3] = {0};
+		uint64_t time, delta;
 		va = va_start;
 		for (int j = 0; j < npages; j ++) {
-			// printf("test case [%d]: Check va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
-			// 	i, va, j, x86_translate(fake_domain, va, &pglvl), VM_PAGE_TO_PHYS(ma[j]));
-			if (x86_translate(fake_domain, va, &pglvl) != VM_PAGE_TO_PHYS(ma[j])) {
+			delta = rdtscp();
+			pa = x86_translate(fake_domain, va, &pglvl);
+			time += rdtscp() - delta;
+			if (pa != VM_PAGE_TO_PHYS(ma[j])) {
 				printf("test case [%d]: mapping verification failed, va 0x%lx, page #%d, translate 0x%lx, paddr 0x%lx\n",
-					i, va, j, x86_translate(fake_domain, va, &pglvl), VM_PAGE_TO_PHYS(ma[j]));
+					i, va, j, pa, VM_PAGE_TO_PHYS(ma[j]));
 				return 1;
 			}
 			else
 				pgcnt[pglvl] ++;
 			va += DMAR_PAGE_SIZE;
 		}
+		uprintf("Avg x86 page walk cost: %d\n", time / npages);
 
 		// calculate the expected # of superpages
 
