@@ -762,7 +762,6 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 		);
 	error = sbuf_finish(&sbuf);
 	sbuf_delete(&sbuf);
-	hist_init();
 	return (error);
 }
 
