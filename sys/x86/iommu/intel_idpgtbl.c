@@ -345,51 +345,6 @@ domain_pmap_destroy(struct dmar_domain *domain, int lvl, dmar_pte_t *ptep)
 	return 1;
 }
 
-/*
- * Assumes that the unmap is never partial.
- */
-int
-domain_unmap_buf(struct dmar_domain *domain, iommu_gaddr_t base,
-    iommu_gaddr_t size)
-{
-	dmar_pte_t *pte;
-
-	if (size == 0)
-		return (0);
-
-	KASSERT(domain->pglv0 != NULL, ("page table lv0 page is NULL"));
-	pte = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
-	
-	DMAR_DOMAIN_PGLOCK(domain);
-    START_STATS;
-	domain_pmap_release_locked(domain, base, size, 0, pte);
-    FINISH_STATS(_UNMAP, size >> 12);
-	DMAR_DOMAIN_PGUNLOCK(domain);
-
-	return (0);
-}
-
-int
-domain_unmap_buf_lockless(struct dmar_domain *domain, iommu_gaddr_t base,
-    iommu_gaddr_t size)
-{
-	dmar_pte_t *pte;
-
-	if (size == 0)
-		return (0);
-
-	KASSERT(domain->pglv0 != NULL, ("page table lv0 page is NULL"));
-	pte = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
-	
-	// DMAR_DOMAIN_PGLOCK(domain);
-    START_STATS;
-	domain_pmap_release_lockless(domain, base, size, 0, pte);
-    FINISH_STATS(_UNMAP, size >> 12);
-	// DMAR_DOMAIN_PGUNLOCK(domain);
-
-	return (0);
-}
-
 int
 domain_alloc_pgtbl(struct dmar_domain *domain)
 {
