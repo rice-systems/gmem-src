@@ -81,6 +81,11 @@ static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
 	return 0;
 }
 
+static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
+{
+	return domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+}
+
 static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int *pglvl)
 {
 	int lvl, id, shift;
@@ -232,7 +237,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 					i, lvl, pgcnt[lvl], truth[lvl]);
 				break;
 			}
-		if (domain_pmap_release_lockless(fake_domain, va_start, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(fake_domain->pglv0)))) {
+		if (unmap(fake_domain, va_start, size)) {
 			printf("error unmapping buffer\n");
 			return 1;
 		}
@@ -261,7 +266,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 		uprintf("bench case # %d\n", i);
 		va_start = test_start[i];
 
-		for (sizeshift = 12; sizeshift < 34; sizeshift ++) {
+		for (sizeshift = 12; sizeshift < 13; sizeshift ++) {
 
 			size = 1ULL << sizeshift;
 			if (size > maxsize)
@@ -278,7 +283,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 				sample[try][0] = rdtscp() - delta;
 
 				delta = rdtscp();
-				if (domain_unmap_buf(fake_domain, va_start, size)) {
+				if (unmap(fake_domain, va_start, size)) {
 					uprintf("error unmapping buffer\n");
 					break;
 				}
@@ -352,7 +357,7 @@ static int test_iommu(bool id_mapped)
 
 
 	verify_sp(ma, npages);
-	// bench(ma, npages);
+	bench(ma, npages);
 
 	free(ma, M_IOMMU_TEST);
 	vm_object_deallocate(object);
