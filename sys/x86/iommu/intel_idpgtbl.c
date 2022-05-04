@@ -417,7 +417,7 @@ domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t base,
     int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t m, pm;
-	dmar_pte_t *pte, pteval;
+	dmar_pte_t *pte;
 	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
 	int i, ret = 0;
 
@@ -550,7 +550,7 @@ domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base,
 			mapsize = pg_size;
 			*pte = 0;
 			dmar_flush_pte_to_ram(domain->dmar, pte);
-			atomic_add_int(pm->ref_count, -1);
+			atomic_add_int(&pm->ref_count, -1);
 			// No need to consider splitting superpage mapping
 		} else {
 			end1 = ((base >> pgshift) + 1) << pgshift;
