@@ -2730,8 +2730,10 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	if (unload && irf->irf_len != 0) {
 		// bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
-		if (async_rx_unmap)
+		if (async_rx_unmap) {
+			printf("[iflib] unloading tag %p\n", fl->ifl_buf_tag);
 			bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
+		}
 		else
 			bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// printf("[iflib] unload buf tag %p\n", fl->ifl_buf_tag);
@@ -2844,6 +2846,7 @@ iflib_rxd_pkt_get(iflib_rxq_t rxq, if_rxd_info_t ri)
 		if (pf_rv != PFIL_PASS && pf_rv != PFIL_REALLOCED)
 			return (m);
 	}
+	printf("[iflib] iflib_rxd_pkt_get done\n");
 	m->m_pkthdr.len = ri->iri_len;
 	m->m_pkthdr.rcvif = ri->iri_ifp;
 	m->m_flags |= ri->iri_flags;
