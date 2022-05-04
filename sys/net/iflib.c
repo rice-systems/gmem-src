@@ -1499,7 +1499,6 @@ iflib_dma_free(iflib_dma_info_t dma)
 		bus_dmamem_free(dma->idi_tag, dma->idi_vaddr, dma->idi_map);
 		dma->idi_vaddr = NULL;
 	}
-	printf("[iflib] dma tag destroy at %d\n", __LINE__);
 	bus_dma_tag_destroy(dma->idi_tag);
 	dma->idi_tag = NULL;
 }
@@ -1823,12 +1822,10 @@ iflib_txq_destroy(iflib_txq_t txq)
 		txq->ift_sds.ifsd_m = NULL;
 	}
 	if (txq->ift_buf_tag != NULL) {
-		printf("[iflib] dma tag destroy at %d\n", __LINE__);
 		bus_dma_tag_destroy(txq->ift_buf_tag);
 		txq->ift_buf_tag = NULL;
 	}
 	if (txq->ift_tso_buf_tag != NULL) {
-		printf("[iflib] dma tag destroy at %d\n", __LINE__);
 		bus_dma_tag_destroy(txq->ift_tso_buf_tag);
 		txq->ift_tso_buf_tag = NULL;
 	}
@@ -1919,34 +1916,23 @@ iflib_rxsd_alloc(iflib_rxq_t rxq, iflib_rxq_t first_rxq)
 	for (int i = 0; i <  rxq->ifr_nfl; i++, fl++) {
 		fl->ifl_size = scctx->isc_nrxd[rxq->ifr_fl_offset]; /* this isn't necessarily the same */
 		/* Set up DMA tag for RX buffers. */
-		if (i == 0) {
-			if (first_rxq != NULL) {
-				fl->ifl_buf_tag = first_rxq->ifr_fl->ifl_buf_tag;
-				printf("[iflib_rxsd_alloc inheret the same dma tag %p\n", fl->ifl_buf_tag);
-			}
-			else {
-				err = bus_dma_tag_create(bus_get_dma_tag(dev), /* parent */
-							 1, 0,			/* alignment, bounds */
-							 BUS_SPACE_MAXADDR,	/* lowaddr */
-							 BUS_SPACE_MAXADDR,	/* highaddr */
-							 NULL, NULL,		/* filter, filterarg */
-							 sctx->isc_rx_maxsize,	/* maxsize */
-							 sctx->isc_rx_nsegments,	/* nsegments */
-							 sctx->isc_rx_maxsegsize,	/* maxsegsize */
-							 0,			/* flags */
-							 NULL,			/* lockfunc */
-							 NULL,			/* lockarg */
-							 &fl->ifl_buf_tag);
-				printf("[iflib_rxsd_alloc] create dma tag %p\n", fl->ifl_buf_tag);
-				if (err) {
-					device_printf(dev,
-					    "Unable to allocate RX DMA tag: %d\n", err);
-					goto fail;
-				}
-			}
-		} else {
-			fl->ifl_buf_tag = rxq->ifr_fl->ifl_buf_tag;
-			printf("[iflib_rxsd_alloc] sharing dma tag %p\n", fl->ifl_buf_tag);
+		err = bus_dma_tag_create(bus_get_dma_tag(dev), /* parent */
+					 1, 0,			/* alignment, bounds */
+					 BUS_SPACE_MAXADDR,	/* lowaddr */
+					 BUS_SPACE_MAXADDR,	/* highaddr */
+					 NULL, NULL,		/* filter, filterarg */
+					 sctx->isc_rx_maxsize,	/* maxsize */
+					 sctx->isc_rx_nsegments,	/* nsegments */
+					 sctx->isc_rx_maxsegsize,	/* maxsegsize */
+					 0,			/* flags */
+					 NULL,			/* lockfunc */
+					 NULL,			/* lockarg */
+					 &fl->ifl_buf_tag);
+		printf("[iflib_rxsd_alloc] create dma tag %p\n", fl->ifl_buf_tag);
+		if (err) {
+			device_printf(dev,
+			    "Unable to allocate RX DMA tag: %d\n", err);
+			goto fail;
 		}
 
 		/* Allocate memory for the RX mbuf map. */
@@ -2846,7 +2832,7 @@ iflib_rxd_pkt_get(iflib_rxq_t rxq, if_rxd_info_t ri)
 		if (pf_rv != PFIL_PASS && pf_rv != PFIL_REALLOCED)
 			return (m);
 	}
-	printf("[iflib] iflib_rxd_pkt_get done\n");
+	// printf("[iflib] iflib_rxd_pkt_get done\n");
 	m->m_pkthdr.len = ri->iri_len;
 	m->m_pkthdr.rcvif = ri->iri_ifp;
 	m->m_flags |= ri->iri_flags;
