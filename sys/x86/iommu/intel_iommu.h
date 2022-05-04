@@ -65,5 +65,14 @@ int domain_unmap_buf(struct dmar_domain *domain,
 int domain_unmap_buf_lockless(struct dmar_domain *domain,
     iommu_gaddr_t base, iommu_gaddr_t size);
 
+int
+domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t base, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
+    int lvl, dmar_pte_t *ptep);
+
+int
+domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
+    dmar_pte_t *root);
 
 #endif

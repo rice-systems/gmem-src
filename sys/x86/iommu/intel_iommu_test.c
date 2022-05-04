@@ -68,9 +68,10 @@ static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
 		// map pages[last_i], ..., pages[i]
 		printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE);
-		error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
+		error = domain_pmap_enter_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
+			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK,
+			0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 
 		if (error != 0)
 			panic("domain_map_buf returns error: %d\n", error);

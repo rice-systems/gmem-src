@@ -122,10 +122,49 @@ finish:
 	return ret;
 }
 
+// No consideration of sp promotions
+int
+domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, dmar_pte_t *root)
+{
+	vm_page_t m, pm;
+	dmar_pte_t *pte;
+	int i;
+
+	for (size; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
+		pm = domain->pglv0;
+		pte = root;
+		for (lvl = 0; lvl < domain->pglvl; lvl ++, pm = m) {
+			i = domain_pgtbl_pte_off(domain, va, lvl);
+			pte = &pte[i];
+
+			if (lvl < domain->pglvl - 1) {
+				if (*pte == 0) {
+					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
+						flags | IOMMU_PGF_ZERO);
+					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
+						dmar_flush_pte_to_ram(domain->dmar, pte);
+						atomic_add_int(&pm->ref_count, 1);
+					}
+					else
+						dmar_pgfree_null(m);
+				}
+			}
+			else
+			{
+				*pte = pa | pflags;
+				dmar_flush_pte_to_ram(domain->dmar, pte);
+				atomic_add_int(&pm->ref_count, 1);
+			}
+		}
+	}
+	return 0;
+}
+
 
 // There are no concurrent mapping/unmapping of the same PTE,
 // so the lock only needs to protect page allocations of the iommu page table.
-static int
+int
 domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
     int lvl, dmar_pte_t *ptep)
