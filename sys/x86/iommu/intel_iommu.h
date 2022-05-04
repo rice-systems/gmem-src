@@ -71,6 +71,10 @@ domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t base,
     int lvl, dmar_pte_t *ptep);
 
 int
+domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, 
+    vm_offset_t size, int lvl, dmar_pte_t *ptep);
+
+int
 domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
     dmar_pte_t *root);

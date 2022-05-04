@@ -232,8 +232,7 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 					i, lvl, pgcnt[lvl], truth[lvl]);
 				break;
 			}
-
-		if (domain_unmap_buf(fake_domain, va_start, size)) {
+		if (domain_pmap_release_lockless(fake_domain, va_start, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(fake_domain->pglv0)))) {
 			printf("error unmapping buffer\n");
 			return 1;
 		}

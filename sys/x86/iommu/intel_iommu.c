@@ -281,7 +281,7 @@ skip_clear:
 }
 
 // No need to consider demotion since it never splits mappings.
-static int
+int
 domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, int lvl, dmar_pte_t *ptep)
 {
