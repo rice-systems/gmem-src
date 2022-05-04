@@ -438,9 +438,12 @@ domain_pmap_release(struct dmar_domain *domain, vm_offset_t base,
 				(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME)))
 				goto skip_clear;
 		}
-		*pte = 0;
-		dmar_flush_pte_to_ram(domain->dmar, pte);
-		pm->ref_count --;
+		// only flush mappings
+		if (lvl == domain->pglvl - 1 || (*pte & DMAR_PTE_SP) != 0) {
+			*pte = 0;
+			dmar_flush_pte_to_ram(domain->dmar, pte);
+			pm->ref_count --;
+		}
 
 skip_clear:
 
