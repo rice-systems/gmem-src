@@ -127,11 +127,12 @@ int
 domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, dmar_pte_t *root)
 {
+	int lvl;
 	vm_page_t m, pm;
 	dmar_pte_t *pte;
 	int i;
 
-	for (size; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
+	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
 		pm = domain->pglv0;
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++, pm = m) {
