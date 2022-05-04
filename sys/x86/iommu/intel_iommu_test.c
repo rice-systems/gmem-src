@@ -258,6 +258,8 @@ static int bench(vm_page_t *ma, unsigned long npages)
 	vm_paddr_t maxsize = npages << PAGE_SHIFT, size, sizeshift;
 	vm_paddr_t test_start[3] = {pg0, pg1, pg2};
 	uint64_t delta, mean[3][34][2] = {{{0}}}, std[3][34][2] = {{{0}}}, sample[30][2];
+	int start_shift = 12;
+	int end_shift = 13;
 
 	fake_domain = dmar_domain_alloc_fake(false);
 	uprintf("benchmark starts, # of page table pages: %d\n", dmar_tbl_pagecnt);
@@ -266,7 +268,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 		uprintf("bench case # %d\n", i);
 		va_start = test_start[i];
 
-		for (sizeshift = 12; sizeshift < 13; sizeshift ++) {
+		for (sizeshift = start_shift; sizeshift < end_shift; sizeshift ++) {
 
 			size = 1ULL << sizeshift;
 			if (size > maxsize)
@@ -275,7 +277,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 			// always cold start
 			for (int try = 0; try < run; try ++) {
 				delta = rdtscp();
-				if (map(fake_domain, va_start, size, ma, 
+				if (map(fake_domain, va_start, size, &ma[try], 
 					DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true)) {
 					uprintf("error mapping buffer\n");
 					break;
@@ -288,7 +290,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 					break;
 				}
 				sample[try][1] = rdtscp() - delta;
-
+				va_start += size;
 			}
 
 			for (int k = 0; k < 2; k ++) {
@@ -310,13 +312,13 @@ static int bench(vm_page_t *ma, unsigned long npages)
 
 		uprintf("mean:\n");
 		for (int i = 0; i < 3; i ++) {
-			for (int j = 12; j < 34; j ++)
+			for (int j = start_shift; j < end_shift; j ++)
 				uprintf("%lu ", mean[i][j][k]);
 			uprintf("\n");
 		}
 		uprintf("square:\n");
 		for (int i = 0; i < 3; i ++) {
-			for (int j = 12; j < 34; j ++)
+			for (int j = start_shift; j < end_shift; j ++)
 				uprintf("%lu ", std[i][j][k]);
 			uprintf("\n");
 		}
@@ -356,7 +358,7 @@ static int test_iommu(bool id_mapped)
 		uprintf("testing dynamic page table\n");
 
 
-	verify_sp(ma, npages);
+	// verify_sp(ma, npages);
 	bench(ma, npages);
 
 	free(ma, M_IOMMU_TEST);
