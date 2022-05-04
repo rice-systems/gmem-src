@@ -1100,11 +1100,8 @@ bus_dma_iommu_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map1,
 }
 
 void
-iommu_domain_init(struct iommu_unit *unit, struct iommu_domain *domain,
-    const struct iommu_domain_map_ops *ops)
+iommu_domain_init(struct iommu_unit *unit, struct iommu_domain *domain)
 {
-
-	domain->ops = ops;
 	domain->iommu = unit;
 
 	mtx_init(&domain->lock, "iodom", NULL, MTX_DEF);

@@ -75,7 +75,6 @@ struct iommu_qi_genseq {
 
 struct iommu_domain {
 	struct iommu_unit *iommu;	/* (c) */
-	const struct iommu_domain_map_ops *ops;
 	struct mtx lock;		/* (c) */
 	u_int entries_cnt;		/* (d) */
 	iommu_gaddr_t end;		/* (c) Highest address + 1 in
@@ -89,13 +88,6 @@ struct iommu_domain {
 	// entries_cnt, rb_root, first_place, last_place, ..
 	gmem_uvas_t *uvas;
 	dev_pmap_t *pmap;
-};
-
-struct iommu_domain_map_ops {
-	int (*map)(struct iommu_domain *domain, iommu_gaddr_t base,
-	    iommu_gaddr_t size, vm_page_t *ma, uint64_t pflags, int flags);
-	int (*unmap)(struct iommu_domain *domain, iommu_gaddr_t base,
-	    iommu_gaddr_t size, int flags);
 };
 
 struct iommu_ctx {
@@ -182,8 +174,7 @@ int iommu_gas_reserve_region_extend(struct iommu_domain *domain,
 
 void iommu_set_buswide_ctx(struct iommu_unit *unit, u_int busno);
 bool iommu_is_buswide_ctx(struct iommu_unit *unit, u_int busno);
-void iommu_domain_init(struct iommu_unit *unit, struct iommu_domain *domain,
-    const struct iommu_domain_map_ops *ops);
+void iommu_domain_init(struct iommu_unit *unit, struct iommu_domain *domain);
 void iommu_domain_fini(struct iommu_domain *domain);
 
 bool bus_dma_iommu_set_buswide(device_t dev);

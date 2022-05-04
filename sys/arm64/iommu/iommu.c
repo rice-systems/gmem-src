@@ -129,7 +129,7 @@ iommu_domain_alloc(struct iommu_unit *iommu)
 	if (iodom == NULL)
 		return (NULL);
 
-	iommu_domain_init(iommu, iodom, &domain_map_ops);
+	iommu_domain_init(iommu, iodom);
 	iodom->end = VM_MAXUSER_ADDRESS;
 	iodom->iommu = iommu;
 	iommu_gas_init_domain(iodom);
