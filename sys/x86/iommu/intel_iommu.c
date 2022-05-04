@@ -54,7 +54,7 @@ __FBSDID("$FreeBSD$");
 #include <x86/iommu/intel_iommu.h>
 
 #define domain_page_shift(domain, lvl) ((domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT + DMAR_PAGE_SHIFT)
-#define domain_pgtbl_pte_off(domain, base, lvl) ((base >> DMAR_PAGE_SHIFT + (domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT) & DMAR_PTEMASK)
+#define domain_pgtbl_pte_off(domain, base, lvl) (base >> (DMAR_PAGE_SHIFT + (domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT) & DMAR_PTEMASK)
 
 // There are no concurrent mapping/unmapping of the same PTE,
 // so the lock only needs to protect page allocations of the iommu page table.
@@ -365,7 +365,7 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	START_STATS;
 	// error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
 	// error = domain_map_buf_lockless(domain, va, size, pa, pflags, mem_flags);
-	domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
+	error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
 		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
@@ -381,6 +381,23 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	}
 
 	return GMEM_OK;
+}
+
+
+static inline uint64_t
+domain_wait_iotlb_flush(struct dmar_unit *unit, uint64_t wt, int iro)
+{
+	uint64_t iotlbr;
+
+	dmar_write8(unit, iro + DMAR_IOTLB_REG_OFF, DMAR_IOTLB_IVT |
+	    DMAR_IOTLB_DR | DMAR_IOTLB_DW | wt);
+	for (;;) {
+		iotlbr = dmar_read8(unit, iro + DMAR_IOTLB_REG_OFF);
+		if ((iotlbr & DMAR_IOTLB_IVT) == 0)
+			break;
+		cpu_spinwait();
+	}
+	return (iotlbr);
 }
 
 void

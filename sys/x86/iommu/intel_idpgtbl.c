@@ -433,19 +433,3 @@ domain_free_pgtbl(struct dmar_domain *domain)
 	dmar_pgfree_null(domain->pglv0);
 	DMAR_DOMAIN_UNLOCK(domain);
 }
-
-static inline uint64_t
-domain_wait_iotlb_flush(struct dmar_unit *unit, uint64_t wt, int iro)
-{
-	uint64_t iotlbr;
-
-	dmar_write8(unit, iro + DMAR_IOTLB_REG_OFF, DMAR_IOTLB_IVT |
-	    DMAR_IOTLB_DR | DMAR_IOTLB_DW | wt);
-	for (;;) {
-		iotlbr = dmar_read8(unit, iro + DMAR_IOTLB_REG_OFF);
-		if ((iotlbr & DMAR_IOTLB_IVT) == 0)
-			break;
-		cpu_spinwait();
-	}
-	return (iotlbr);
-}
