@@ -2324,7 +2324,7 @@ iflib_rx_sds_free(iflib_rxq_t rxq)
 						    fl->ifl_sds.ifsd_map[j]);
 					}
 				}
-				printf("[iflib] dma tag destroy at %d\n", __LINE__);
+				// printf("[iflib] dma tag destroy at %d\n", __LINE__);
 				bus_dma_tag_destroy(fl->ifl_buf_tag);
 				fl->ifl_buf_tag = NULL;
 			}
@@ -2715,13 +2715,10 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 	if (unload && irf->irf_len != 0) {
 		// bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
-		if (async_rx_unmap) {
-			// printf("[iflib] unloading tag %p\n", fl->ifl_buf_tag);
+		if (async_rx_unmap)
 			bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
-		}
 		else
 			bus_dmamap_unload(fl->ifl_buf_tag, map);
-		// printf("[iflib] unload buf tag %p\n", fl->ifl_buf_tag);
 	}
 	fl->ifl_cidx = (fl->ifl_cidx + 1) & (fl->ifl_size-1);
 	if (__predict_false(fl->ifl_cidx == 0))
