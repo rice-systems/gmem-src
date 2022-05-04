@@ -420,6 +420,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 
 int unmap_coalesce_threshold = 1024;
 int tlb_coalescing_threshold = 5;
+int enable_daemon = 1;
 int enable_async = 1;
 int wakeup_time = 1; // 1 runs per 1 second
 int instrument = 1;
@@ -633,17 +634,17 @@ gmem_uvas_async_unmap(void *args)
 	UVAS_ENQUEUE_LOCK(uvas);
 	for (;;)
 	{
-		// if (uvas->unmap_pages > 0) {
-		// 	// refill the consumer queue
-		// 	UVAS_DEQUEUE_LOCK(uvas);
-		// 	refill_consumer(uvas);
+		if (enable_daemon && uvas->unmap_pages > 0) {
+			// refill the consumer queue
+			UVAS_DEQUEUE_LOCK(uvas);
+			refill_consumer(uvas);
 
-		// 	// Someone has to process all the pending unmap requests, let's do it now.
-		// 	UVAS_ENQUEUE_UNLOCK(uvas);
-		// 	gmem_uvas_generic_unmap_handler(uvas);
-		// 	UVAS_DEQUEUE_UNLOCK(uvas);
-		// 	UVAS_ENQUEUE_LOCK(uvas);
-		// }
+			// Someone has to process all the pending unmap requests, let's do it now.
+			UVAS_ENQUEUE_UNLOCK(uvas);
+			gmem_uvas_generic_unmap_handler(uvas);
+			UVAS_DEQUEUE_UNLOCK(uvas);
+			UVAS_ENQUEUE_LOCK(uvas);
+		}
 
 		msleep(&uvas->async_unmap_proc, &uvas->enqueue_lock, 0,
 		    "uvas", 1 * hz / wakeup_time);
@@ -695,3 +696,6 @@ SYSCTL_INT(_vm_gmem, OID_AUTO, wakeup_time, CTLFLAG_RWTUN,
 SYSCTL_INT(_vm_gmem, OID_AUTO, instrument, CTLFLAG_RWTUN,
     &instrument, 0,
     "instrumentation switch");
+SYSCTL_INT(_vm_gmem, OID_AUTO, enable_daemon, CTLFLAG_RWTUN,
+    &enable_daemon, 0,
+    "async unmap daemon");
