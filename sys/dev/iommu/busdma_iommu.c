@@ -390,6 +390,8 @@ iommu_bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	// So, both dev and uvas must be created upon the context creation time.
 	newtag->gmem_dev = oldtag->gmem_dev;
 
+	printf("creating new dma tag %p, iommu domain %p, uvas %p\n", newtag, newtag->ctx->domain,
+		newtag->ctx->domain->uvas);
 	*dmat = (bus_dma_tag_t)newtag;
 out:
 	CTR4(KTR_BUSDMA, "%s returned tag %p tag flags 0x%x error %d",
