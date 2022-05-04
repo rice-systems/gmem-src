@@ -283,6 +283,7 @@ static int bench(vm_page_t *ma, unsigned long npages)
 					break;
 				}
 				sample[try][0] = rdtscp() - delta;
+				printf("map try %d cost %lu\n", try, sample[try][0]);
 
 				delta = rdtscp();
 				if (unmap(fake_domain, va_start, size)) {
