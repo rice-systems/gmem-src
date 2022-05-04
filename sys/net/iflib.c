@@ -2740,8 +2740,7 @@ assemble_segments(iflib_rxq_t rxq, if_rxd_info_t ri, if_rxsd_t sd, int *pf_rv)
 	consumed = false;
 	*pf_rv = PFIL_PASS;
 	pf_rv_ptr = pf_rv;
-	do { //rxq->ifr_fl[irf->irf_flid].ifl_buf_tag
-		// printf("[iflib] assemble seg %d\n", i);
+	do {
 		m = rxd_frag_to_sd(rxq, &ri->iri_frags[i], !consumed, sd,
 		    pf_rv_ptr, ri);
 
@@ -2986,9 +2985,10 @@ iflib_rxeof(iflib_rxq_t rxq, qidx_t budget)
 		}
 	}
 	// printf("[iflib] Done with budget\n");
-	// This is the secured point to sync IOMMU unmaps.
-	// if (async_rx_flush)
-	// 	bus_dmamap_unload_flush_tag(fl->ifl_buf_tag);
+	// This is the safe point to sync IOMMU unmaps.
+	// Note that all dma tags actually share the same uvas, we just need to put the first one
+	if (async_rx_flush)
+		bus_dmamap_unload_flush_tag(rxq->ifr_fl->ifl_buf_tag);
 
 	CURVNET_RESTORE();
 	/* make sure that we can refill faster than drain */
