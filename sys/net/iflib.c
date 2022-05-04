@@ -1450,6 +1450,7 @@ iflib_dma_alloc_align(if_ctx_t ctx, int size, int align, iflib_dma_info_t dma, i
 fail_2:
 	bus_dmamem_free(dma->idi_tag, dma->idi_vaddr, dma->idi_map);
 fail_1:
+	printf("[iflib] dma tag destroy at %d\n", __LINE__);
 	bus_dma_tag_destroy(dma->idi_tag);
 fail_0:
 	dma->idi_tag = NULL;
@@ -1498,6 +1499,7 @@ iflib_dma_free(iflib_dma_info_t dma)
 		bus_dmamem_free(dma->idi_tag, dma->idi_vaddr, dma->idi_map);
 		dma->idi_vaddr = NULL;
 	}
+	printf("[iflib] dma tag destroy at %d\n", __LINE__);
 	bus_dma_tag_destroy(dma->idi_tag);
 	dma->idi_tag = NULL;
 }
@@ -1821,10 +1823,12 @@ iflib_txq_destroy(iflib_txq_t txq)
 		txq->ift_sds.ifsd_m = NULL;
 	}
 	if (txq->ift_buf_tag != NULL) {
+		printf("[iflib] dma tag destroy at %d\n", __LINE__);
 		bus_dma_tag_destroy(txq->ift_buf_tag);
 		txq->ift_buf_tag = NULL;
 	}
 	if (txq->ift_tso_buf_tag != NULL) {
+		printf("[iflib] dma tag destroy at %d\n", __LINE__);
 		bus_dma_tag_destroy(txq->ift_tso_buf_tag);
 		txq->ift_tso_buf_tag = NULL;
 	}
@@ -2335,6 +2339,7 @@ iflib_rx_sds_free(iflib_rxq_t rxq)
 						    fl->ifl_sds.ifsd_map[j]);
 					}
 				}
+				printf("[iflib] dma tag destroy at %d\n", __LINE__);
 				bus_dma_tag_destroy(fl->ifl_buf_tag);
 				fl->ifl_buf_tag = NULL;
 			}
