@@ -311,79 +311,6 @@ domain_map_buf_lockless(struct dmar_domain *domain, vm_offset_t base,
 	return 0;
 }
 
-// GMEM CBs
-static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
-{
-	intel_iommu_pgtable_t *pgtable;
-
-	KASSERT(pmap->data == NULL, "creating a pmap over existing page table");
-	pmap->data = dev_data;
-
-
-	pgtable = pmap->data;
-	if (pgtable->id_mapped) {
-		if ((pgtable->dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
-			pgtable->domain->pgtbl_obj = domain_get_idmap_pgtbl(pgtable->domain,
-			    pgtable->domain->iodom.end);
-		}
-		pgtable->domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
-	} else {
-		domain_alloc_pgtbl(pgtable->domain);
-	}
-	return GMEM_OK;
-}
-
-static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
-{
-	intel_iommu_pgtable_t *pgtable;
-
-	pgtable = (intel_iommu_pgtable_t *) pmap->data;
-	domain_free_pgtbl(pgtable->domain);
-	return GMEM_OK;
-}
-
-static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
-	vm_paddr_t pa, u_int prot, u_int mem_flags)
-{
-
-	struct dmar_domain *domain;
-	struct dmar_unit *unit;
-	uint64_t pflags;
-	int error;
-
-	pflags = ((prot & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
-	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
-	    ((prot & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
-	    ((prot & IOMMU_MAP_ENTRY_TM) != 0 ? DMAR_PTE_TM : 0);
-	// pflags = DMAR_PTE_R | DMAR_PTE_W;
-
-	intel_iommu_pgtable_t *pgtable = pmap->data;
-	domain = pgtable->domain;
-	unit = domain->dmar;
-
-
-	START_STATS;
-	// error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
-	// error = domain_map_buf_lockless(domain, va, size, pa, pflags, mem_flags);
-	error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
-		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-    FINISH_STATS(MAP, size >> 12);
-	if (error != 0)
-		return (error);
-
-	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
-		domain_flush_iotlb_sync(domain, va, size);
-	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
-		/* See 11.1 Write Buffer Flushing. */
-		DMAR_LOCK(unit);
-		dmar_flush_write_bufs(unit);
-		DMAR_UNLOCK(unit);
-	}
-
-	return GMEM_OK;
-}
-
-
 static inline uint64_t
 domain_wait_iotlb_flush(struct dmar_unit *unit, uint64_t wt, int iro)
 {
@@ -461,6 +388,82 @@ domain_flush_iotlb_domain(struct dmar_domain *domain)
 	DMAR_UNLOCK(unit);
 }
 
+
+// ------------------------------------------------------ //
+
+
+// GMEM CBs
+static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
+{
+	intel_iommu_pgtable_t *pgtable;
+
+	KASSERT(pmap->data == NULL, "creating a pmap over existing page table");
+	pmap->data = dev_data;
+
+
+	pgtable = pmap->data;
+	if (pgtable->id_mapped) {
+		if ((pgtable->dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
+			pgtable->domain->pgtbl_obj = domain_get_idmap_pgtbl(pgtable->domain,
+			    pgtable->domain->iodom.end);
+		}
+		pgtable->domain->iodom.flags |= IOMMU_DOMAIN_IDMAP;
+	} else {
+		domain_alloc_pgtbl(pgtable->domain);
+	}
+	return GMEM_OK;
+}
+
+static gmem_error_t intel_iommu_pmap_destroy(dev_pmap_t *pmap)
+{
+	intel_iommu_pgtable_t *pgtable;
+
+	pgtable = (intel_iommu_pgtable_t *) pmap->data;
+	domain_free_pgtbl(pgtable->domain);
+	return GMEM_OK;
+}
+
+static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
+	vm_paddr_t pa, u_int prot, u_int mem_flags)
+{
+
+	struct dmar_domain *domain;
+	struct dmar_unit *unit;
+	uint64_t pflags;
+	int error;
+
+	pflags = ((prot & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_TM) != 0 ? DMAR_PTE_TM : 0);
+	// pflags = DMAR_PTE_R | DMAR_PTE_W;
+
+	intel_iommu_pgtable_t *pgtable = pmap->data;
+	domain = pgtable->domain;
+	unit = domain->dmar;
+
+
+	START_STATS;
+	// error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
+	// error = domain_map_buf_lockless(domain, va, size, pa, pflags, mem_flags);
+	error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
+		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+    FINISH_STATS(MAP, size >> 12);
+	if (error != 0)
+		return (error);
+
+	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
+		domain_flush_iotlb_sync(domain, va, size);
+	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
+		/* See 11.1 Write Buffer Flushing. */
+		DMAR_LOCK(unit);
+		dmar_flush_write_bufs(unit);
+		DMAR_UNLOCK(unit);
+	}
+
+	return GMEM_OK;
+}
+
 static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
 	intel_iommu_pgtable_t *pgtable = pmap->data;
@@ -469,7 +472,7 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 	// destroy mappings
 	START_STATS;
 	// error = domain_unmap_buf(pgtable->domain, va, size);
-	error = domain_pmap_release_lockless(domain, base, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	error = domain_pmap_release_lockless(pgtable->domain, base, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(pgtable->domain->pglv0)));
 	// error = domain_unmap_buf_lockless(pgtable->domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
