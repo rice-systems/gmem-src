@@ -449,10 +449,10 @@ skip_clear:
 		i ++;
 	}
 
-	if (pm->ref_count == 1) {
-		dmar_pgfree_null(pm);
-		return 0;
-	}
+	// if (pm->ref_count == 1) {
+	// 	dmar_pgfree_null(pm);
+	// 	return 0;
+	// }
 	return 1;
 }
 
