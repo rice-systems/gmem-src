@@ -1450,7 +1450,6 @@ iflib_dma_alloc_align(if_ctx_t ctx, int size, int align, iflib_dma_info_t dma, i
 fail_2:
 	bus_dmamem_free(dma->idi_tag, dma->idi_vaddr, dma->idi_map);
 fail_1:
-	printf("[iflib] dma tag destroy at %d\n", __LINE__);
 	bus_dma_tag_destroy(dma->idi_tag);
 fail_0:
 	dma->idi_tag = NULL;
@@ -2717,7 +2716,7 @@ rxd_frag_to_sd(iflib_rxq_t rxq, if_rxd_frag_t irf, bool unload, if_rxsd_t sd,
 		// bus_dmamap_unload(fl->ifl_buf_tag, map);
 		// asynchornously unload dmamaps
 		if (async_rx_unmap) {
-			printf("[iflib] unloading tag %p\n", fl->ifl_buf_tag);
+			// printf("[iflib] unloading tag %p\n", fl->ifl_buf_tag);
 			bus_dmamap_unload_async(fl->ifl_buf_tag, map, NULL, NULL);
 		}
 		else
@@ -3668,23 +3667,30 @@ iflib_tx_desc_free(iflib_txq_t txq, int n)
 				bus_dmamap_sync(txq->ift_tso_buf_tag,
 				    txq->ift_sds.ifsd_tso_map[cidx],
 				    BUS_DMASYNC_POSTWRITE);
-				// bus_dmamap_unload(txq->ift_tso_buf_tag,
-				//     txq->ift_sds.ifsd_tso_map[cidx]);
-				bus_dmamap_unload_async(txq->ift_tso_buf_tag,
-				    txq->ift_sds.ifsd_tso_map[cidx], &mfree_cb, m);
+
+				if (async_tx_unmap)
+					bus_dmamap_unload_async(txq->ift_tso_buf_tag,
+					    txq->ift_sds.ifsd_tso_map[cidx], &mfree_cb, m);
+				else {
+					bus_dmamap_unload(txq->ift_tso_buf_tag,
+					    txq->ift_sds.ifsd_tso_map[cidx]);
+					m_freem(m);
+				}
 			} else {
 				bus_dmamap_sync(txq->ift_buf_tag,
 				    txq->ift_sds.ifsd_map[cidx],
 				    BUS_DMASYNC_POSTWRITE);
-				// bus_dmamap_unload(txq->ift_buf_tag,
-				//     txq->ift_sds.ifsd_map[cidx]);
-				bus_dmamap_unload_async(txq->ift_buf_tag,
-				    txq->ift_sds.ifsd_map[cidx], &mfree_cb, m);
+				if (async_tx_unmap)
+					bus_dmamap_unload_async(txq->ift_buf_tag,
+					    txq->ift_sds.ifsd_map[cidx], &mfree_cb, m);
+				else {
+					bus_dmamap_unload(txq->ift_buf_tag,
+					    txq->ift_sds.ifsd_map[cidx]);
+					m_freem(m);
+				}
 			}
 			/* XXX we don't support any drivers that batch packets yet */
 			MPASS(m->m_nextpkt == NULL);
-			// mute as it is attached as a cb
-			// m_freem(m);
 			ifsd_m[cidx] = NULL;
 #if MEMORY_LOGGING
 			txq->ift_dequeued++;

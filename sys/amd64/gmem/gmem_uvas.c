@@ -531,7 +531,7 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 			(*unmap_callback)(callback_args);
 	} else {
 		// The unmap will be async
-		// printf("[unmap async] request enqueued to uvas %p\n", uvas);
+		printf("[unmap async] request enqueued to uvas %p\n", uvas);
 		enqueue_unmap_req(uvas, ext_entries, unmap_callback, callback_args);
 	}
 	return GMEM_OK;
