@@ -53,7 +53,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 {
 	vm_offset_t i, last_i = 0;
 	int error;
-	uint64_t total = 0, delta;
+	// uint64_t total = 0, delta;
 
 	// coalesce mapping requests
 	while(last_i * GMEM_PAGE_SIZE < size) {
@@ -70,14 +70,14 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 		// printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
 
-		delta = rdtscp();
+		// delta = rdtscp();
 		error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
 		// error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-		total += rdtscp() - delta;
+		// total += rdtscp() - delta;
 		// printf("map costs %lu\n", delta);
 
 		if (error != 0)
