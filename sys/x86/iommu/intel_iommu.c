@@ -125,7 +125,7 @@ finish:
 // No consideration of sp promotions
 int
 domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, dmar_pte_t *root)
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
 	int lvl;
 	vm_page_t m, pm;
