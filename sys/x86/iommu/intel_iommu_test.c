@@ -85,7 +85,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 
 		last_i = i + 1;
 	}
-	return delta;
+	return 0;
 }
 
 static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
