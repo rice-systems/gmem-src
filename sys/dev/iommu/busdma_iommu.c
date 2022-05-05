@@ -940,6 +940,7 @@ static void iommu_reload_fast_mmu(bus_dma_tag_t dmat)
 	ctx = tag->ctx;
 	domain = ctx->domain;
 
+	printf("[gmem] NIC is reloading faster mmu\n");
 	pmap_reload_mmu(domain->pmap, &intel_iommu_ops);
 }
 
