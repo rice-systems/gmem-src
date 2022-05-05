@@ -53,7 +53,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 {
 	vm_offset_t i, last_i = 0;
 	int error;
-	// uint64_t total = 0, delta;
+	uint64_t total = 0, delta;
 
 	// coalesce mapping requests
 	while(last_i * GMEM_PAGE_SIZE < size) {
@@ -70,8 +70,8 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 		// printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
 
-		// delta = rdtscp();
-		
+		delta = rdtscp();
+
 		// error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
@@ -80,7 +80,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
 
-		// total += rdtscp() - delta;
+		total += rdtscp() - delta;
 		// printf("map costs %lu\n", delta);
 
 		if (error != 0)
@@ -88,7 +88,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 
 		last_i = i + 1;
 	}
-	return 0;
+	return total;
 }
 
 static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
@@ -202,11 +202,8 @@ static int verify_sp(vm_page_t *ma, unsigned long npages)
 	pgtb_cnt = dmar_tbl_pagecnt;
 	for (int i = 0; i < test_cases; i ++) {
 		va_start = test_start[i];
-		if (map(fake_domain, va_start, size, ma, 
-			DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true)) {
-			printf("error mapping buffer\n");
-			return 1;
-		}
+		map(fake_domain, va_start, size, ma, 
+			DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true);
 		uprintf("test case [%d], start verification...\n", i);
 
 		// verify mapping
@@ -286,13 +283,8 @@ static int bench(vm_page_t *ma, unsigned long npages)
 
 			// always cold start
 			for (int try = 0; try < run; try ++) {
-				delta = rdtscp();
-				if (map(fake_domain, va_start, size, &ma[try], 
-					DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true)) {
-					uprintf("error mapping buffer\n");
-					break;
-				}
-				sample[try][0] = rdtscp() - delta;
+				sample[try][0] = map(fake_domain, va_start, size, &ma[try], 
+					DMAR_PTE_R | DMAR_PTE_W, IOMMU_PGF_WAITOK, true);
 
 				delta = rdtscp();
 				if (unmap(fake_domain, va_start, size)) {
