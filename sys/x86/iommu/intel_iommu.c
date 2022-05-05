@@ -133,10 +133,11 @@ domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 	int i;
 
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
-		pm = domain->pglv0;
+		// pm = domain->pglv0;
 		pte = root;
-		for (lvl = 0; lvl < domain->pglvl; lvl ++, pm = m) {
+		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
+			pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
 			pte = &pte[i];
 
 			if (lvl < domain->pglvl - 1) {
