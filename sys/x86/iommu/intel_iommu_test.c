@@ -52,7 +52,6 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
     vm_page_t *pages, uint64_t pflags, int flags, bool contig)
 {
 	vm_offset_t i;
-	int error;
 	uint64_t total = 0, delta;
 
 
