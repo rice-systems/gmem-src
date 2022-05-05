@@ -71,12 +71,15 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// delta = rdtscp();
-		error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
-			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-		// error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
+		
+		// error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
+
+		error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
+			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
+			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
+
 		// total += rdtscp() - delta;
 		// printf("map costs %lu\n", delta);
 
