@@ -367,7 +367,7 @@ static int test_iommu(bool id_mapped)
 		uprintf("testing dynamic page table\n");
 
 
-	// verify_sp(ma, npages);
+	verify_sp(ma, npages);
 	bench(ma, npages);
 
 	free(ma, M_IOMMU_TEST);
