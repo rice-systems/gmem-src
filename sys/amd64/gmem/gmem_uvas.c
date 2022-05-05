@@ -130,7 +130,7 @@ gmem_error_t gmem_uvas_create(
 		pmap->uvas = uvas;
 
 		// use mmu callback to initialize device-specific data
-		mmu_ops->mmu_init();
+		mmu_ops->mmu_init(mmu_ops);
 		pmap->mmu_ops = mmu_ops;
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
