@@ -48,11 +48,12 @@ __FBSDID("$FreeBSD$");
 
 static MALLOC_DEFINE(M_IOMMU_TEST, "iommu_test", "IOMMU test pool");
 
-static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
+static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
     vm_page_t *pages, uint64_t pflags, int flags, bool contig)
 {
 	vm_offset_t i, last_i = 0;
 	int error;
+	uint64_t total = 0, delta;
 
 	// coalesce mapping requests
 	while(last_i * GMEM_PAGE_SIZE < size) {
@@ -66,25 +67,25 @@ static int map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
 		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
-		printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
-			(i + 1 - last_i) * GMEM_PAGE_SIZE);
+		// printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
+		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
 
-		uint64_t delta = rdtscp();
-		// error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
-		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-		error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
+		delta = rdtscp();
+		error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
 			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-		delta = rdtscp() - delta;
-		printf("map costs %lu\n", delta);
+		// error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
+		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
+		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
+		total += rdtscp() - delta;
+		// printf("map costs %lu\n", delta);
 
 		if (error != 0)
 			panic("domain_map_buf returns error: %d\n", error);
 
 		last_i = i + 1;
 	}
-	return 0;
+	return delta;
 }
 
 static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
