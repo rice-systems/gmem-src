@@ -123,11 +123,9 @@ bus_dmamap_reload_fast(bus_dma_tag_t dmat)
 {
 	struct bus_dma_tag_common *tc;
 
-	if (map != NULL) {
-		tc = (struct bus_dma_tag_common *)dmat;
-		printf("[gmem] NIC is reloading faster mmu\n");
-		tc->impl->reload_fast(dmat);
-	}
+	tc = (struct bus_dma_tag_common *)dmat;
+	printf("[gmem] NIC is reloading faster mmu\n");
+	tc->impl->reload_fast(dmat);
 }
 
 static inline void
