@@ -180,6 +180,13 @@ gmem_error_t gmem_uvas_create(
 	return GMEM_OK;
 }
 
+gmem_error_t pmap_reload_mmu(dev_pmap_t *pmap, gmem_mmu_ops_t *new_mmu)
+{
+	new_mmu->mmu_init(new_mmu);
+	pmap->mmu_ops = new_mmu;
+	return GMEM_OK;
+}
+
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 {
 	KASSERT(uvas != NULL, "The uvas to be deleted is NULL!");

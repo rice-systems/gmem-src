@@ -5680,6 +5680,7 @@ iflib_queues_alloc(if_ctx_t ctx)
 	txq = ctx->ifc_txqs;
 	rxq = ctx->ifc_rxqs;
 
+	bus_dmamap_reload_fast(bus_get_dma_tag(ctx->ifc_dev));
 	/*
 	 * XXX handle allocation failure
 	 */

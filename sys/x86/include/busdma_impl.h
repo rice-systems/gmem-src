@@ -85,6 +85,7 @@ struct bus_dma_impl {
 	void (*map_unload)(bus_dma_tag_t dmat, bus_dmamap_t map);
 	void (*map_unload_async)(bus_dma_tag_t dmat, bus_dmamap_t map, void (*cb)(void *), void *);
 	void (*map_unload_flush)(bus_dma_tag_t dmat);
+	void (*reload_fast)(bus_dma_tag_t dmat);
 	void (*map_sync)(bus_dma_tag_t dmat, bus_dmamap_t map,
 	    bus_dmasync_op_t op);
 };

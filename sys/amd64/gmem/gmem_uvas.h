@@ -366,4 +366,6 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 	int wait, void (* unmap_callback)(void *), void *callback_args);
 gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	void (* unmap_callback)(void *), void *callback_args);
+gmem_error_t pmap_reload_mmu(dev_pmap_t *pmap, gmem_mmu_ops_t *new_mmu);
+
 #endif

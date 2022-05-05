@@ -114,8 +114,19 @@ bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map)
 
 	if (map != NULL) {
 		tc = (struct bus_dma_tag_common *)dmat;
-		// printf("[%s]: %s #%d\n", file, func, line);
 		tc->impl->map_unload(dmat, map);
+	}
+}
+
+static inline void
+bus_dmamap_reload_fast(bus_dma_tag_t dmat)
+{
+	struct bus_dma_tag_common *tc;
+
+	if (map != NULL) {
+		tc = (struct bus_dma_tag_common *)dmat;
+		printf("[gmem] NIC is reloading faster mmu\n");
+		tc->impl->reload_fast(dmat);
 	}
 }
 
