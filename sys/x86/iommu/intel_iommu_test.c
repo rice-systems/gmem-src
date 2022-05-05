@@ -99,7 +99,8 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
 {
 	// return domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-	return domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	return 0;
 }
 
 static vm_paddr_t x86_translate(struct dmar_domain *domain, vm_offset_t va, int *pglvl)
