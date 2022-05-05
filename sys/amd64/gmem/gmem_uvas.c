@@ -125,11 +125,13 @@ gmem_error_t gmem_uvas_create(
 		pmap->ndevices = 1;
 		TAILQ_INIT(&pmap->gmem_dev_header);
 		TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
-		pmap->mmu_ops = mmu_ops;
+
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
 
 		// use mmu callback to initialize device-specific data
+		mmu_ops->mmu_init();
+		pmap->mmu_ops = mmu_ops;
 		pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
 		// initialize uvas

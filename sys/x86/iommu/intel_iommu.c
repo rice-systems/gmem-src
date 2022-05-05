@@ -569,6 +569,7 @@ static void intel_iommu_tlb_invl_coalesced(
 gmem_mmu_ops_t intel_iommu_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
 	.mmu_has_range_tlb = false,
+	.inited = 0,
 	.mmu_init               = intel_iommu_init,
 	.prepare                = intel_iommu_prepare,
 	.mmu_pmap_create        = intel_iommu_pmap_create,
@@ -584,6 +585,7 @@ gmem_mmu_ops_t intel_iommu_ops = {
 gmem_mmu_ops_t intel_iommu_default_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
 	.mmu_has_range_tlb = false,
+	.inited = 0,
 	.mmu_init               = intel_iommu_init,
 	.prepare                = intel_iommu_prepare,
 	.mmu_pmap_create        = intel_iommu_pmap_create,

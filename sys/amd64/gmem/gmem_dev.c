@@ -117,7 +117,7 @@ gmem_dev_t * gmem_dev_add(device_t device)
 	// dev->mmu_ops = mmu_ops;
 	GMEM_DEVMAP_UNLOCK(gmem_devmap);
 
-	mmu_ops->mmu_init(mmu_ops);
+	// mmu_ops->mmu_init(mmu_ops);
 
 	return dev;
 }
