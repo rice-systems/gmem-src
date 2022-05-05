@@ -234,8 +234,7 @@ finish:
 }
 
 // No need to consider demotion since it never splits mappings.
-static int
-domain_pmap_release_locked(struct dmar_domain *domain, vm_offset_t base, 
+int domain_pmap_release_locked(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t pm;
