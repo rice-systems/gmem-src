@@ -67,8 +67,8 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
-		// printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
-		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
+		printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
+			(i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		delta = rdtscp();
 
