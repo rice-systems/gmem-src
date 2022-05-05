@@ -222,7 +222,7 @@ dmar_identify(driver_t *driver, device_t parent)
 		}
 
 		// GMEM code: register this gmem device using iommu_ops
-		gmem_dev_tmp = gmem_dev_add(dmar_devs[i], &intel_iommu_ops);
+		gmem_dev_tmp = gmem_dev_add(dmar_devs[i]);
 		// GMEM code: revert the registration of the gmem_dev upon errors
 		// gmem_dev_remove(gmem_dev_tmp);
 	}

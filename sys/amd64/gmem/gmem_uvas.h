@@ -292,6 +292,7 @@ struct dev_pmap
 {
 	// An array of the mapping devices
 	uint8_t ndevices;
+
 	// for convenience, use a tailq for devices sharing this dev_pmap
 	TAILQ_HEAD(gmem_dev_tailq, gmem_dev) gmem_dev_header;
 
@@ -316,6 +317,9 @@ struct dev_pmap
 	// can include a child_pmap for nested translation
 	// can also store the implementation of mmu_ops
 	void *data;
+
+	// minimum sp shift (dev-specific)
+	uint8_t min_sp_shift;
 };
 
 struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags);

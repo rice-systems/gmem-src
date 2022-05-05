@@ -123,8 +123,7 @@ finish:
 }
 
 // No consideration of sp promotions
-int
-domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
+int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
 	int lvl;
@@ -157,80 +156,11 @@ domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 				*pte = pa | pflags;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				atomic_add_int(&pm->ref_count, 1);
+				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
 		}
 	}
 	return 0;
-}
-
-
-// There are no concurrent mapping/unmapping of the same PTE,
-// so the lock only needs to protect page allocations of the iommu page table.
-int
-domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t base, 
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
-    int lvl, dmar_pte_t *ptep)
-{
-	vm_page_t m, pm;
-	dmar_pte_t *pte;
-	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
-	int i, ret = 0;
-
-	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));
-
-	i = domain_pgtbl_pte_off(domain, base, lvl);
-	pgshift = domain_page_shift(domain, lvl);
-	pg_size = 1ULL << pgshift;
-	pg_frame = pg_size - 1;
-
-	while (size > 0) {
-		pte = &ptep[i];
-
-		// map the page, it could be a superpage
-		if (lvl == domain->pglvl - 1) {
-			*pte = pa | pflags;
-finish:
-			dmar_flush_pte_to_ram(domain->dmar, pte);
-			atomic_add_int(&pm->ref_count, 1);
-			size -= pg_size;
-			pa += 1 << pgshift;
-		} 
-		else {
-			// now determine the map size (base, mapsize)
-			end1 = ((base >> pgshift) + 1) << pgshift;
-			mapsize = (end1 <= base + size) ? end1 - base : size;
-
-			// Can we map a superpage?
-			if ((mapsize == pg_size) && ((base & pg_frame) == 0)
-				&& ((pa & pg_frame) == 0)
-				&& domain_is_sp_lvl(domain, lvl + 1)) {
-				*pte = pa | pflags | DMAR_PTE_SP;
-				base += mapsize;
-				goto finish;
-			}
-			else {
-				// do we need to create pg table page?
-				if (*pte == 0) {
-					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
-						flags | IOMMU_PGF_ZERO);
-					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
-						dmar_flush_pte_to_ram(domain->dmar, pte);
-						atomic_add_int(&pm->ref_count, 1);
-					}
-					else
-						dmar_pgfree_null(m);
-				}
-				domain_pmap_enter_lockless(domain, base, mapsize, 
-						pa, pflags, flags, lvl + 1, 
-						(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
-				size -= mapsize;
-				base += mapsize;
-				pa += mapsize;
-			}
-		}
-		i ++;
-	}
-	return ret;
 }
 
 // No need to consider demotion since it never splits mappings.
@@ -281,8 +211,7 @@ skip_clear:
 }
 
 // No need to consider demotion since it never splits mappings.
-int
-domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, 
+int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, int lvl, dmar_pte_t *ptep)
 {
 	vm_page_t pm;
@@ -319,8 +248,37 @@ domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base,
 	return 0;
 }
 
+// No need to consider demotion since it never splits mappings.
+int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
+{
+	int lvl;
+	vm_page_t m, pm;
+	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
+	int i;
+
+	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
+		pte = root;
+		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+			i = domain_pgtbl_pte_off(domain, va, lvl);
+			pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+			pte = &pte[i];
+
+			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
+			else
+			{
+				*pte = 0;
+				dmar_flush_pte_to_ram(domain->dmar, pte);
+				atomic_add_int(&pm->ref_count, -1);
+				// This is the point to insert demotion code, if DMAR_PTE_SP
+			}
+		}
+	}
+	return 0;
+}
+
 // This function has been changed to map a contiguous pa range.
-int
+static inline int
 domain_map_buf(struct dmar_domain *domain, vm_offset_t base,
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
@@ -332,22 +290,6 @@ domain_map_buf(struct dmar_domain *domain, vm_offset_t base,
     FINISH_STATS(_MAP, size >> 12);
 
 	DMAR_DOMAIN_PGUNLOCK(domain);
-	return 0;
-}
-
-// This function has been changed to map a contiguous pa range.
-int
-domain_map_buf_lockless(struct dmar_domain *domain, vm_offset_t base,
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
-{
-	// DMAR_DOMAIN_PGLOCK(domain);
-
-	START_STATS;
-	domain_pmap_enter_lockless(domain, base, size, pa, pflags, flags, 
-		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-    FINISH_STATS(_MAP, size >> 12);
-
-	// DMAR_DOMAIN_PGUNLOCK(domain);
 	return 0;
 }
 
@@ -440,7 +382,7 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 	KASSERT(pmap->data == NULL, "creating a pmap over existing page table");
 	pmap->data = dev_data;
 
-
+	pmap->min_sp_shift = 21;
 	pgtable = pmap->data;
 	if (pgtable->id_mapped) {
 		if ((pgtable->dmar->hw_ecap & DMAR_ECAP_PT) == 0) {
@@ -476,7 +418,6 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
 	    ((prot & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
 	    ((prot & IOMMU_MAP_ENTRY_TM) != 0 ? DMAR_PTE_TM : 0);
-	// pflags = DMAR_PTE_R | DMAR_PTE_W;
 
 	intel_iommu_pgtable_t *pgtable = pmap->data;
 	domain = pgtable->domain;
@@ -484,10 +425,43 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 
 
 	START_STATS;
-	// error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
-	// error = domain_map_buf_lockless(domain, va, size, pa, pflags, mem_flags);
-	// error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
-	// 	0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
+    FINISH_STATS(MAP, size >> 12);
+	if (error != 0)
+		return (error);
+
+	if ((unit->hw_cap & DMAR_CAP_CM) != 0)
+		domain_flush_iotlb_sync(domain, va, size);
+	else if ((unit->hw_cap & DMAR_CAP_RWBF) != 0) {
+		/* See 11.1 Write Buffer Flushing. */
+		DMAR_LOCK(unit);
+		dmar_flush_write_bufs(unit);
+		DMAR_UNLOCK(unit);
+	}
+
+	return GMEM_OK;
+}
+
+static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
+	vm_paddr_t pa, u_int prot, u_int mem_flags)
+{
+
+	struct dmar_domain *domain;
+	struct dmar_unit *unit;
+	uint64_t pflags;
+	int error;
+
+	pflags = ((prot & IOMMU_MAP_ENTRY_READ) != 0 ? DMAR_PTE_R : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_WRITE) != 0 ? DMAR_PTE_W : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_SNOOP) != 0 ? DMAR_PTE_SNP : 0) |
+	    ((prot & IOMMU_MAP_ENTRY_TM) != 0 ? DMAR_PTE_TM : 0);
+
+	intel_iommu_pgtable_t *pgtable = pmap->data;
+	domain = pgtable->domain;
+	unit = domain->dmar;
+
+
+	START_STATS;
 	error = domain_pmap_enter_fast(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
@@ -508,13 +482,29 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
 	intel_iommu_pgtable_t *pgtable = pmap->data;
+	dmar_domain *domain = pgtable->domain;
 	int error;
 
 	// destroy mappings
 	START_STATS;
-	// error = domain_unmap_buf(pgtable->domain, va, size);
-	error = domain_pmap_release_lockless(pgtable->domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(pgtable->domain->pglv0)));
-	// error = domain_unmap_buf_lockless(pgtable->domain, va, size);
+	DMAR_DOMAIN_PGLOCK(domain);
+	error = domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	DMAR_DOMAIN_PGUNLOCK(domain);
+	FINISH_STATS(UNMAP, size >> 12);
+
+	// invalidate TLB
+	return GMEM_OK;
+}
+
+static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
+{
+	intel_iommu_pgtable_t *pgtable = pmap->data;
+	dmar_domain *domain = pgtable->domain;
+	int error;
+
+	// destroy mappings
+	START_STATS;
+	error = domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
@@ -579,7 +569,21 @@ static void intel_iommu_tlb_invl_coalesced(
 gmem_mmu_ops_t intel_iommu_ops = {
 	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
 	.mmu_has_range_tlb = false,
-	.inited = 0,
+	.mmu_init               = intel_iommu_init,
+	.prepare                = intel_iommu_prepare,
+	.mmu_pmap_create        = intel_iommu_pmap_create,
+	.mmu_pmap_destroy       = intel_iommu_pmap_destroy,
+	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
+	.mmu_pmap_release       = intel_iommu_pmap_release_fast,
+	.mmu_pmap_protect       = intel_iommu_pmap_protect,
+	.mmu_tlb_invl           = intel_iommu_tlb_invl,
+	.mmu_pmap_kill          = gmem_mmu_pmap_kill_generic,
+	.mmu_tlb_invl_coalesced = intel_iommu_tlb_invl_coalesced,
+};
+
+gmem_mmu_ops_t intel_iommu_default_ops = {
+	.pgsize_bitmap = (1UL << 12) | (1UL << 21) | (1UL << 30),
+	.mmu_has_range_tlb = false,
 	.mmu_init               = intel_iommu_init,
 	.prepare                = intel_iommu_prepare,
 	.mmu_pmap_create        = intel_iommu_pmap_create,

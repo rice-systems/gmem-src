@@ -31,7 +31,7 @@ struct gmem_dev
 	//   1. hiererchical MMUs for nested translations, as gmem interfaces should run independently
 	// To consider:
 	//   1. dynamic mmu changes. E.g. device hotplug in guest OS.
-	gmem_mmu_ops_t *mmu_ops;
+	// gmem_mmu_ops_t *mmu_ops;
 
 	// list of gmem devs sharing the same pmap
 	TAILQ_ENTRY(gmem_dev) gmem_dev_list;
@@ -49,7 +49,7 @@ struct gmem_devmap_info
 };
 
 // GMEM KPIs for devices
-gmem_dev_t* gmem_dev_add(device_t device, gmem_mmu_ops_t *mmu_ops);
+gmem_dev_t* gmem_dev_add(device_t device);
 void gmem_dev_remove(gmem_dev_t *dev);
 bool is_gmem_dev(device_t device);
 

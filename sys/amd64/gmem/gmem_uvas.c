@@ -95,9 +95,16 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 //  4. unique: the device is an edge device and the uvas has a single pmap
 //     TODO: change this mode to share CPU vma, consider the opencl case.
 //  lookup: faultable device requires looking up uvas entries 
-gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev,
-	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
-	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size)
+gmem_error_t gmem_uvas_create(
+	gmem_uvas_t **uvas_res, 
+	dev_pmap_t **pmap_res, 
+	gmem_dev_t *dev,
+	dev_pmap_t *pmap_to_share, 
+	void *dev_data, 
+	int mode,
+	vm_offset_t alignment, 
+	vm_offset_t boundary, 
+	vm_offset_t size)
 {
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
@@ -117,7 +124,7 @@ gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gme
 		pmap->ndevices = 1;
 		TAILQ_INIT(&pmap->gmem_dev_header);
 		TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
-		pmap->mmu_ops = dev->mmu_ops;
+		pmap->mmu_ops = mmu_ops;
 		pmap->pmap_replica = NULL;
 		pmap->uvas = uvas;
 
@@ -340,35 +347,37 @@ gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 }
 
 // Map a list of scattered 4KB pages
-// protection flags are required since a RO mapping can still be created with write permission
-// memory flags are required because the device may ask the kernel to manage its physical memory
-// mapping requires allocating physical pages.
-// This interface automatically coalesce contiguous scattered pages.
+// This interface used to coalesce contiguous scattered pages.
+// However, it is totally unnecessary. What is the probability for scattered pages to be contig?
 static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, vm_offset_t start,
-	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags)
+	vm_size_t size, vm_page_t *pages, u_int prot, u_int mem_flags, int coalesce)
 {
 	vm_offset_t i, last_i = 0;
 
 	if (pmap == NULL || size < GMEM_PAGE_SIZE)
 		return GMEM_EINVALIDARGS;
 
-	// coalesce mapping requests
-	while(last_i * GMEM_PAGE_SIZE < size) {
-		i = last_i;
+	if (coalesce) {
+		// coalesce mapping requests
+		while(last_i * GMEM_PAGE_SIZE < size) {
+			i = last_i;
 
-		// advance when contiguous
-		while((i + 1) * GMEM_PAGE_SIZE < size && 
-			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
-			++ i;
+			// advance when contiguous
+			while((i + 1) * GMEM_PAGE_SIZE < size && 
+				VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
+				++ i;
+			// map pages[last_i], ..., pages[i]
+			pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
+				(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
+				prot, mem_flags);
 
-		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
-
-		// map pages[last_i], ..., pages[i]
-		pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * last_i, 
-			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-			prot, mem_flags);
-
-		last_i = i + 1;
+			last_i = i + 1;
+		}
+	}
+	else {
+		for (i = 0; i < size / GMEM_PAGE_SIZE; i ++)
+			pmap->mmu_ops->mmu_pmap_enter(pmap, start + GMEM_PAGE_SIZE * i, 
+				GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[i]), prot, mem_flags);
 	}
 	return GMEM_OK;
 }
@@ -611,7 +620,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
 
     // Who should consider multiple pmaps cases?
     error = gmem_uvas_prepare_and_map_pages_sg(pmap, entry->start,
-        entry->end - entry->start, ma, eflags, ((flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK : 0));
+        entry->end - entry->start, ma, eflags, ((flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK : 0), (size >> pmap->min_sp_shift));
 
     if (error) {
         // There is no need to call iotlb inv

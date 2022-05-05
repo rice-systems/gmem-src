@@ -577,7 +577,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		if (!is_gmem_dev(dev))
 		{
 			// GMEM code: register this gmem device using iommu_ops
-			gmem_dev_add(dev, &intel_iommu_ops);
+			gmem_dev_add(dev);
 			// Let's not panic, it could be normal
 			// panic("requesting device was not registered as a gmem device\n");
 		}
@@ -593,7 +593,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			dev_data->dmar = dmar;
 			dev_data->domain = domain1;
 			dev_data->id_mapped = id_mapped;
-			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev),
+			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev), &intel_iommu_default_ops,
 				NULL, dev_data, GMEM_UVAS_UNIQUE,
 				PAGE_SIZE, 0, 1ULL << 48);
 			debug_printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);

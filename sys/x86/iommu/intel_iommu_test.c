@@ -51,53 +51,24 @@ static MALLOC_DEFINE(M_IOMMU_TEST, "iommu_test", "IOMMU test pool");
 static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t size,
     vm_page_t *pages, uint64_t pflags, int flags, bool contig)
 {
-	vm_offset_t i, last_i = 0;
+	vm_offset_t i;
 	int error;
 	uint64_t total = 0, delta;
 
-	// coalesce mapping requests
-	while(last_i * GMEM_PAGE_SIZE < size) {
-		i = last_i;
 
-		// advance when contiguous
-		while((i + 1) * GMEM_PAGE_SIZE < size && 
-			VM_PAGE_TO_PHYS(pages[i]) + GMEM_PAGE_SIZE == VM_PAGE_TO_PHYS(pages[i + 1]))
-			++ i;
-
-		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
-
-		// map pages[last_i], ..., pages[i]
-		// printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
-		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
-
+	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
 		delta = rdtscp();
-
-		error = domain_pmap_enter_fast(domain, start + GMEM_PAGE_SIZE * last_i,
-			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-
-		// error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
-		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-
-		// error = domain_map_buf(domain, start + GMEM_PAGE_SIZE * last_i,
-		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-		// 	DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
-
+		domain_pmap_enter_fast(domain, start + GMEM_PAGE_SIZE * i, 
+			GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[i]), DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
 		total += rdtscp() - delta;
-		// printf("map costs %lu\n", delta);
-
-		if (error != 0)
-			panic("domain_map_buf returns error: %d\n", error);
-
-		last_i = i + 1;
 	}
 	return total;
 }
 
 static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
 {
-	domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	domain_pmap_release_fast(domain, va, size);
+	// domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	// domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	return 0;
 }
@@ -368,8 +339,8 @@ static int test_iommu(bool id_mapped)
 		uprintf("testing dynamic page table\n");
 
 
-	// verify_sp(ma, npages);
-	bench(ma, npages);
+	verify_sp(ma, npages);
+	// bench(ma, npages);
 
 	free(ma, M_IOMMU_TEST);
 	vm_object_deallocate(object);

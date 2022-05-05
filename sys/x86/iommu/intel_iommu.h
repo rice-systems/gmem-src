@@ -55,29 +55,14 @@ typedef struct intel_iommu_pgtable intel_iommu_pgtable_t;
 extern gmem_mmu_ops_t intel_iommu_ops;
 
 
-int domain_map_buf(struct dmar_domain *domain, vm_offset_t base,
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
-int domain_map_buf_lockless(struct dmar_domain *domain, vm_offset_t base,
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
-
-int domain_unmap_buf(struct dmar_domain *domain,
-    iommu_gaddr_t base, iommu_gaddr_t size);
-int domain_unmap_buf_lockless(struct dmar_domain *domain,
-    iommu_gaddr_t base, iommu_gaddr_t size);
-
-
-int
-domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t base, 
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags, 
-    int lvl, dmar_pte_t *ptep);
-
 int domain_pmap_release_locked(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, int lvl, dmar_pte_t *ptep);
+
+int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
 int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, int lvl, dmar_pte_t *ptep);
+int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t base, vm_offset_t size);
 
-int
-domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
 
 #endif
