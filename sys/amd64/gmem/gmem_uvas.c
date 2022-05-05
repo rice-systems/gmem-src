@@ -99,6 +99,7 @@ gmem_error_t gmem_uvas_create(
 	gmem_uvas_t **uvas_res, 
 	dev_pmap_t **pmap_res, 
 	gmem_dev_t *dev,
+	gmem_mmu_ops_t *mmu_ops,
 	dev_pmap_t *pmap_to_share, 
 	void *dev_data, 
 	int mode,

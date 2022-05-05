@@ -252,7 +252,7 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base,
 int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
-	vm_page_t m, pm;
+	vm_page_t pm;
 	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
 	int i;
 
