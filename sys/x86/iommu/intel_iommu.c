@@ -129,11 +129,10 @@ domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 {
 	int lvl;
 	vm_page_t m, pm;
-	dmar_pte_t *pte;
+	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
 	int i;
 
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
-		// pm = domain->pglv0;
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
@@ -487,8 +486,9 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	START_STATS;
 	// error = domain_map_buf(domain, va, size, pa, pflags, mem_flags);
 	// error = domain_map_buf_lockless(domain, va, size, pa, pflags, mem_flags);
-	error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
-		0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	// error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags, 
+	// 	0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	error = domain_pmap_enter_fast(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);

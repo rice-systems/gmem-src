@@ -67,15 +67,14 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 		// pmap->mmu_ops->prepare(VM_PAGE_TO_PHYS(pages[last_i]), (i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		// map pages[last_i], ..., pages[i]
-		printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
-			(i + 1 - last_i) * GMEM_PAGE_SIZE);
+		// printf("[map] start %lx - size %lx\n", start + GMEM_PAGE_SIZE * last_i,
+		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE);
 
 		delta = rdtscp();
 
 		error = domain_pmap_enter_fast(domain, start + GMEM_PAGE_SIZE * last_i,
 			(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
-			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK,
-		    (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+			DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
 
 		// error = domain_map_buf_lockless(domain, start + GMEM_PAGE_SIZE * last_i,
 		// 	(i + 1 - last_i) * GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[last_i]),
