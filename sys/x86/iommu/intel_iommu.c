@@ -129,7 +129,7 @@ domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 {
 	int lvl;
 	vm_page_t m, pm;
-	dmar_pte_t *pte;
+	dmar_pte_t *pte, *ptep;
 	int i;
 
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
@@ -150,6 +150,7 @@ domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 					else
 						dmar_pgfree_null(m);
 				}
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME)
 			}
 			else
 			{
