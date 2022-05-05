@@ -256,7 +256,7 @@ int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offs
 	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
 	int i;
 
-	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
+	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
@@ -482,7 +482,7 @@ static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va
 static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
 	intel_iommu_pgtable_t *pgtable = pmap->data;
-	dmar_domain *domain = pgtable->domain;
+	struct dmar_domain *domain = pgtable->domain;
 	int error;
 
 	// destroy mappings
@@ -499,7 +499,7 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
 	intel_iommu_pgtable_t *pgtable = pmap->data;
-	dmar_domain *domain = pgtable->domain;
+	struct dmar_domain *domain = pgtable->domain;
 	int error;
 
 	// destroy mappings
