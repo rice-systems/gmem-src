@@ -368,7 +368,7 @@ static int test_iommu(bool id_mapped)
 
 
 	verify_sp(ma, npages);
-	bench(ma, npages);
+	// bench(ma, npages);
 
 	free(ma, M_IOMMU_TEST);
 	vm_object_deallocate(object);
