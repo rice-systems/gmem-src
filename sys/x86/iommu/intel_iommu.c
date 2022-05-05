@@ -150,7 +150,7 @@ domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 					else
 						dmar_pgfree_null(m);
 				}
-				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME)
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
 			}
 			else
 			{
