@@ -221,7 +221,7 @@ SYSCTL_DECL(_hw_iommu);
 
 #include <machine/atomic.h>
 #include <sys/systm.h>
-#define instrument true
+extern int instrument;
 #define MAP           0
 #define UNMAP         1 
 #define VA_ALLOC      2

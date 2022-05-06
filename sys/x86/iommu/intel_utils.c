@@ -68,6 +68,7 @@ __FBSDID("$FreeBSD$");
 #include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
+#include <dev/iommu/iommu.h>
 
 u_int
 dmar_nd2mask(u_int nd)
@@ -672,6 +673,7 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
 #include <sys/sbuf.h>
 #include <sys/malloc.h>
 
+int instrument=0;
 struct hist instrument_hist[MAXPGCNT];
 
 static void
@@ -744,3 +746,6 @@ SYSCTL_OID(_hw_iommu_dmar, OID_AUTO, print_iommu_hist, CTLTYPE_STRING | CTLFLAG_
     sysctl_iommu_hist, "A", "print iommu histogram");
 SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, reset_iommu_hist, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
     sysctl_iommu_reset, "I", "reset iommu hist");
+SYSCTL_INT(_hw_iommu_dmar, OID_AUTO, instrument, CTLFLAG_RWTUN,
+    &instrument, 0,
+    "instrument iommu ops");
