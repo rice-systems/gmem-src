@@ -504,7 +504,7 @@ static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t 
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	error = domain_pmap_release_fast(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
