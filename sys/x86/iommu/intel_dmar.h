@@ -73,6 +73,7 @@ struct dmar_domain {
 	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
 	vm_page_t pglv0;
+	dmar_pte_t *root;
 };
 
 struct dmar_ctx {

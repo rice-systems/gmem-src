@@ -355,6 +355,7 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 	/* No implicit free of the top level page table page. */
 	m->ref_count ++;
 	domain->pglv0 = m;
+	domain->root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
 	vm_wire_add(1);
 	domain->iodom.flags |= IOMMU_DOMAIN_PGTBL_INITED;
 	domain->pgtbl_obj = NULL;
@@ -385,6 +386,7 @@ domain_free_pgtbl(struct dmar_domain *domain)
 	DMAR_DOMAIN_LOCK(domain);
 	domain_pmap_destroy(domain, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	domain->pglv0->ref_count = 1;
+	domain->root = NULL;
 	dmar_pgfree_null(domain->pglv0);
 	DMAR_DOMAIN_UNLOCK(domain);
 }

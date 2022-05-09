@@ -128,7 +128,7 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 {
 	int lvl;
 	vm_page_t m; //, pm;
-	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
+	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
@@ -253,7 +253,7 @@ int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offs
 {
 	int lvl;
 	// vm_page_t pm;
-	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
+	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
@@ -504,7 +504,7 @@ static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t 
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_fast(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	error = domain_pmap_release_fast(domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
