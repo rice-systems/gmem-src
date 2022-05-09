@@ -127,7 +127,7 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
 	int lvl;
-	vm_page_t m, pm;
+	vm_page_t m; //, pm;
 	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
 	int i;
 
@@ -135,7 +135,7 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
-			pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
 			pte = &pte[i];
 
 			if (lvl < domain->pglvl - 1) {
@@ -144,7 +144,7 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 						flags | IOMMU_PGF_ZERO);
 					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
 						dmar_flush_pte_to_ram(domain->dmar, pte);
-						atomic_add_int(&pm->ref_count, 1);
+						// atomic_add_int(&pm->ref_count, 1);
 					}
 					else
 						dmar_pgfree_null(m);
@@ -155,7 +155,7 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 			{
 				*pte = pa | pflags;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
-				atomic_add_int(&pm->ref_count, 1);
+				// atomic_add_int(&pm->ref_count, 1);
 				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
 		}
@@ -252,7 +252,7 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base,
 int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
-	vm_page_t pm;
+	// vm_page_t pm;
 	dmar_pte_t *pte, *root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0));
 	int i;
 
@@ -260,7 +260,7 @@ int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offs
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
-			pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
 			pte = &pte[i];
 
 			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
@@ -269,7 +269,7 @@ int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offs
 			{
 				*pte = 0;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
-				atomic_add_int(&pm->ref_count, -1);
+				// atomic_add_int(&pm->ref_count, -1);
 				// This is the point to insert demotion code, if DMAR_PTE_SP
 			}
 		}

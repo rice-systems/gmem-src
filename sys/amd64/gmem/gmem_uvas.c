@@ -166,7 +166,7 @@ gmem_error_t gmem_uvas_create(
 			// Currently we use the maximum available quantum cache (16)
 			// nextfit/bestfit/firstfit do not impact iommu netperf performance.
 			uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-				alignment, alignment * 128, M_WAITOK | M_FIRSTFIT);
+				alignment, alignment * 16, M_WAITOK | M_FIRSTFIT);
 		}
 
 		*uvas_res = uvas;
