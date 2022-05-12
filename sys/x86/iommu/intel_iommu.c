@@ -497,6 +497,23 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 	return GMEM_OK;
 }
 
+static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
+{
+	intel_iommu_pgtable_t *pgtable = pmap->data;
+	struct dmar_domain *domain = pgtable->domain;
+	int error;
+
+	// destroy mappings
+	START_STATS;
+	DMAR_DOMAIN_PGLOCK(domain);
+	error = domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
+	DMAR_DOMAIN_PGUNLOCK(domain);
+	FINISH_STATS(UNMAP, size >> 12);
+
+	// invalidate TLB
+	return GMEM_OK;
+}
+
 static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
 	vm_paddr_t pa, u_int prot, u_int mem_flags)
 {
@@ -517,7 +534,7 @@ static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va
 
 
 	START_STATS;
-	error = domain_pmap_enter_fast(domain, va, size, pa, pflags, mem_flags);
+	error = domain_pmap_enter_fast_test(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
@@ -534,23 +551,6 @@ static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va
 	return GMEM_OK;
 }
 
-static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
-{
-	intel_iommu_pgtable_t *pgtable = pmap->data;
-	struct dmar_domain *domain = pgtable->domain;
-	int error;
-
-	// destroy mappings
-	START_STATS;
-	DMAR_DOMAIN_PGLOCK(domain);
-	error = domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-	DMAR_DOMAIN_PGUNLOCK(domain);
-	FINISH_STATS(UNMAP, size >> 12);
-
-	// invalidate TLB
-	return GMEM_OK;
-}
-
 static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
 	intel_iommu_pgtable_t *pgtable = pmap->data;
@@ -559,7 +559,7 @@ static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t 
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_fast(domain, va, size);
+	error = domain_pmap_release_fast_test(domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
@@ -629,8 +629,8 @@ gmem_mmu_ops_t intel_iommu_ops = {
 	.prepare                = intel_iommu_prepare,
 	.mmu_pmap_create        = intel_iommu_pmap_create,
 	.mmu_pmap_destroy       = intel_iommu_pmap_destroy,
-	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast_test,
-	.mmu_pmap_release       = intel_iommu_pmap_release_fast_test,
+	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
+	.mmu_pmap_release       = intel_iommu_pmap_release_fast,
 	.mmu_pmap_protect       = intel_iommu_pmap_protect,
 	.mmu_tlb_invl           = intel_iommu_tlb_invl,
 	.mmu_pmap_kill          = gmem_mmu_pmap_kill_generic,
