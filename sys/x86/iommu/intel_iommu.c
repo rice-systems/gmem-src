@@ -287,7 +287,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
-	vm_page_t pm, p[4];
+	vm_page_t p[4];
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
 	int i;
 
