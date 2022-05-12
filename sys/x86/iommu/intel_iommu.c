@@ -322,6 +322,8 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 					}
 					rw_wunlock(&domain->lock);
 				}
+				// we have reached the leaf node and we are done.
+				break;
 			}
 		}
 	}
