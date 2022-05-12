@@ -356,6 +356,7 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 	m->ref_count ++;
 	domain->pglv0 = m;
 	domain->root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
+	rw_init(&domain->lock, "read writer lock for iommu page table");
 	vm_wire_add(1);
 	domain->iodom.flags |= IOMMU_DOMAIN_PGTBL_INITED;
 	domain->pgtbl_obj = NULL;

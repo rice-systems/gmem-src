@@ -122,47 +122,6 @@ finish:
 	return ret;
 }
 
-// No consideration of sp promotions
-int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
-    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
-{
-	int lvl;
-	vm_page_t m; //, pm;
-	dmar_pte_t *pte, *root = domain->root;
-	int i;
-
-	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
-		pte = root;
-		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
-			i = domain_pgtbl_pte_off(domain, va, lvl);
-			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
-			pte = &pte[i];
-
-			if (lvl < domain->pglvl - 1) {
-				if (*pte == 0) {
-					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
-						flags | IOMMU_PGF_ZERO);
-					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
-						dmar_flush_pte_to_ram(domain->dmar, pte);
-						// atomic_add_int(&pm->ref_count, 1);
-					}
-					else
-						dmar_pgfree_null(m);
-				}
-				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
-			}
-			else
-			{
-				*pte = pa | pflags;
-				dmar_flush_pte_to_ram(domain->dmar, pte);
-				// atomic_add_int(&pm->ref_count, 1);
-				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
-			}
-		}
-	}
-	return 0;
-}
-
 // No need to consider demotion since it never splits mappings.
 int domain_pmap_release_locked(struct dmar_domain *domain, vm_offset_t base, 
     vm_offset_t size, int lvl, dmar_pte_t *ptep)
@@ -210,40 +169,43 @@ skip_clear:
 	return 1;
 }
 
-// No need to consider demotion since it never splits mappings.
-int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, 
-    vm_offset_t size, int lvl, dmar_pte_t *ptep)
+// No consideration of sp promotions
+int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
 {
-	vm_page_t pm;
-	dmar_pte_t *pte;
-	vm_offset_t pgshift, pg_size, pg_frame, end1, mapsize;
+	int lvl;
+	vm_page_t m; //, pm;
+	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
-	pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptep));
+	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
+		pte = root;
+		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+			i = domain_pgtbl_pte_off(domain, va, lvl);
+			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+			pte = &pte[i];
 
-	i = domain_pgtbl_pte_off(domain, base, lvl);
-	pgshift = domain_page_shift(domain, lvl);
-	pg_size = 1ULL << pgshift;
-	pg_frame = pg_size - 1;
-
-	while (size > 0) {
-		pte = &ptep[i];
-		if (lvl == domain->pglvl - 1 || (*pte & DMAR_PTE_SP) != 0) {
-			mapsize = pg_size;
-			*pte = 0;
-			dmar_flush_pte_to_ram(domain->dmar, pte);
-			atomic_add_int(&pm->ref_count, -1);
-			// No need to consider splitting superpage mapping
-		} else {
-			end1 = ((base >> pgshift) + 1) << pgshift;
-			mapsize = (end1 <= base + size) ? end1 - base : size;
-			// Dig deeper
-			domain_pmap_release_lockless(domain, base, mapsize, lvl + 1, 
-				(dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME));
+			if (lvl < domain->pglvl - 1) {
+				if (*pte == 0) {
+					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
+						flags | IOMMU_PGF_ZERO);
+					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
+						dmar_flush_pte_to_ram(domain->dmar, pte);
+						// atomic_add_int(&pm->ref_count, 1);
+					}
+					else
+						dmar_pgfree_null(m);
+				}
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
+			}
+			else
+			{
+				*pte = pa | pflags;
+				dmar_flush_pte_to_ram(domain->dmar, pte);
+				// atomic_add_int(&pm->ref_count, 1);
+				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
+			}
 		}
-		size -= mapsize;
-		base += mapsize;
-		i ++;
 	}
 	return 0;
 }
@@ -276,6 +238,97 @@ int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offs
 	}
 	return 0;
 }
+
+// No consideration of sp promotions
+int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va, 
+    vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
+{
+	int lvl;
+	vm_page_t m, p[4];
+	dmar_pte_t *pte, *root = domain->root;
+	int i;
+
+	rw_rlock(&domain->lock);
+	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
+		pte = root;
+		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+			i = domain_pgtbl_pte_off(domain, va, lvl);
+			p[lvl] = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+
+			pte = &pte[i];
+
+			if (lvl < domain->pglvl - 1) {
+				if (*pte == 0) {
+					m = dmar_pgalloc_null(i + (lvl << DMAR_NPTEPGSHIFT), 
+						flags | IOMMU_PGF_ZERO);
+					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
+						dmar_flush_pte_to_ram(domain->dmar, pte);
+						atomic_add_int(&p[lvl]->ref_count, 1);
+					}
+					else
+						dmar_pgfree_null(m);
+				}
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
+			}
+			else
+			{
+				*pte = pa | pflags;
+				dmar_flush_pte_to_ram(domain->dmar, pte);
+				atomic_add_int(&p[lvl]->ref_count, 1);
+				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
+			}
+		}
+	}
+	rw_runlock(&domain->lock);
+	return 0;
+}
+
+// No need to consider demotion since it never splits mappings.
+int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
+{
+	int lvl;
+	vm_page_t pm, p[4];
+	dmar_pte_t *pte, *root = domain->root, *ptes[4];
+	int i;
+
+	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
+		pte = root;
+		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+			i = domain_pgtbl_pte_off(domain, va, lvl);
+			p[lvl] = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+			ptes[lvl] = pte;
+
+			pte = &pte[i];
+
+			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
+			else
+			{
+				*pte = 0;
+				dmar_flush_pte_to_ram(domain->dmar, pte);
+				atomic_add_int(&p[lvl]->ref_count, -1);
+				// This is the point to insert demotion code, if DMAR_PTE_SP
+
+				// This is the point we start to try to reclaim page table pages
+				if (p[lvl]->ref_count == 0) {
+					rw_wlock(&domain->lock);
+					while(p[lvl]->ref_count == 0 && lvl > 0)
+					{
+						dmar_pgfree_null(p[lvl]);
+						lvl --;
+						*ptes[lvl] = 0;
+						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
+						atomic_add_int(&p[lvl]->ref_count, -1);
+					}
+					rw_wunlock(&domain->lock);
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+
 
 // This function has been changed to map a contiguous pa range.
 static inline int

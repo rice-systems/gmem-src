@@ -57,7 +57,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 
 	for (i = 0; i < size / GMEM_PAGE_SIZE; i ++) {
 		delta = rdtscp();
-		domain_pmap_enter_fast(domain, start + GMEM_PAGE_SIZE * i, 
+		domain_pmap_enter_fast_test(domain, start + GMEM_PAGE_SIZE * i, 
 			GMEM_PAGE_SIZE, VM_PAGE_TO_PHYS(pages[i]), DMAR_PTE_R | DMAR_PTE_W, GMEM_WAITOK);
 		total += rdtscp() - delta;
 	}
@@ -66,7 +66,7 @@ static uint64_t map(struct dmar_domain *domain, vm_paddr_t start, vm_paddr_t siz
 
 static int unmap(struct dmar_domain *domain, vm_paddr_t va, vm_paddr_t size)
 {
-	domain_pmap_release_fast(domain, va, size);
+	domain_pmap_release_fast_test(domain, va, size);
 	// domain_pmap_release_lockless(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	// domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
 	return 0;
