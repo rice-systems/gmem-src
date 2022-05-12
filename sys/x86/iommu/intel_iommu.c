@@ -310,9 +310,9 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 				// This is the point to insert demotion code, if DMAR_PTE_SP
 
 				// This is the point we start to try to reclaim page table pages
-				if (p[lvl]->ref_count == 0) {
+				if (p[lvl]->ref_count == 1) {
 					rw_wlock(&domain->lock);
-					while(p[lvl]->ref_count == 0 && lvl > 0)
+					while(p[lvl]->ref_count == 1 && lvl > 0)
 					{
 						dmar_pgfree_null(p[lvl]);
 						lvl --;
