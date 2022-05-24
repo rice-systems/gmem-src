@@ -123,8 +123,8 @@ gmem_rb_destroy(struct gmem_uvas *uvas)
 	gmem_uvas_free_entry(uvas, entry);
 
 	entry = RB_MAX(gmem_uvas_entries_tree, &uvas->rb_root);
-	KASSERT(entry->start == uvas->end, ("end entry start %p", uvas));
-	KASSERT(entry->end == uvas->end, ("end entry end %p", uvas));
+	// KASSERT(entry->start == uvas->end, ("end entry start %p", uvas));
+	// KASSERT(entry->end == uvas->end, ("end entry end %p", uvas));
 	KASSERT(entry->flags ==
 	    (GMEM_UVAS_ENTRY_PLACE | GMEM_UVAS_ENTRY_UNMAPPED),
 	    ("end entry flags %p", uvas));
@@ -133,8 +133,8 @@ gmem_rb_destroy(struct gmem_uvas *uvas)
 
 	RB_FOREACH_SAFE(entry, gmem_uvas_entries_tree, &uvas->rb_root,
 	    entry1) {
-		KASSERT((entry->flags & GMEM_UVAS_ENTRY_RMRR) != 0,
-		    ("non-RMRR entry left %p", uvas));
+		// KASSERT((entry->flags & GMEM_UVAS_ENTRY_RMRR) != 0,
+		//     ("non-RMRR entry left %p", uvas));
 		RB_REMOVE(gmem_uvas_entries_tree, &uvas->rb_root,
 		    entry);
 		gmem_uvas_free_entry(uvas, entry);

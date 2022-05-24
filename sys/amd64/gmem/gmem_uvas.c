@@ -110,8 +110,8 @@ gmem_error_t gmem_uvas_create(
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
 	{
-		KASSERT(pmap_to_share == NULL, "Creating a uvas with non-null pmap");
-		KASSERT(dev_data == NULL, "Creating a uvas with non-null dev-specific data");
+		KASSERT(pmap_to_share == NULL, ("Creating a uvas with non-null pmap"));
+		KASSERT(dev_data == NULL, ("Creating a uvas with non-null dev-specific data"));
 
 		// allocate and create the pmap with dev->mmu_ops
 		dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -189,7 +189,7 @@ gmem_error_t pmap_reload_mmu(dev_pmap_t *pmap, gmem_mmu_ops_t *new_mmu)
 
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 {
-	KASSERT(uvas != NULL, "The uvas to be deleted is NULL!");
+	KASSERT(uvas != NULL, ("The uvas to be deleted is NULL!"));
 
 	GMEM_UVAS_LOCK(uvas);
 	// traverse all pmaps of the uvas and delete them
@@ -217,7 +217,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	gmem_uvas_entry_t *entry;
 	int error;
 
-	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
+	KASSERT(uvas != NULL, ("The uvas to allocate entry is NULL!"));
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
@@ -266,7 +266,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		return GMEM_EINVALIDARGS;
 	}
 	
-	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
+	KASSERT(uvas != NULL, ("The uvas to allocate entry is NULL!"));
 	entry = gmem_uvas_alloc_entry(uvas, (flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK:0);
 	if (entry == NULL)
 		return (GMEM_ENOMEM);
@@ -310,7 +310,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 
 gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry)
 {
-	KASSERT(uvas != NULL, "The uvas to allocate entry is NULL!");
+	KASSERT(uvas != NULL, ("The uvas to allocate entry is NULL!"));
 	if (uvas == NULL) {
 		panic("[gmem panic] uvas is null\n");
 		return -1;
@@ -347,7 +347,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry)
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags)
 {
-	KASSERT(pmap != NULL, "The pmap to map is NULL!");
+	KASSERT(pmap != NULL, ("The pmap to map is NULL!"));
 
 	if (size & PAGE_MASK)
 		return GMEM_EINVALIDARGS;
@@ -396,7 +396,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wait,
 	void (* unmap_callback)(void *), void *callback_args)
 {
-	KASSERT(pmap != NULL, "The pmap to unmap is NULL!");
+	KASSERT(pmap != NULL, ("The pmap to unmap is NULL!"));
 
 	// I think there is no point to enqueue mmu_pmap_release operations from different pmap
 	// It is also not common to see a lot of pmap_release operations from the same pmap
@@ -583,7 +583,7 @@ void gmem_uvas_drain_unmap_tasks(gmem_uvas_t *uvas)
 gmem_error_t gmem_uvas_protect(gmem_uvas_t *uvas, vm_offset_t start,
 	vm_size_t size, vm_prot_t new_protection)
 {
-	KASSERT(uvas != NULL, "The uvas to mutate protection is NULL!");
+	KASSERT(uvas != NULL, ("The uvas to mutate protection is NULL!"));
 
 	return GMEM_OK;
 }
