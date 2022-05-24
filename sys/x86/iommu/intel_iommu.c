@@ -434,7 +434,7 @@ static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
 {
 	intel_iommu_pgtable_t *pgtable;
 
-	KASSERT(pmap->data == NULL, "creating a pmap over existing page table");
+	KASSERT(pmap->data == NULL, ("creating a pmap over existing page table"));
 	pmap->data = dev_data;
 
 	pmap->min_sp_shift = 21;
