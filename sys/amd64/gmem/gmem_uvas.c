@@ -110,8 +110,8 @@ gmem_error_t gmem_uvas_create(
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
 	{
-		KASSERT(pmap_to_share == NULL, ("Creating a uvas with non-null pmap"));
-		KASSERT(dev_data == NULL, ("Creating a uvas with non-null dev-specific data"));
+		KASSERT(pmap_to_share == NULL, ("Creating a unique uvas with non-null pmap"));
+		KASSERT(dev_data != NULL, ("Creating a unique uvas with null dev-specific data"));
 
 		// allocate and create the pmap with dev->mmu_ops
 		dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
