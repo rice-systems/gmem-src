@@ -490,7 +490,8 @@ static inline void enqueue_unmap_req(
 	gmem_uvas_t *uvas, 
 	struct gmem_uvas_entries_tailq *ext_entries,
 	void (* unmap_callback)(void *),
-	void *callback_args)
+	void *callback_args,
+	bool sleepable)
 {
 	struct unmap_request *req;
 	gmem_uvas_entry_t *entry, *entry1;
@@ -499,7 +500,7 @@ static inline void enqueue_unmap_req(
 
 	TAILQ_INIT(&request_q);
 	TAILQ_FOREACH_SAFE(entry, ext_entries, mapped_entry, entry1) {
-		req = uma_zalloc(gmem_uvas_unmap_requests_zone, M_WAITOK);
+		req = uma_zalloc(gmem_uvas_unmap_requests_zone, sleepable? M_WAITOK:M_NOWAIT);
 		TAILQ_REMOVE(ext_entries, entry, mapped_entry);
 		req->entry = entry;
 		req->cb = NULL;
@@ -553,7 +554,7 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 	} else {
 		// The unmap will be async
 		// printf("[unmap async] request enqueued to uvas %p\n", uvas);
-		enqueue_unmap_req(uvas, ext_entries, unmap_callback, callback_args);
+		enqueue_unmap_req(uvas, ext_entries, unmap_callback, callback_args, sleepable);
 	}
 	return GMEM_OK;
 }
