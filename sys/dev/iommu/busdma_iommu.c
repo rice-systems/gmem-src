@@ -689,7 +689,7 @@ iommu_bus_dmamap_load_something1(struct bus_dma_tag_iommu *tag,
 		TAILQ_CONCAT(&ext_entries, &map->map_entries, mapped_entry);
 		IOMMU_DOMAIN_UNLOCK(domain);
 		// ASYNC UNMAP used by busdma interface
-		gmem_uvas_unmap_external(domain->uvas, &ext_entries, false, NULL, NULL);
+		gmem_uvas_unmap_external(domain->uvas, &ext_entries, false, NULL, NULL, false);
 	}
 	return (error);
 }
@@ -907,7 +907,7 @@ _iommu_bus_dmamap_unload(bus_dma_tag_t dmat, bus_dmamap_t map1, bool wait, void 
 	IOMMU_DOMAIN_LOCK(domain);
 	TAILQ_CONCAT(&ext_entries, &map->map_entries, mapped_entry);
 	IOMMU_DOMAIN_UNLOCK(domain);
-	gmem_uvas_unmap_external(domain->uvas, &ext_entries, wait, cb, args);
+	gmem_uvas_unmap_external(domain->uvas, &ext_entries, wait, cb, args, false);
 }
 
 static void

@@ -431,7 +431,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	void (* unmap_callback)(void *), void *callback_args)
 {
 	GMEM_UVAS_LOCK(uvas);
-	gmem_uvas_unmap_external(uvas, &uvas->mapped_entries, wait, unmap_callback, callback_args);
+	gmem_uvas_unmap_external(uvas, &uvas->mapped_entries, wait, unmap_callback, callback_args, false);
 	GMEM_UVAS_UNLOCK(uvas);
 
 	return GMEM_OK;
@@ -533,8 +533,9 @@ static inline void enqueue_unmap_req(
 }
 
 // munmap all for program termination or whatever.
+// ext_entries must not be accessed by anyone else
 gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entries_tailq *ext_entries, 
-	int wait, void (* unmap_callback)(void *), void *callback_args)
+	int wait, void (* unmap_callback)(void *), void *callback_args, bool sleepable)
 {
 	gmem_uvas_entry_t *entry, *entry1;
 	dev_pmap_t *pmap;
