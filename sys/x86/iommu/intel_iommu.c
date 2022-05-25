@@ -311,16 +311,16 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 
 				// This is the point we start to try to reclaim page table pages
 				if (p[lvl]->ref_count == 1) {
-					rw_wlock(&domain->lock);
-					while(p[lvl]->ref_count == 1 && lvl > 0)
-					{
-						dmar_pgfree_null(p[lvl]);
-						lvl --;
-						*ptes[lvl] = 0;
-						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-						atomic_add_int(&p[lvl]->ref_count, -1);
-					}
-					rw_wunlock(&domain->lock);
+					// rw_wlock(&domain->lock);
+					// while(p[lvl]->ref_count == 1 && lvl > 0)
+					// {
+					// 	dmar_pgfree_null(p[lvl]);
+					// 	lvl --;
+					// 	*ptes[lvl] = 0;
+					// 	dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
+					// 	atomic_add_int(&p[lvl]->ref_count, -1);
+					// }
+					// rw_wunlock(&domain->lock);
 				}
 				// we have reached the leaf node and we are done.
 				break;
