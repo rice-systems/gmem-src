@@ -248,7 +248,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
-	rw_rlock(&domain->lock);
+	rw_wlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
@@ -279,7 +279,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 			}
 		}
 	}
-	rw_runlock(&domain->lock);
+	rw_wunlock(&domain->lock);
 	return 0;
 }
 
@@ -647,10 +647,10 @@ gmem_mmu_ops_t intel_iommu_default_ops = {
 	.prepare                = intel_iommu_prepare,
 	.mmu_pmap_create        = intel_iommu_pmap_create,
 	.mmu_pmap_destroy       = intel_iommu_pmap_destroy,
-	.mmu_pmap_enter         = intel_iommu_pmap_enter,
-	.mmu_pmap_release       = intel_iommu_pmap_release,
-	// .mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
-	// .mmu_pmap_release       = intel_iommu_pmap_release_fast,
+	// .mmu_pmap_enter         = intel_iommu_pmap_enter,
+	// .mmu_pmap_release       = intel_iommu_pmap_release,
+	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
+	.mmu_pmap_release       = intel_iommu_pmap_release_fast,
 	.mmu_pmap_protect       = intel_iommu_pmap_protect,
 	.mmu_tlb_invl           = intel_iommu_tlb_invl,
 	.mmu_pmap_kill          = gmem_mmu_pmap_kill_generic,
