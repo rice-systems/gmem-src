@@ -108,14 +108,14 @@ gmem_dev_t * gmem_dev_add(device_t device)
 		return dev;
 	}
 
-	GMEM_DEVMAP_LOCK(gmem_devmap);
+	// GMEM_DEVMAP_LOCK(gmem_devmap);
 	dev = gmem_devmap_alloc_dev();
 	device_set_gmem_dev(device, dev);
 	dev->device = device;
 	dev->cur_pmap = NULL;
 	// Let's not couple device with mmu ops. Device may implement multiple mmu ops
 	// dev->mmu_ops = mmu_ops;
-	GMEM_DEVMAP_UNLOCK(gmem_devmap);
+	// GMEM_DEVMAP_UNLOCK(gmem_devmap);
 
 	// mmu_ops->mmu_init(mmu_ops);
 
