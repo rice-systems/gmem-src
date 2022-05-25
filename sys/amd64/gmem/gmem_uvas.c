@@ -679,21 +679,22 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 	struct thread *td;
 
 	printf("Creating daemon\n");
-	error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, RFSTOPPED, 0,
+	error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, 0, 0,
 		"uvas");
 	if (error)
 		panic("uvas async daemon: error %d\n", error);
-	td = FIRST_THREAD_IN_PROC(p);
-	printf("Acquiring thread lock\n");
-	thread_lock(td);
+	// td = FIRST_THREAD_IN_PROC(p);
+	// printf("Acquiring thread lock\n");
+	// thread_lock(td);
 
-	/* We're an idle task, don't count us in the load. */
-	td->td_flags |= TDF_NOLOAD;
-	sched_class(td, PRI_IDLE);
-	sched_prio(td, PRI_MAX_IDLE);
-	sched_add(td, SRQ_BORING);
-	printf("Releasing thread lock\n");
-	thread_unlock(td);
+	// /* We're an idle task, don't count us in the load. */
+	// td->td_flags |= TDF_NOLOAD;
+	// sched_class(td, PRI_IDLE);
+	// sched_prio(td, PRI_MAX_IDLE);
+	// sched_add(td, SRQ_BORING);
+	// printf("Releasing thread lock\n");
+	// thread_unlock(td);
+	// printf("Done.\n");
 }
 
 
