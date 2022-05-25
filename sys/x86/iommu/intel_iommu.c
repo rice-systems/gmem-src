@@ -534,7 +534,7 @@ static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va
 
 
 	START_STATS;
-	error = domain_pmap_enter_fast(domain, va, size, pa, pflags, mem_flags);
+	error = domain_pmap_enter_fast_test(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
@@ -559,7 +559,7 @@ static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t 
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_fast(domain, va, size);
+	error = domain_pmap_release_fast_test(domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
@@ -647,8 +647,8 @@ gmem_mmu_ops_t intel_iommu_default_ops = {
 	.mmu_pmap_destroy       = intel_iommu_pmap_destroy,
 	// .mmu_pmap_enter         = intel_iommu_pmap_enter,
 	// .mmu_pmap_release       = intel_iommu_pmap_release,
-	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast_test,
-	.mmu_pmap_release       = intel_iommu_pmap_release_fast_test,
+	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
+	.mmu_pmap_release       = intel_iommu_pmap_release_fast,
 	.mmu_pmap_protect       = intel_iommu_pmap_protect,
 	.mmu_tlb_invl           = intel_iommu_tlb_invl,
 	.mmu_pmap_kill          = gmem_mmu_pmap_kill_generic,
