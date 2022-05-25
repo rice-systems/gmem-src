@@ -676,7 +676,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 {
 	int error;
 	struct proc *p;
-	struct thread *td;
+	// struct thread *td;
 
 	printf("Creating daemon\n");
 	error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, 0, 0,
