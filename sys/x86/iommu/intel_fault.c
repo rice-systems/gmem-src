@@ -264,7 +264,7 @@ int
 dmar_init_fault_log(struct dmar_unit *unit)
 {
 
-	mtx_init(&unit->fault_lock, "dmarflt", NULL, MTX_DEF);
+	mtx_init(&unit->fault_lock, "dmarflt", NULL, MTX_SPIN);
 	unit->fault_log_size = 256; /* 128 fault log entries */
 	TUNABLE_INT_FETCH("hw.dmar.fault_log_size", &unit->fault_log_size);
 	if (unit->fault_log_size % 2 != 0)
