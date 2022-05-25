@@ -57,8 +57,6 @@ static gmem_dev_t* gmem_devmap_alloc_dev()
 {
 	uint16_t dev_id;
 
-	GMEM_DEVMAP_ASSERT_LOCKED(gmem_devmap);
-
 	dev_id = alloc_unr(gmem_devmap->unr);
 	if (dev_id + 1 == 0)
 		panic("gmem dev id allocation failed");
