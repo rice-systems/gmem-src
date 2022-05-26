@@ -210,35 +210,6 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 	return 0;
 }
 
-// No need to consider demotion since it never splits mappings.
-int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
-{
-	int lvl;
-	// vm_page_t pm;
-	dmar_pte_t *pte, *root = domain->root;
-	int i;
-
-	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
-		pte = root;
-		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
-			i = domain_pgtbl_pte_off(domain, va, lvl);
-			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
-			pte = &pte[i];
-
-			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
-				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
-			else
-			{
-				*pte = 0;
-				dmar_flush_pte_to_ram(domain->dmar, pte);
-				// atomic_add_int(&pm->ref_count, -1);
-				// This is the point to insert demotion code, if DMAR_PTE_SP
-			}
-		}
-	}
-	return 0;
-}
-
 // No consideration of sp promotions
 int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
@@ -284,6 +255,35 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 }
 
 // No need to consider demotion since it never splits mappings.
+int domain_pmap_release_fast(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
+{
+	int lvl;
+	// vm_page_t pm;
+	dmar_pte_t *pte, *root = domain->root;
+	int i;
+
+	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
+		pte = root;
+		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+			i = domain_pgtbl_pte_off(domain, va, lvl);
+			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
+			pte = &pte[i];
+
+			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
+				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
+			else
+			{
+				*pte = 0;
+				dmar_flush_pte_to_ram(domain->dmar, pte);
+				// atomic_add_int(&pm->ref_count, -1);
+				// This is the point to insert demotion code, if DMAR_PTE_SP
+			}
+		}
+	}
+	return 0;
+}
+
+// No need to consider demotion since it never splits mappings.
 int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
@@ -296,10 +296,10 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
+			pte = &pte[i];
 			p[lvl] = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
 			ptes[lvl] = pte;
 
-			pte = &pte[i];
 
 			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
 				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
@@ -507,13 +507,9 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 
 	// destroy mappings
 	START_STATS;
-	// DMAR_DOMAIN_PGLOCK(domain);
-
-	rw_wlock(&domain->lock);
+	DMAR_DOMAIN_PGLOCK(domain);
 	error = domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-	rw_wunlock(&domain->lock);
-
-	// DMAR_DOMAIN_PGUNLOCK(domain);
+	DMAR_DOMAIN_PGUNLOCK(domain);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
@@ -652,9 +648,9 @@ gmem_mmu_ops_t intel_iommu_default_ops = {
 	.mmu_pmap_create        = intel_iommu_pmap_create,
 	.mmu_pmap_destroy       = intel_iommu_pmap_destroy,
 	// .mmu_pmap_enter         = intel_iommu_pmap_enter,
-	.mmu_pmap_release       = intel_iommu_pmap_release,
+	// .mmu_pmap_release       = intel_iommu_pmap_release,
 	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
-	// .mmu_pmap_release       = intel_iommu_pmap_release_fast,
+	.mmu_pmap_release       = intel_iommu_pmap_release_fast,
 	.mmu_pmap_protect       = intel_iommu_pmap_protect,
 	.mmu_tlb_invl           = intel_iommu_tlb_invl,
 	.mmu_pmap_kill          = gmem_mmu_pmap_kill_generic,
