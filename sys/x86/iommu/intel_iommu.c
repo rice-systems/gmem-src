@@ -507,9 +507,13 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 
 	// destroy mappings
 	START_STATS;
-	DMAR_DOMAIN_PGLOCK(domain);
+	// DMAR_DOMAIN_PGLOCK(domain);
+
+	rw_wlock(&domain->lock);
 	error = domain_pmap_release_locked(domain, va, size, 0, (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(domain->pglv0)));
-	DMAR_DOMAIN_PGUNLOCK(domain);
+	rw_wunlock(&domain->lock);
+
+	// DMAR_DOMAIN_PGUNLOCK(domain);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
@@ -648,9 +652,9 @@ gmem_mmu_ops_t intel_iommu_default_ops = {
 	.mmu_pmap_create        = intel_iommu_pmap_create,
 	.mmu_pmap_destroy       = intel_iommu_pmap_destroy,
 	// .mmu_pmap_enter         = intel_iommu_pmap_enter,
-	// .mmu_pmap_release       = intel_iommu_pmap_release,
+	.mmu_pmap_release       = intel_iommu_pmap_release,
 	.mmu_pmap_enter         = intel_iommu_pmap_enter_fast,
-	.mmu_pmap_release       = intel_iommu_pmap_release_fast,
+	// .mmu_pmap_release       = intel_iommu_pmap_release_fast,
 	.mmu_pmap_protect       = intel_iommu_pmap_protect,
 	.mmu_tlb_invl           = intel_iommu_tlb_invl,
 	.mmu_pmap_kill          = gmem_mmu_pmap_kill_generic,
