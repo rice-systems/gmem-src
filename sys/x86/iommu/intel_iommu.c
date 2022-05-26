@@ -219,7 +219,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
-	rw_rlock(&domain->lock);
+	// rw_rlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
@@ -250,7 +250,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 			}
 		}
 	}
-	rw_runlock(&domain->lock);
+	// rw_runlock(&domain->lock);
 	return 0;
 }
 
@@ -291,7 +291,6 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
 	int i;
 
-	// rw_wlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
@@ -328,7 +327,6 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 			}
 		}
 	}
-	// rw_wunlock(&domain->lock);
 	return 0;
 }
 
@@ -536,7 +534,7 @@ static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va
 
 
 	START_STATS;
-	error = domain_pmap_enter_fast(domain, va, size, pa, pflags, mem_flags);
+	error = domain_pmap_enter_fast_test(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
@@ -561,7 +559,7 @@ static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t 
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_fast(domain, va, size);
+	error = domain_pmap_release_fast_test(domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
