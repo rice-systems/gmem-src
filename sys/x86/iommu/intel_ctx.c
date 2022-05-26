@@ -407,6 +407,8 @@ dmar_domain_alloc(struct dmar_unit *dmar, bool id_mapped)
 	iodom = DOM2IODOM(domain);
 	unit = DMAR2IOMMU(dmar);
 	domain->domain = id;
+	
+	mtx_init(&domain->lock, "iodom", NULL, MTX_DEF);
 	LIST_INIT(&domain->contexts);
 	iommu_domain_init(unit, iodom);
 

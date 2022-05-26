@@ -36,6 +36,7 @@
 
 #include <dev/iommu/iommu.h>
 #include <sys/gmem.h>
+#include <sys/sx.h>
 
 struct dmar_unit;
 
@@ -73,7 +74,7 @@ struct dmar_domain {
 	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
 	vm_page_t pglv0;
-	struct rwlock lock; // rw lock for page table
+	struct sx lock; // sx lock for page table
 	dmar_pte_t *root;
 };
 
