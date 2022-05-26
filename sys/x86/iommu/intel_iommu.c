@@ -289,7 +289,7 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 	int lvl;
 	vm_page_t p[4];
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
-	int i;
+	int i, last_free_lvl, leaf_lvl;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
@@ -310,18 +310,24 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 				// This is the point to insert demotion code, if DMAR_PTE_SP
 
 				// This is the point we start to try to reclaim page table pages
-				// if (p[lvl]->ref_count == 1) {
-				// 	rw_wlock(&domain->lock);
-				// 	while(p[lvl]->ref_count == 1 && lvl > 0)
-				// 	{
-				// 		dmar_pgfree_null(p[lvl]);
-				// 		lvl --;
-				// 		*ptes[lvl] = 0;
-				// 		dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-				// 		atomic_add_int(&p[lvl]->ref_count, -1);
-				// 	}
-				// 	rw_wunlock(&domain->lock);
-				// }
+				if (p[lvl]->ref_count == 1) {
+					sx_xlock(&domain->lock);
+					last_free = leaf_lvl = lvl + 1;
+					while(p[lvl]->ref_count == 1 && lvl > 0)
+					{
+						// dmar_pgfree_null(p[lvl]);
+						last_free = lvl;
+						lvl --;
+						*ptes[lvl] = 0;
+						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
+						atomic_add_int(&p[lvl]->ref_count, -1);
+					}
+					sx_xunlock(&domain->lock);
+					while (last_free < leaf_lvl) {
+						dmar_pgfree_null(p[last_free]);
+						last_free ++;
+					}
+				}
 				// we have reached the leaf node and we are done.
 				break;
 			}
