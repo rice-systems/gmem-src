@@ -219,7 +219,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
-	rw_wlock(&domain->lock);
+	rw_rlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
@@ -250,7 +250,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 			}
 		}
 	}
-	rw_wunlock(&domain->lock);
+	rw_runlock(&domain->lock);
 	return 0;
 }
 
