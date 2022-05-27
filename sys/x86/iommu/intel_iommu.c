@@ -210,8 +210,6 @@ int domain_pmap_enter_fast(struct dmar_domain *domain, vm_offset_t va,
 	return 0;
 }
 
-struct rm_priotracker iommu_rlock_tracker;
-
 // No consideration of sp promotions
 int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va, 
     vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags)
@@ -220,6 +218,7 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 	vm_page_t m, p[4];
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
+	struct rm_priotracker iommu_rlock_tracker;
 
 	// sx_slock(&domain->lock);
 	rm_rlock(&domain->lock, &iommu_rlock_tracker);
