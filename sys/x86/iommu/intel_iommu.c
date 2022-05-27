@@ -323,7 +323,7 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 					}
 					sx_xunlock(&domain->lock);
 					while (last_free < leaf_lvl) {
-						printf("Free iommu pt page\n");
+						// printf("Free iommu pt page\n");
 						dmar_pgfree_null(p[last_free]);
 						last_free ++;
 					}
