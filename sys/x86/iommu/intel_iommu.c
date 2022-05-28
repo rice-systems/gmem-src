@@ -314,24 +314,24 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 
 				// This is the point we start to try to reclaim page table pages
 				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
-					// rw_wlock(&domain->lock);
-					// // sx_xlock(&domain->lock);
-					// last_free = leaf_lvl = lvl + 1;
-					// while(p[lvl]->ref_count == 1 && lvl > 0)
-					// {
-					// 	last_free = lvl;
-					// 	lvl --;
-					// 	*ptes[lvl] = 0;
-					// 	dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-					// 	atomic_add_int(&p[lvl]->ref_count, -1);
-					// }
-					// rw_wunlock(&domain->lock);
-					// // sx_xunlock(&domain->lock);
-					// while (last_free < leaf_lvl) {
-					// 	// printf("Free iommu pt page\n");
-					// 	dmar_pgfree_null(p[last_free]);
-					// 	last_free ++;
-					// }
+					rw_wlock(&domain->lock);
+					// sx_xlock(&domain->lock);
+					last_free = leaf_lvl = lvl + 1;
+					while(p[lvl]->ref_count == 1 && lvl > 0)
+					{
+						last_free = lvl;
+						lvl --;
+						*ptes[lvl] = 0;
+						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
+						atomic_add_int(&p[lvl]->ref_count, -1);
+					}
+					rw_wunlock(&domain->lock);
+					// sx_xunlock(&domain->lock);
+					while (last_free < leaf_lvl) {
+						// printf("Free iommu pt page\n");
+						dmar_pgfree_null(p[last_free]);
+						last_free ++;
+					}
 				}
 				// we have reached the leaf node and we are done.
 				break;
@@ -545,7 +545,7 @@ static gmem_error_t intel_iommu_pmap_enter_fast(dev_pmap_t *pmap, vm_offset_t va
 
 
 	START_STATS;
-	error = domain_pmap_enter_fast_test(domain, va, size, pa, pflags, mem_flags);
+	error = domain_pmap_enter_fast(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
@@ -570,7 +570,7 @@ static gmem_error_t intel_iommu_pmap_release_fast(dev_pmap_t *pmap, vm_offset_t 
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_fast_test(domain, va, size);
+	error = domain_pmap_release_fast(domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
