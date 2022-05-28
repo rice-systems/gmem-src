@@ -356,8 +356,8 @@ domain_alloc_pgtbl(struct dmar_domain *domain)
 	m->ref_count ++;
 	domain->pglv0 = m;
 	domain->root = (dmar_pte_t*) PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
-	// sx_init(&domain->lock, "shared lock for iommu page table");
-	rm_init(&domain->lock, "read-mostly lock for iommu page table");
+	sx_init(&domain->lock, "shared lock for iommu page table");
+	// rm_init(&domain->lock, "read-mostly lock for iommu page table");
 	vm_wire_add(1);
 	domain->iodom.flags |= IOMMU_DOMAIN_PGTBL_INITED;
 	domain->pgtbl_obj = NULL;
