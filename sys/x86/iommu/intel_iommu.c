@@ -218,10 +218,9 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 	vm_page_t m, p[4];
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
-	// struct rm_priotracker iommu_rlock_tracker;
 
-	sx_slock(&domain->lock);
-	// rm_rlock(&domain->lock, &iommu_rlock_tracker);
+	// sx_slock(&domain->lock);
+	rw_rlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, pa += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
@@ -252,8 +251,8 @@ int domain_pmap_enter_fast_test(struct dmar_domain *domain, vm_offset_t va,
 			}
 		}
 	}
-	// rm_runlock(&domain->lock, &iommu_rlock_tracker);
-	sx_sunlock(&domain->lock);
+	rw_runlock(&domain->lock);
+	// sx_sunlock(&domain->lock);
 	return 0;
 }
 
@@ -314,8 +313,8 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 
 				// This is the point we start to try to reclaim page table pages
 				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
-					// rm_wlock(&domain->lock);
-					sx_xlock(&domain->lock);
+					rw_wlock(&domain->lock);
+					// sx_xlock(&domain->lock);
 					last_free = leaf_lvl = lvl + 1;
 					while(p[lvl]->ref_count == 1 && lvl > 0)
 					{
@@ -325,8 +324,8 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
 						atomic_add_int(&p[lvl]->ref_count, -1);
 					}
-					// rm_wunlock(&domain->lock);
-					sx_xunlock(&domain->lock);
+					rw_wunlock(&domain->lock);
+					// sx_xunlock(&domain->lock);
 					while (last_free < leaf_lvl) {
 						// printf("Free iommu pt page\n");
 						dmar_pgfree_null(p[last_free]);
