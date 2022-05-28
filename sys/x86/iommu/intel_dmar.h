@@ -75,8 +75,8 @@ struct dmar_domain {
 	vm_object_t pgtbl_obj;		/* (c) Page table pages */
 	u_int batch_no;
 	vm_page_t pglv0;
-	// struct sx lock; // sx lock for page table
-	struct rmlock lock; // rm lock
+	struct sx lock; // sx lock for page table
+	// struct rmlock lock; // rm lock
 	dmar_pte_t *root;
 };
 
