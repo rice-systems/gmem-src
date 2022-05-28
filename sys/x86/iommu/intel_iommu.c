@@ -292,7 +292,7 @@ int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm
 	vm_page_t p[4];
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
 	int i;
-	// int last_free, leaf_lvl;
+	int last_free, leaf_lvl;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
