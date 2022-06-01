@@ -183,7 +183,6 @@ int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va,
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
-			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
 			pte = &pte[i];
 
 			if (lvl < domain->pglvl - 1) {
@@ -192,6 +191,7 @@ int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va,
 						flags | IOMMU_PGF_ZERO);
 					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
 						dmar_flush_pte_to_ram(domain->dmar, pte);
+						// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
 						// atomic_add_int(&pm->ref_count, 1); // ref counting
 					}
 					else
@@ -203,6 +203,7 @@ int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va,
 			{
 				*pte = pa | pflags;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
+				// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
 				// atomic_add_int(&pm->ref_count, 1); // ref counting
 				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
@@ -267,7 +268,6 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
-			// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
 			pte = &pte[i];
 
 			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
@@ -276,6 +276,7 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 			{
 				*pte = 0;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
+				// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
 				// atomic_add_int(&pm->ref_count, -1); // ref counting
 				// This is the point to insert demotion code, if DMAR_PTE_SP
 			}
@@ -288,17 +289,16 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
-	vm_page_t p[4];
+	vm_page_t pm;
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
 	int i;
-	int last_free, leaf_lvl;
+	// int last_free, leaf_lvl;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
 			pte = &pte[i];
-			p[lvl] = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
 			ptes[lvl] = pte;
 
 
@@ -308,27 +308,29 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 			{
 				*pte = 0;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
-				// atomic_add_int(&p[lvl]->ref_count, -1);
 				// This is the point to insert demotion code, if DMAR_PTE_SP
 
 				// This is the point we start to try to reclaim page table pages
-				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
+				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
+				if (atomic_fetchadd_int(&pm->ref_count, -1) == 2) {
 					rw_wlock(&domain->lock);
-					last_free = leaf_lvl = lvl + 1;
-					while(p[lvl]->ref_count == 1 && lvl > 0)
+					// last_free = leaf_lvl = lvl + 1;
+					while(pm->ref_count == 1 && lvl > 0)
 					{
-						last_free = lvl;
+						// last_free = lvl;
 						lvl --;
 						*ptes[lvl] = 0;
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-						atomic_add_int(&p[lvl]->ref_count, -1);
+						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
+						atomic_add_int(&pm->ref_count, -1);
+						dmar_pgfree_null(pm);
 					}
 					rw_wunlock(&domain->lock);
-					while (last_free < leaf_lvl) {
-						// printf("Free iommu pt page\n");
-						dmar_pgfree_null(p[last_free]);
-						last_free ++;
-					}
+					// while (last_free < leaf_lvl) {
+					// 	// printf("Free iommu pt page\n");
+					// 	dmar_pgfree_null(p[last_free]);
+					// 	last_free ++;
+					// }
 				}
 				// we have reached the leaf node and we are done.
 				break;
