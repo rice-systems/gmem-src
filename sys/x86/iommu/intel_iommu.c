@@ -175,7 +175,7 @@ int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va,
 {
 	int lvl;
 	vm_page_t m; 
-	// vm_page_t pm; // ref counting
+	vm_page_t pm; // ref counting
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
 
@@ -263,7 +263,7 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 	int lvl;
 	dmar_pte_t *pte, *root = domain->root;
 	int i;
-	// vm_page_t pm; // ref counting
+	vm_page_t pm; // ref counting
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
