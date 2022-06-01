@@ -236,7 +236,8 @@ int domain_pmap_enter_rw(struct dmar_domain *domain, vm_offset_t va,
 					if (atomic_cmpset_64(pte, 0, DMAR_PTE_R | DMAR_PTE_W | VM_PAGE_TO_PHYS(m))) {
 						dmar_flush_pte_to_ram(domain->dmar, pte);
 						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
-						atomic_add_int(&pm->ref_count, 1);
+						pm->ref_count = pm->ref_count + 1; // protected by the exclusive CAS branch
+						// atomic_add_int(&pm->ref_count, 1);
 					}
 					else
 						dmar_pgfree_null(m);
@@ -248,7 +249,7 @@ int domain_pmap_enter_rw(struct dmar_domain *domain, vm_offset_t va,
 				*pte = pa | pflags;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
-				atomic_add_int(&pm->ref_count, 1);
+				atomic_add_acq_int(&pm->ref_count, 1);
 				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
 		}
@@ -313,7 +314,9 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 
 				// This is the point we start to try to reclaim page table pages
 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-				if (atomic_fetchadd_int(&pm->ref_count, -1) == 2) {
+				// if (atomic_fetchadd_rel_int(&pm->ref_count, -1) == 2) {
+				atomic_add_rel_int(&pm->ref_count, -1);
+				if (pm->ref_count == 1) {
 					rw_wlock(&domain->lock);
 					// last_free = leaf_lvl = lvl + 1;
 					while(pm->ref_count == 1 && lvl > 0)
@@ -323,7 +326,8 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 						*ptes[lvl] = 0;
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
 						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-						atomic_add_int(&pm->ref_count, -1);
+						// atomic_add_int(&pm->ref_count, -1);
+						pm->ref_count = pm->ref_count + 1; // protected by writer lock
 						dmar_pgfree_null(pm);
 					}
 					rw_wunlock(&domain->lock);
