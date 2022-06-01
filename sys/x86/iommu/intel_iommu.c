@@ -203,8 +203,8 @@ int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va,
 			{
 				*pte = pa | pflags;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
-				// pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
-				// atomic_add_int(&pm->ref_count, 1); // ref counting
+				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
+				atomic_add_int(&pm->ref_count, 1); // ref counting
 				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
 		}
@@ -545,8 +545,8 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 
 
 	START_STATS;
-	error = domain_pmap_enter_rw(domain, va, size, pa, pflags, mem_flags);
-	// error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags);
+	// error = domain_pmap_enter_rw(domain, va, size, pa, pflags, mem_flags);
+	error = domain_pmap_enter_lockless(domain, va, size, pa, pflags, mem_flags);
     FINISH_STATS(MAP, size >> 12);
 	if (error != 0)
 		return (error);
@@ -571,8 +571,8 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 
 	// destroy mappings
 	START_STATS;
-	error = domain_pmap_release_rw(domain, va, size);
-	// error = domain_pmap_release_lockless(domain, va, size);
+	// error = domain_pmap_release_rw(domain, va, size);
+	error = domain_pmap_release_lockless(domain, va, size);
 	FINISH_STATS(UNMAP, size >> 12);
 
 	// invalidate TLB
