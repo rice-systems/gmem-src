@@ -205,7 +205,7 @@ int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va,
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte)); // ref counting
 				// atomic_add_int(&pm->ref_count, 1); // ref counting
-				pm->ref_count ++;
+				atomic_cmpset_32(&pm->ref_count, 1, 1);
 				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
 		}
