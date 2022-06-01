@@ -940,8 +940,8 @@ static void iommu_reload_fast_mmu(bus_dma_tag_t dmat)
 	ctx = tag->ctx;
 	domain = ctx->domain;
 
-	printf("[gmem] NIC is reloading faster mmu, this is currently a buggy feature that creates inconsistent page table img\n");
-	pmap_reload_mmu(domain->pmap, &intel_iommu_ops);
+	printf("[gmem] Reloading faster mmu is currently unavailable\n");
+	// pmap_reload_mmu(domain->pmap, &intel_iommu_ops);
 }
 
 static void
