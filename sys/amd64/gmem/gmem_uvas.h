@@ -138,6 +138,7 @@ struct gmem_vma_format
 	vm_offset_t alignment;
 	vm_offset_t boundary;
 	vm_offset_t maxaddr;
+	vm_offset_t guard;
 };
 
 TAILQ_HEAD(gmem_uvas_entries_tailq, gmem_uvas_entry);
@@ -261,9 +262,8 @@ struct gmem_mmu_ops
 	gmem_error_t (*mmu_pmap_enter)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size, 
 		vm_paddr_t pa, u_int prot, u_int mem_flags);
 	gmem_error_t (*mmu_pmap_release)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
-	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size,
-		vm_prot_t new_prot);
-	void (*mmu_tlb_invl)(dev_pmap_t *pmap, gmem_uvas_entry_t *entry);
+	gmem_error_t (*mmu_pmap_protect)(vm_offset_t va, vm_size_t size, vm_prot_t new_prot);
+	void (*mmu_tlb_invl)(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size);
 	gmem_error_t (*mmu_tlb_flush)(struct gmem_uvas_entries_tailq *entries);
 	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 	void (*mmu_tlb_invl_coalesced)(dev_pmap_t *pmap);
@@ -326,7 +326,7 @@ struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flag
 void gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry);
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev, gmem_mmu_ops_t *mmu_ops,
 	dev_pmap_t *pmap_to_share, void *dev_data, int mode,
-	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size);
+	vm_offset_t alignment, vm_offset_t boundary, vm_offset_t size, vm_offset_t guard);
 gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas);
 gmem_error_t gmem_uvas_map_pages(dev_pmap_t *pmap, vm_offset_t start,
 	vm_size_t size, vm_page_t first_page, u_int prot, u_int mem_flags);
@@ -354,8 +354,8 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	vm_offset_t start, vm_offset_t end, vm_prot_t protection, u_int flags, gmem_uvas_entry_t **ret);
 
 // GMEM-based functions for map/unmap
-gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, 
-	vm_offset_t size, u_int eflags, u_int flags, vm_page_t *ma, bool track, gmem_uvas_entry_t **ret);
+gmem_error_t gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offset_t size,
+	u_int eflags, u_int flags, vm_page_t *ma, bool track, gmem_uvas_entry_t **ret);
 
 // Generic pmap kill function
 gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);

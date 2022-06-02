@@ -295,7 +295,7 @@ domain_init_rmrr(struct dmar_domain *domain, device_t dev, int bus,
 
 		gstart = entry->start;
 		gend = entry->end;
-		error1 = gmem_mmap_eager(domain->iodom.uvas, domain->iodom.pmap, &gstart, gend - gstart, 
+		error1 = gmem_mmap_eager(domain->iodom.uvas, domain->iodom.pmap, &gstart, gend - gstart,
 			GMEM_UVAS_ENTRY_READ | GMEM_UVAS_ENTRY_WRITE,
 		    GMEM_MF_CANWAIT | GMEM_MF_RMRR | GMEM_UVA_ALLOC_FIXED, ma, false, &entry);
 
@@ -596,7 +596,7 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			dev_data->id_mapped = id_mapped;
 			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev), &intel_iommu_default_ops,
 				NULL, dev_data, GMEM_UVAS_UNIQUE,
-				PAGE_SIZE, 0, 1ULL << 48);
+				PAGE_SIZE, 0, 1ULL << 48, 4096);
 			debug_printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
 
 			if (!id_mapped) {

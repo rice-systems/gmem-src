@@ -70,7 +70,8 @@ gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags)
 	    0 ? M_WAITOK : M_NOWAIT) | M_ZERO);
 	if (res != NULL) {
 		res->uvas = uvas;
-		atomic_add_int(&uvas->entries_cnt, 1);
+		if (instrument)
+			atomic_add_int(&uvas->entries_cnt, 1);
 	}
 	else
 		printf("gmem_uvas_alloc_entry NOMEM\n");
@@ -84,7 +85,8 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	KASSERT(uvas == entry->uvas,
 	    ("mismatched free uvas %p entry %p entry->uvas %p", uvas,
 	    entry, entry->uvas));
-	atomic_subtract_int(&uvas->entries_cnt, 1);
+	if (instrument)
+		atomic_subtract_int(&uvas->entries_cnt, 1);
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
@@ -105,7 +107,8 @@ gmem_error_t gmem_uvas_create(
 	int mode,
 	vm_offset_t alignment, 
 	vm_offset_t boundary, 
-	vm_offset_t size)
+	vm_offset_t size,
+	vm_offset_t guard)
 {
 	gmem_uvas_t *uvas;
 	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
@@ -155,6 +158,7 @@ gmem_error_t gmem_uvas_create(
 		uvas->format.alignment = alignment;
 		uvas->format.boundary = boundary;
 		uvas->format.maxaddr = size;
+		uvas->format.guard = guard;
 
 		// Edge device does not need to perform page faults
 		if (0) {
@@ -211,6 +215,7 @@ gmem_error_t gmem_uvas_delete(gmem_uvas_t *uvas)
 	return GMEM_OK;
 }
 
+// Allocate [start, size + uvas->format.guard], i.e. with holes
 gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas, 
 	vm_offset_t *start, vm_size_t size, vm_prot_t protection, u_int flags, gmem_uvas_entry_t **ret)
 {
@@ -227,7 +232,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	{
 		// use rb-tree allocator
 		// TODO: offset makes no sense. (Offset is effectively a bug.)
-		error = gmem_rb_find_space(uvas, size, flags, entry);
+		error = gmem_rb_find_space(uvas, size + uvas->format.guard, flags, entry);
 		if (error == GMEM_ENOMEM) {
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
@@ -239,13 +244,13 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 	else if (uvas->allocator == VMEM)
 	{
 		// use vmem allocator
-		error = vmem_alloc(uvas->arena, size, M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ?
+		error = vmem_alloc(uvas->arena, size + uvas->format.guard, M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ?
 			M_WAITOK : M_NOWAIT), start);
 		if (error != 0)
 			return error;
 		else {
 			entry->start = *start;
-			entry->end = *start + size;
+			entry->end = *start + size + uvas->format.guard;
 		}
 	}
     FINISH_STATS(VA_ALLOC, size >> 12);
@@ -275,7 +280,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 	if (uvas->allocator == RBTREE)
 	{
 		// use rb-tree allocator
-		error = gmem_rb_reserve_region(uvas, start, end, entry);
+		error = gmem_rb_reserve_region(uvas, start, end + uvas->format.guard, entry);
 		if (error != 0) {
 			gmem_uvas_free_entry(uvas, entry);
 			return (error);
@@ -286,7 +291,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		vm_offset_t new_start;
 		// use vmem allocator
 		error = 0;
-		error = vmem_xalloc(uvas->arena, end - start, 0, 0, 0, start, end, 
+		error = vmem_xalloc(uvas->arena, end + uvas->format.guard - start, 0, 0, 0, start, end + uvas->format.guard, 
 			M_FIRSTFIT | ((flags & GMEM_MF_CANWAIT) != 0 ? M_WAITOK : M_NOWAIT), &new_start);
 		if (start != new_start) {
 			debug_printf("VMEM xalloc failed with start %lx, end %lx, newstart %lx\n", start, end, new_start);
@@ -297,7 +302,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 		}
 		else {
 			entry->start = start;
-			entry->end = end;
+			entry->end = end + uvas->format.guard;
 			entry->flags |= GMEM_UVAS_VMEM_XALLOC;
 		}
 	}
@@ -405,8 +410,8 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 	// Think about how to async?
 	if (wait) {
 		// The unmap will be sync
-		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
-		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start - uvas->format.guard);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->start - uvas->format.guard);
 		gmem_uvas_free_span(entry->uvas, entry);
 	} else {
 		// The unmap will be async
@@ -420,8 +425,8 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entri
 {
 	gmem_uvas_entry_t *entry;
 	TAILQ_FOREACH(entry, ext_entries, mapped_entry) {
-		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
-		pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->startuvas->format.guard);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->startuvas->format.guard);
 	}
 	return GMEM_OK;
 }
@@ -457,9 +462,9 @@ static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 	TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list) {
 		TAILQ_FOREACH(req, &uvas->unmap_workspace, next) {
 			entry = req->entry;
-			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start);
+			pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start - uvas->format.guard);
 			if (!tlb_coalesce)
-				pmap->mmu_ops->mmu_tlb_invl(pmap, entry);
+				pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->start - uvas->format.guard);
 		}
 		if (tlb_coalesce)
 			pmap->mmu_ops->mmu_tlb_invl_coalesced(pmap);
@@ -505,7 +510,7 @@ static inline void enqueue_unmap_req(
 		req->entry = entry;
 		req->cb = NULL;
 		// req->cb_args = NULL;
-		pages += (req->entry->end - req->entry->start) >> GMEM_PAGE_SHIFT;
+		pages += (req->entry->end - req->entry->start - uvas->format.guard) >> GMEM_PAGE_SHIFT;
 		TAILQ_INSERT_TAIL(&request_q, req, next);
 	}
 	req->cb = unmap_callback;
@@ -614,6 +619,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
         error = gmem_uvas_alloc_span_fixed(uvas, *start, *start + size, GMEM_PROT_READ | GMEM_PROT_WRITE, 
             flags, &entry);
     }
+    KASSERT(entry->end - entry->start == size + uvas->format.guard, ("inconsistent va allocation with guard\n"));
 
     // Failed to allocate VA space
     if (error) {
@@ -632,7 +638,7 @@ gmem_mmap_eager(gmem_uvas_t *uvas, dev_pmap_t *pmap, vm_offset_t *start, vm_offs
 
     // Who should consider multiple pmaps cases?
     error = gmem_uvas_prepare_and_map_pages_sg(pmap, entry->start,
-        entry->end - entry->start, ma, eflags, ((flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK : 0), (size >> pmap->min_sp_shift));
+        size, ma, eflags, ((flags & GMEM_MF_CANWAIT) != 0 ? GMEM_WAITOK : 0), (size >> pmap->min_sp_shift));
 
     if (error) {
         // There is no need to call iotlb inv
