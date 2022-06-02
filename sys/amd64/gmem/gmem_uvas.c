@@ -410,8 +410,8 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 	// Think about how to async?
 	if (wait) {
 		// The unmap will be sync
-		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start - uvas->format.guard);
-		pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->start - uvas->format.guard);
+		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start - pmap->uvas->format.guard);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->start - pmap->uvas->format.guard);
 		gmem_uvas_free_span(entry->uvas, entry);
 	} else {
 		// The unmap will be async
@@ -425,8 +425,8 @@ gmem_error_t gmem_mmu_pmap_kill_generic(dev_pmap_t *pmap, struct gmem_uvas_entri
 {
 	gmem_uvas_entry_t *entry;
 	TAILQ_FOREACH(entry, ext_entries, mapped_entry) {
-		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->startuvas->format.guard);
-		pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->startuvas->format.guard);
+		pmap->mmu_ops->mmu_pmap_release(pmap, entry->start, entry->end - entry->start - pmap->uvas->format.guard);
+		pmap->mmu_ops->mmu_tlb_invl(pmap, entry->start, entry->end - entry->start - pmap->uvas->format.guard);
 	}
 	return GMEM_OK;
 }
