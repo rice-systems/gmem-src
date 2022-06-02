@@ -249,7 +249,7 @@ int domain_pmap_enter_rw(struct dmar_domain *domain, vm_offset_t va,
 				*pte = pa | pflags;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
-				atomic_add_acq_int(&pm->ref_count, 1);
+				atomic_add_int(&pm->ref_count, 1);
 				// This is the point to insert promotion code, if pm->ref_count == 1 + 512
 			}
 		}
@@ -314,9 +314,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 
 				// This is the point we start to try to reclaim page table pages
 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-				// if (atomic_fetchadd_rel_int(&pm->ref_count, -1) == 2) {
-				atomic_add_rel_int(&pm->ref_count, -1);
-				if (pm->ref_count == 1) {
+				if (atomic_fetchadd_int(&pm->ref_count, -1) == 2) {
 					rw_wlock(&domain->lock);
 					// last_free = leaf_lvl = lvl + 1;
 					while(pm->ref_count == 1 && lvl > 0)
