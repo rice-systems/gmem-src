@@ -581,8 +581,7 @@ static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, v
 	return GMEM_OK;
 }
 
-static gmem_error_t intel_iommu_pmap_protect(vm_offset_t va, vm_size_t size,
-	vm_prot_t new_prot)
+static gmem_error_t intel_iommu_pmap_protect(vm_offset_t va, vm_size_t size, vm_prot_t new_prot)
 {
 	return GMEM_OK;
 }
@@ -602,19 +601,16 @@ static gmem_error_t intel_iommu_init(struct gmem_mmu_ops* ops)
 	return GMEM_OK;
 }
 
-static void intel_iommu_tlb_invl(dev_pmap_t *pmap, gmem_uvas_entry_t *entry)
+static void intel_iommu_tlb_invl(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
 	struct dmar_domain *domain = ((intel_iommu_pgtable_t *) pmap->data)->domain;
 	struct dmar_unit *unit = ((intel_iommu_pgtable_t *) pmap->data)->dmar;
 
 	if (!unit->qi_enabled) {
-		domain_flush_iotlb_sync(domain, entry->start,
-		    entry->end - entry->start);
+		domain_flush_iotlb_sync(domain, va, size);
 	} else {
 		DMAR_LOCK(unit);
-		dmar_qi_invalidate_locked(domain, entry->start, entry->end -
-		    entry->start,
-		    true);
+		dmar_qi_invalidate_locked(domain, va, size, true);
 		DMAR_UNLOCK(unit);
 	}
 }
