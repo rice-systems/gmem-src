@@ -345,7 +345,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry)
 		}
 		gmem_uvas_free_entry(uvas, entry);
 	}
-	FINISH_STATS(VA_FREE, (entry->end - entry->start) >> 12);
+	FINISH_STATS(VA_FREE, (entry->end - entry->start - uvas->format.guard) >> 12);
 	return GMEM_OK;
 }
 
