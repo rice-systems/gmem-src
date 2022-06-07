@@ -24,7 +24,9 @@
 // #define PRINTINFO  { printf("[%s] %s line #%d\n", __FILE__, __func__, __LINE__); }
 #define PRINTINFO  { }
 // #define debug_printf(...) { printf(...); }
+#ifndef debug_printf
 #define debug_printf(...) { }
+#endif
 
 #include <machine/atomic.h>
 #include <sys/systm.h>
