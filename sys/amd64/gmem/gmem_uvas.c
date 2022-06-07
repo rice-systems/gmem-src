@@ -90,32 +90,17 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
-// Four modes to use uvas:
-// 	1. private: pmap is NULL && replicate == false
-//  2. shared: uvas and pmap are both not NULL, replicate == false
-//  3. replicate: uvas and pmap are both not NULL, replicate == true
-//  4. unique: the device is an edge device and the uvas has a single pmap
-//     TODO: change this mode to share CPU vma, consider the opencl case.
-//  lookup: faultable device requires looking up uvas entries 
-gmem_error_t gmem_uvas_create(
+static inline create_unique_uvas(
 	gmem_uvas_t **uvas_res, 
 	dev_pmap_t **pmap_res, 
-	gmem_dev_t *dev,
 	gmem_mmu_ops_t *mmu_ops,
 	dev_pmap_t *pmap_to_share, 
 	void *dev_data, 
-	int mode,
 	vm_offset_t alignment, 
 	vm_offset_t boundary, 
 	vm_offset_t size,
 	vm_offset_t guard)
 {
-	gmem_uvas_t *uvas;
-	if (*uvas_res == NULL && mode == GMEM_UVAS_UNIQUE)
-	{
-		KASSERT(pmap_to_share == NULL, ("Creating a unique uvas with non-null pmap"));
-		KASSERT(dev_data != NULL, ("Creating a unique uvas with null dev-specific data"));
-
 		// allocate and create the pmap with dev->mmu_ops
 		dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		// allocate and create the uvas
@@ -175,11 +160,45 @@ gmem_error_t gmem_uvas_create(
 
 		*uvas_res = uvas;
 		*pmap_res = pmap;
-	}
-	else
-	{
-		// attach dev and pmap to the uvas
-		panic("Other UVAS modes are not implemented");
+}
+
+// Four modes to use uvas:
+// 	1. private: pmap is NULL && replicate == false
+//  2. shared: uvas and pmap are both not NULL, replicate == false
+//  3. replicate: uvas and pmap are both not NULL, replicate == true
+//  4. unique: the device is an edge device and the uvas has a single pmap
+//     TODO: change this mode to share CPU vma, consider the opencl case.
+//  lookup: faultable device requires looking up uvas entries 
+gmem_error_t gmem_uvas_create(
+	gmem_uvas_t **uvas_res, 
+	dev_pmap_t **pmap_res, 
+	gmem_dev_t *dev, // this argument is never used, consider removing it.
+	gmem_mmu_ops_t *mmu_ops,
+	dev_pmap_t *pmap_to_share, 
+	void *dev_data, 
+	int mode,
+	vm_offset_t alignment, 
+	vm_offset_t boundary, 
+	vm_offset_t size,
+	vm_offset_t guard)
+{
+	gmem_uvas_t *uvas;
+	switch (mode) {
+		case GMEM_UVAS_UNIQUE:
+			if (!(uvas_res != NULL && *uvas_res == NULL && 
+				pmap_res != NULL && *pmap_res == NULL &&
+				mmu_ops != NULL && pmap_to_share == NULL && dev_data != NULL))
+				return GMEM_EINVALIDARGS;
+			create_unique_uvas(uvas_res, pmap_res, mmu_ops, pmap_to_share,
+				dev_data, alignment, boundary, size, guard);
+			break;
+		case GMEM_UVAS_SHARE_CPU:
+			printf("%s: trying to share CPU process address space\n", __func__);
+			break;
+		default:
+			printf("Other UVAS creation modes are not implemented\n");
+			return GMEM_EINVALIDARGS;
+
 	}
 	return GMEM_OK;
 }
