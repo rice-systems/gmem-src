@@ -742,23 +742,23 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 		if (instrument_hist[1].count[i] == 0)
 			instrument_hist[1].count[i] = 1;
 
-	sbuf_printf(&sbuf, "MAP: %ld\n",
-		instrument_hist[1].latency[MAP] / instrument_hist[1].count[MAP]
+	sbuf_printf(&sbuf, "UVAS_INST_MAP: %ld\n",
+		instrument_hist[1].latency[UVAS_INST_MAP] / instrument_hist[1].count[UVAS_INST_MAP]
 		);
-	sbuf_printf(&sbuf, "UNMAP: %ld\n",
-		instrument_hist[1].latency[UNMAP] / instrument_hist[1].count[UNMAP]
+	sbuf_printf(&sbuf, "UVAS_INST_UNMAP: %ld\n",
+		instrument_hist[1].latency[UVAS_INST_UNMAP] / instrument_hist[1].count[UVAS_INST_UNMAP]
 		);
-	sbuf_printf(&sbuf, "_MAP: %ld\n",
-		instrument_hist[1].latency[_MAP] / instrument_hist[1].count[_MAP]
+	sbuf_printf(&sbuf, "UVAS_INST__MAP: %ld\n",
+		instrument_hist[1].latency[UVAS_INST__MAP] / instrument_hist[1].count[UVAS_INST__MAP]
 		);
-	sbuf_printf(&sbuf, "_UNMAP: %ld\n",
-		instrument_hist[1].latency[_UNMAP] / instrument_hist[1].count[_UNMAP]
+	sbuf_printf(&sbuf, "UVAS_INST__UNMAP: %ld\n",
+		instrument_hist[1].latency[UVAS_INST__UNMAP] / instrument_hist[1].count[UVAS_INST__UNMAP]
 		);
-	sbuf_printf(&sbuf, "VA_ALLOC: %ld\n",
-		instrument_hist[1].latency[VA_ALLOC] / instrument_hist[1].count[VA_ALLOC]
+	sbuf_printf(&sbuf, "UVAS_INST_VA_ALLOC: %ld\n",
+		instrument_hist[1].latency[UVAS_INST_VA_ALLOC] / instrument_hist[1].count[UVAS_INST_VA_ALLOC]
 		);
-	sbuf_printf(&sbuf, "VA_FREE: %ld\n",
-		instrument_hist[1].latency[VA_FREE] / instrument_hist[1].count[VA_FREE]
+	sbuf_printf(&sbuf, "VUVAS_INST_A_FREE: %ld\n",
+		instrument_hist[1].latency[UVAS_INST_VA_FREE] / instrument_hist[1].count[UVAS_INST_VA_FREE]
 		);
 	error = sbuf_finish(&sbuf);
 	sbuf_delete(&sbuf);

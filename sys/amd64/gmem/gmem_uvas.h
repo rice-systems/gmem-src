@@ -31,15 +31,15 @@
 #include <machine/atomic.h>
 #include <sys/systm.h>
 extern int instrument;
-#define MAP           0
-#define UNMAP         1 
-#define VA_ALLOC      2
-#define VA_FREE       3
-#define TLB_INV       4
-#define _MAP          5
-#define _UNMAP        6
-#define STAT_COUNT    7
-#define MAXPGCNT      512
+#define UVAS_INST_MAP           0
+#define UVAS_INST_UNMAP         1 
+#define UVAS_INST_VA_ALLOC      2
+#define UVAS_INST_VA_FREE       3
+#define UVAS_INST_TLB_INV       4
+#define UVAS_INST__MAP          5
+#define UVAS_INST__UNMAP        6
+#define UVAS_INST_STAT_COUNT    7
+#define UVAS_INST_MAXPGCNT      512
 
 // indexed by buffer size / 4KB
 // 0: buffer size >= 2MB
