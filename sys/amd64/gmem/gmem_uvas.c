@@ -90,7 +90,7 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
-static inline create_unique_uvas(
+static inline void create_unique_uvas(
 	gmem_uvas_t **uvas_res, 
 	dev_pmap_t **pmap_res, 
 	gmem_mmu_ops_t *mmu_ops,
@@ -109,10 +109,10 @@ static inline create_unique_uvas(
 	mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
 	mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
 
-	// initialize pmap
-	pmap->ndevices = 1;
-	TAILQ_INIT(&pmap->gmem_dev_header);
-	TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
+	// useless gmem_dev structs?
+	// pmap->ndevices = 1;
+	// TAILQ_INIT(&pmap->gmem_dev_header);
+	// TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
 
 	pmap->pmap_replica = NULL;
 	pmap->uvas = uvas;
