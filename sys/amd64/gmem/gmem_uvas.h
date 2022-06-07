@@ -61,7 +61,7 @@ extern struct hist instrument_hist[UVAS_INST_MAXPGCNT];
 #define FINISH_STATS(typeId,pgcnt)                              \
 	if (instrument) {											\
 		delta = rdtscp() - delta;                                         \
-		if (pgcnt < MAXPGCNT && typeId < UVAS_INST_STAT_COUNT) { \
+		if (pgcnt < UVAS_INST_MAXPGCNT && typeId < UVAS_INST_STAT_COUNT) { \
 			atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
 			atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
 		} \
