@@ -46,7 +46,7 @@ extern int instrument;
 struct hist
 {
 	uint64_t latency[UVAS_INST_STAT_COUNT];
-	uint64_t count[SUVAS_INST_TAT_COUNT];
+	uint64_t count[UVAS_INST_TAT_COUNT];
 };
 
 extern struct hist instrument_hist[UVAS_INST_MAXPGCNT];
