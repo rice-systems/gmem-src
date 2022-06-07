@@ -164,12 +164,6 @@ dev/imcsmb/imcsmb.c		optional	imcsmb
 dev/imcsmb/imcsmb_pci.c		optional	imcsmb pci
 dev/intel/spi.c			optional	intelspi
 dev/io/iodev.c			optional	io
-
-#
-# GMEM support
-#
-amd64/gmem/gmem_dev.c 	optional gmem
-amd64/gmem/gmem_uvas.c 	optional gmem
 dev/iommu/busdma_iommu.c	optional	acpi iommu pci
 dev/iommu/iommu_gas.c		optional	acpi iommu pci
 dev/ipmi/ipmi.c			optional	ipmi

@@ -69,10 +69,10 @@ __FBSDID("$FreeBSD$");
 
 #include <vm/uma.h>
 #include <vm/vm.h>
+#include <vm/gmem.h>
 
 #include <ddb/ddb.h>
 
-#include <sys/gmem.h>
 
 SYSCTL_NODE(_hw, OID_AUTO, bus, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
     NULL);

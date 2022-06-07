@@ -48,9 +48,9 @@ __FBSDID("$FreeBSD$");
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/intel_dmar.h>
 
-#include <sys/gmem.h>
-#include <amd64/gmem/gmem_dev.h>
-#include <amd64/gmem/gmem_uvas.h>
+#include <vm/gmem.h>
+#include <vm/gmem_dev.h>
+#include <vm/gmem_uvas.h>
 #include <x86/iommu/intel_iommu.h>
 
 #define domain_page_shift(domain, lvl) ((domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT + DMAR_PAGE_SHIFT)

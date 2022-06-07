@@ -35,7 +35,7 @@
 #define	__X86_IOMMU_INTEL_DMAR_H
 
 #include <dev/iommu/iommu.h>
-#include <sys/gmem.h>
+#include <vm/gmem.h>
 #include <sys/sx.h>
 #include <sys/rmlock.h>
 

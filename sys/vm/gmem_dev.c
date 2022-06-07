@@ -32,9 +32,9 @@
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 
-#include <sys/gmem.h>
-#include <amd64/gmem/gmem_dev.h>
-#include <amd64/gmem/gmem_uvas.h>
+#include <vm/gmem.h>
+#include <vm/gmem_dev.h>
+#include <vm/gmem_uvas.h>
 
 static gmem_devmap_t gmem_devmap_store;
 #define gmem_devmap (&gmem_devmap_store)

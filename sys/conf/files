@@ -5095,6 +5095,8 @@ ufs/ufs/ufs_lookup.c		optional ffs
 ufs/ufs/ufs_quota.c		optional ffs
 ufs/ufs/ufs_vfsops.c		optional ffs
 ufs/ufs/ufs_vnops.c		optional ffs
+vm/gmem_dev.c 			standard
+vm/gmem_uvas.c 			standard
 vm/default_pager.c		standard
 vm/device_pager.c		standard
 vm/phys_pager.c			standard

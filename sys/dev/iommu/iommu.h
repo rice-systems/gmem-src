@@ -35,8 +35,8 @@
 #define _DEV_IOMMU_IOMMU_H_
 
 #include <dev/iommu/iommu_types.h>
-#include <sys/gmem.h>
-#include <amd64/gmem/gmem_uvas.h>
+#include <vm/gmem.h>
+#include <vm/gmem_uvas.h>
 
 struct bus_dma_tag_common;
 
