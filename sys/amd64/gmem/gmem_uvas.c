@@ -271,7 +271,7 @@ gmem_error_t gmem_uvas_alloc_span(gmem_uvas_t *uvas,
 			entry->end = *start + size + uvas->format.guard;
 		}
 	}
-    FINISH_STATS(VA_ALLOC, size >> 12);
+    FINISH_STATS(UVAS_INST_VA_ALLOC, size >> 12);
 
 	if (ret != NULL)
 		*ret = entry;
@@ -324,7 +324,7 @@ gmem_error_t gmem_uvas_alloc_span_fixed(gmem_uvas_t *uvas,
 			entry->flags |= GMEM_UVAS_VMEM_XALLOC;
 		}
 	}
-    FINISH_STATS(VA_ALLOC, (end - start) >> 12);
+    FINISH_STATS(UVAS_INST_VA_ALLOC, (end - start) >> 12);
 
 	if (ret != NULL)
 		*ret = entry;
@@ -363,7 +363,7 @@ gmem_error_t gmem_uvas_free_span(gmem_uvas_t *uvas, gmem_uvas_entry_t *entry)
 		}
 		gmem_uvas_free_entry(uvas, entry);
 	}
-	FINISH_STATS(VA_FREE, (entry->end - entry->start - uvas->format.guard) >> 12);
+	FINISH_STATS(UVAS_INST_VA_FREE, (entry->end - entry->start - uvas->format.guard) >> 12);
 	return GMEM_OK;
 }
 
