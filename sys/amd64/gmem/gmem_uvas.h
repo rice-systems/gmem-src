@@ -45,11 +45,11 @@ extern int instrument;
 // 0: buffer size >= 2MB
 struct hist
 {
-	uint64_t latency[STAT_COUNT];
-	uint64_t count[STAT_COUNT];
+	uint64_t latency[UVAS_INST_STAT_COUNT];
+	uint64_t count[SUVAS_INST_TAT_COUNT];
 };
 
-extern struct hist instrument_hist[MAXPGCNT];
+extern struct hist instrument_hist[UVAS_INST_MAXPGCNT];
 
 #define START_STATS \
 	uint64_t delta; \
@@ -61,7 +61,7 @@ extern struct hist instrument_hist[MAXPGCNT];
 #define FINISH_STATS(typeId,pgcnt)                              \
 	if (instrument) {											\
 		delta = rdtscp() - delta;                                         \
-		if (pgcnt < MAXPGCNT && typeId < STAT_COUNT) { \
+		if (pgcnt < MAXPGCNT && typeId < UVAS_INST_STAT_COUNT) { \
 			atomic_add_64(&(instrument_hist[pgcnt].latency[typeId]), delta);  \
 			atomic_add_64(&(instrument_hist[pgcnt].count[typeId]), 1);        \
 		} \

@@ -708,14 +708,14 @@ SYSCTL_PROC(_hw_iommu_dmar, OID_AUTO, timeout,
 #include <sys/sbuf.h>
 #include <sys/malloc.h>
 
-struct hist instrument_hist[MAXPGCNT];
+struct hist instrument_hist[UVAS_INST_MAXPGCNT];
 
 static void
 hist_init()
 {
-	for (int i = 0; i < MAXPGCNT; i ++) {
-		memset(instrument_hist[i].latency, 0, STAT_COUNT * sizeof(uint64_t));
-		memset(instrument_hist[i].count, 0, STAT_COUNT * sizeof(uint64_t));
+	for (int i = 0; i < UVAS_INST_MAXPGCNT; i ++) {
+		memset(instrument_hist[i].latency, 0, UVAS_INST_STAT_COUNT * sizeof(uint64_t));
+		memset(instrument_hist[i].count, 0, UVAS_INST_STAT_COUNT * sizeof(uint64_t));
 	}
 }
 
@@ -738,7 +738,7 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_printf(&sbuf, "\niommu histogram\n\n");
 
 	// Avoid div 0
-	for (i = 0; i < STAT_COUNT; i ++)
+	for (i = 0; i < UVAS_INST_STAT_COUNT; i ++)
 		if (instrument_hist[1].count[i] == 0)
 			instrument_hist[1].count[i] = 1;
 
