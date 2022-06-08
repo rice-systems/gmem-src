@@ -121,7 +121,7 @@ static inline void create_unique_uvas(
 	mmu_ops->mmu_init(mmu_ops);
 	pmap->data = dev_data;
 	pmap->mmu_ops = mmu_ops;
-	pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
+	pmap->mmu_ops->mmu_pmap_create(pmap);
 
 	// initialize uvas
 	TAILQ_INIT(&uvas->mapped_entries);
@@ -189,7 +189,7 @@ static inline void create_cpu_share_uvas(
 	mmu_ops->mmu_init(mmu_ops);
 	pmap->data = dev_data;
 	pmap->mmu_ops = mmu_ops;
-	pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
+	pmap->mmu_ops->mmu_pmap_create(pmap);
 
 	// initialize uvas
 	TAILQ_INIT(&uvas->mapped_entries);
