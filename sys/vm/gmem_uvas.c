@@ -203,21 +203,13 @@ static inline void create_cpu_share_uvas(
 	// insert pmap to uvas pmap list
 	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
 
-	// Edge device does not need to perform page faults
-	if (0) {
-		uvas->allocator = RBTREE;
-		// TODO: RB-TREE
-		gmem_rb_init(uvas);
-	} else {
-		uvas->allocator = VMEM;
-		// Currently we use the maximum available quantum cache (16)
-		// nextfit/bestfit/firstfit do not impact iommu netperf performance.
-		uvas->arena = vmem_create("uva", 0, rounddown(size, alignment), 
-			alignment, alignment * 16, M_WAITOK | M_BESTFIT);
-	}
+	// CPU handles VA allocations
+	uvas->allocator = CPU_VM;
 
-	*uvas_res = uvas;
-	*pmap_res = pmap;
+	if (uvas_res != NULL)
+		*uvas_res = uvas;
+	if (pmap_res != NULL)
+		*pmap_res = pmap;
 }
 
 // Four modes to use uvas:
@@ -253,7 +245,8 @@ gmem_error_t gmem_uvas_create(
 			printf("[gmem] %s: trying to share CPU process address space\n", __func__);
 			if (!(mmu_ops != NULL && dev_data != NULL))
 				return GMEM_EINVALIDARGS;
-			create_cpu_share_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
+			create_cpu_share_uvas(uvas_res, pmap_res, mmu_ops,
+				dev_data, alignment, boundary, size, guard);
 			break;
 		default:
 			printf("Other UVAS creation modes are not implemented\n");

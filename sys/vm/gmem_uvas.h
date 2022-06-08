@@ -129,7 +129,8 @@ RB_PROTOTYPE(gmem_uvas_entries_tree, gmem_uvas_entry, rb_entry,
 
 enum gmem_uvas_allocator_type {
 	RBTREE = 0,
-	VMEM
+	VMEM,
+	CPU_VM
 };
 
 // Canonical address space: 0~maxsize
