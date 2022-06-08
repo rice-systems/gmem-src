@@ -242,11 +242,6 @@ struct gmem_mmu_ops
 	unsigned long pgsize_bitmap;
 	bool mmu_has_range_tlb;
 	int inited;
-	struct mtx lock;
-
-	// protected by GMEM_MMU_LOCK
-	struct gmem_uvas_entries_tailq unmap_entries;
-	u_int unmap_entry_cnt;
 
 	// init function that initializes this mmu ops, including a global queue for tlb inv
 	gmem_error_t (*mmu_init)(struct gmem_mmu_ops *);
@@ -255,7 +250,7 @@ struct gmem_mmu_ops
 	gmem_error_t (*prepare)(vm_paddr_t pa, vm_size_t size);
 
 	// device page/range table creation and destruction.
-	gmem_error_t (*mmu_pmap_create)(dev_pmap_t *pmap, void *dev_data);
+	gmem_error_t (*mmu_pmap_create)(dev_pmap_t *pmap);
 	gmem_error_t (*mmu_pmap_destroy)(dev_pmap_t *pmap);
 
 	// device mapping creation, manipulation and destruction

@@ -443,12 +443,11 @@ domain_flush_iotlb_domain(struct dmar_domain *domain)
 
 
 // GMEM CBs
-static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap, void *dev_data)
+static gmem_error_t intel_iommu_pmap_create(dev_pmap_t *pmap)
 {
 	intel_iommu_pgtable_t *pgtable;
 
 	KASSERT(pmap->data == NULL, ("creating a pmap over existing page table"));
-	pmap->data = dev_data;
 
 	pmap->min_sp_shift = 21;
 	pgtable = pmap->data;
@@ -594,9 +593,7 @@ static gmem_error_t intel_iommu_prepare(vm_paddr_t pa, vm_offset_t size)
 static gmem_error_t intel_iommu_init(struct gmem_mmu_ops* ops)
 {
 	if (atomic_cmpset_int(&ops->inited, 0, 1)) {
-		TAILQ_INIT(&ops->unmap_entries);
-		mtx_init(&ops->lock, "mmu lock for global device data structures", NULL, MTX_DEF);
-		ops->unmap_entry_cnt = 0;
+		printf("initing iommu ops\n");
 	}
 	return GMEM_OK;
 }

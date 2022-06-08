@@ -119,6 +119,7 @@ static inline void create_unique_uvas(
 
 	// use mmu callback to initialize device-specific data
 	mmu_ops->mmu_init(mmu_ops);
+	pmap->data = dev_data;
 	pmap->mmu_ops = mmu_ops;
 	pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
@@ -186,6 +187,7 @@ static inline void create_cpu_share_uvas(
 
 	// use mmu callback to initialize device-specific data
 	mmu_ops->mmu_init(mmu_ops);
+	pmap->data = dev_data;
 	pmap->mmu_ops = mmu_ops;
 	pmap->mmu_ops->mmu_pmap_create(pmap, dev_data);
 
@@ -203,7 +205,7 @@ static inline void create_cpu_share_uvas(
 	// insert pmap to uvas pmap list
 	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
 
-	// CPU handles VA allocations
+	// pmap replicates CPU ptes
 	uvas->allocator = CPU_VM;
 
 	if (uvas_res != NULL)
