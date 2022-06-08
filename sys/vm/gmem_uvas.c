@@ -245,8 +245,7 @@ gmem_error_t gmem_uvas_create(
 			printf("[gmem] %s: trying to share CPU process address space\n", __func__);
 			if (!(mmu_ops != NULL && dev_data != NULL))
 				return GMEM_EINVALIDARGS;
-			create_cpu_share_uvas(uvas_res, pmap_res, mmu_ops,
-				dev_data, alignment, boundary, size, guard);
+			create_cpu_share_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
 			break;
 		default:
 			printf("Other UVAS creation modes are not implemented\n");
