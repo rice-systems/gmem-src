@@ -1602,6 +1602,27 @@ RetryFault:
 		(*fs.m_hold) = fs.m;
 		vm_page_wire(fs.m);
 	}
+
+	// gmem uvas
+	if (map->gmem_pmap != NULL) {
+		// pin it anyways (actually, we should check if it is desirable)
+		if (fs.m_hold == NULL)
+			vm_page_wire(fs.m);
+
+		if (map->gmem_pmap->pmap_replica->npmaps != 1)
+			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
+		// for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
+		// 	map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
+		// 		map->gmem_pmap->pmap_replica->replicated_pmaps[i],
+		// 		vaddr >> 12 << 12,
+		// 		PAGE_SIZE,
+		// 		VM_PAGE_TO_PHYS(fs.m),
+		// 		fault_type,
+		// 		0);
+		// }
+	}
+
+
 	vm_page_xunbusy(fs.m);
 	fs.m = NULL;
 

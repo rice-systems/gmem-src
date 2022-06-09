@@ -96,6 +96,7 @@ extern struct hist instrument_hist[UVAS_INST_MAXPGCNT];
 #define GMEM_UVAS_SHARE_CPU  0x1
 #define GMEM_UVAS_REPLICATED 0x2
 #define GMEM_UVAS_EXCLUSIVE  0x3
+#define GMEM_UVAS_REPLICATE_CPU  0x4
 
 
 

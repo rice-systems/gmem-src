@@ -217,7 +217,7 @@ struct vm_map {
 #ifdef DIAGNOSTIC
 	int nupdates;
 #endif
-    struct gmem_uvas *uvas;  /* shared uvas */
+    struct dev_pmap *gmem_pmap;  /* shared uvas */
 };
 
 /*

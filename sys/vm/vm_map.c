@@ -937,7 +937,7 @@ _vm_map_init(vm_map_t map, pmap_t pmap, vm_offset_t min, vm_offset_t max)
 #ifdef DIAGNOSTIC
 	map->nupdates = 0;
 #endif
-	map->uvas = NULL;
+	map->gmem_pmap = NULL;
 }
 
 void

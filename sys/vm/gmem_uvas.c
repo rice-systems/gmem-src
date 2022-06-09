@@ -90,6 +90,24 @@ gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry)
 	uma_zfree(gmem_uvas_entry_zone, entry);
 }
 
+static inline void init_uvas(struct gmem_uvas *uvas)
+{
+	mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
+	mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
+	mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
+
+	// initialize uvas
+	TAILQ_INIT(&uvas->mapped_entries);
+	TAILQ_INIT(&uvas->unmap_requests);
+	TAILQ_INIT(&uvas->unmap_workspace);
+	TAILQ_INIT(&uvas->dev_pmap_header);
+	uvas->unmap_pages = 0;
+	uvas->unmap_working_pages = 0;
+
+	// Need a flag to enable uvas daemon?
+	gmem_uvas_async_unmap_start(uvas);
+}
+
 static inline void create_unique_uvas(
 	gmem_uvas_t **uvas_res, 
 	dev_pmap_t **pmap_res, 
@@ -105,9 +123,8 @@ static inline void create_unique_uvas(
 	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 	// allocate and create the uvas
 	gmem_uvas_t *uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
-	mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
-	mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
-	mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
+
+	init_uvas(uvas);
 
 	// useless gmem_dev structs?
 	// pmap->ndevices = 1;
@@ -122,17 +139,6 @@ static inline void create_unique_uvas(
 	pmap->data = dev_data;
 	pmap->mmu_ops = mmu_ops;
 	pmap->mmu_ops->mmu_pmap_create(pmap);
-
-	// initialize uvas
-	TAILQ_INIT(&uvas->mapped_entries);
-	TAILQ_INIT(&uvas->unmap_requests);
-	TAILQ_INIT(&uvas->unmap_workspace);
-	TAILQ_INIT(&uvas->dev_pmap_header);
-	uvas->unmap_pages = 0;
-	uvas->unmap_working_pages = 0;
-
-	// Need a flag to enable uvas daemon?
-	gmem_uvas_async_unmap_start(uvas);
 
 	// insert pmap to uvas pmap list
 	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
@@ -163,57 +169,67 @@ static inline void create_unique_uvas(
 	*pmap_res = pmap;
 }
 
-static inline void create_cpu_share_uvas(
+// pmap may replicate whatever happens in another pmap -- two coherent devices can replicate mappings
+// exclusive pmap may not need to be explicitly considered,
+//  because it should be handled by migration code from physical mm
+static inline void create_cpu_replicate_uvas(
 	gmem_uvas_t **uvas_res, 
 	dev_pmap_t **pmap_res, 
 	gmem_mmu_ops_t *mmu_ops,
 	void *dev_data)
 {
 	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
-	map->uvas = uvas;
+	dev_pmap_t *cpu_pmap;
+	gmem_uvas_t *uvas;
+
+	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
+	if (map->dev_pmap != NULL) {
+		cpu_pmap = map->gmem_pmap;
+		uvas = cpu_pmap->uvas;
+	}
+	else {
+		// allocate and create the uvas
+		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
+		init_uvas(uvas);
+
+		// Need to init a CPU dev_pmap
+		cpu_pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
+		cpu_pmap->pmap_replica = (struct dev_pmap_replica *) malloc(sizeof(struct dev_pmap_replica), M_DEVBUF, M_WAITOK | M_ZERO);
+		cpu_pmap->pmap_replica->npmaps = 0;
+		cpu_pmap->pmap_replica->replicated_pmaps = NULL;
+		cpu_pmap->data = map->pmap;
+		cpu_pmap->uvas = uvas;
+		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, cpu_pmap, unified_pmap_list);
+
+
+		// No VA allocation should be done by gmem
+		uvas->allocator = CPU_VM;
+	}
 
 	// allocate and create the pmap with dev->mmu_ops
 	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
-
-	// allocate and create the uvas
-	gmem_uvas_t *uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
-
-	if (atomic_cmpset_ptr())
-
-	mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
-	mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
-	mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);
-
-	// useless gmem_dev structs?
-	// pmap->ndevices = 1;
-	// TAILQ_INIT(&pmap->gmem_dev_header);
-	// TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
-
 	pmap->pmap_replica = NULL;
-	pmap->uvas = uvas;
-
-	// use mmu callback to initialize device-specific data
 	mmu_ops->mmu_init(mmu_ops);
 	pmap->data = dev_data;
 	pmap->mmu_ops = mmu_ops;
 	pmap->mmu_ops->mmu_pmap_create(pmap);
 
-	// initialize uvas
-	TAILQ_INIT(&uvas->mapped_entries);
-	TAILQ_INIT(&uvas->unmap_requests);
-	TAILQ_INIT(&uvas->unmap_workspace);
-	TAILQ_INIT(&uvas->dev_pmap_header);
-	uvas->unmap_pages = 0;
-	uvas->unmap_working_pages = 0;
+	// bind pmap as a replica to cpu_pmap
+	int tmp = cpu_pmap->pmap_replica->npmaps + 1;
+	struct dev_pmap **tmp_pmaps = (dev_pmap_t **) malloc(sizeof(dev_pmap_t *) * tmp, M_DEVBUF, M_WAITOK | M_ZERO);
+	if (tmp > 1) {
+		memcpy(tmp_pmaps, cpu_pmap->pmap_replica->replicated_pmaps, (tmp - 1) * sizeof(dev_pmap_t *));
+		free(cpu_pmap->pmap_replica->replicated_pmaps, M_DEVBUF);
+	}
+	tmp_pmaps[tmp - 1] = pmap;
+	cpu_pmap->pmap_replica->npmaps = tmp;
+	cpu_pmap->pmap_replica->replicated_pmaps = tmp_pmaps;
 
-	// Need a flag to enable uvas daemon?
-	gmem_uvas_async_unmap_start(uvas);
+	// bind pmap to uvas
+	pmap->uvas = uvas;
 
 	// insert pmap to uvas pmap list
 	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
-
-	// pmap replicates CPU ptes
-	uvas->allocator = CPU_VM;
 
 	if (uvas_res != NULL)
 		*uvas_res = uvas;
@@ -250,11 +266,12 @@ gmem_error_t gmem_uvas_create(
 			create_unique_uvas(uvas_res, pmap_res, mmu_ops, pmap_to_share,
 				dev_data, alignment, boundary, size, guard);
 			break;
-		case GMEM_UVAS_SHARE_CPU:
-			printf("[gmem] %s: trying to share CPU process address space\n", __func__);
+		case GMEM_UVAS_REPLICATE_CPU:
+			printf("[gmem] %s: trying to share CPU process address space with a replicate pmap\n", __func__);
 			if (!(mmu_ops != NULL && dev_data != NULL))
 				return GMEM_EINVALIDARGS;
-			create_cpu_share_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
+			create_cpu_replicate_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
+			printf("Binding UVAS to CPU VM successful\n");
 			break;
 		default:
 			printf("Other UVAS creation modes are not implemented\n");
