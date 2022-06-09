@@ -35,6 +35,7 @@
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
+#include <vm/vm_map.h>
 
 #include <vm/gmem.h>
 #include <vm/gmem_dev.h>
