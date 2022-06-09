@@ -169,10 +169,17 @@ static inline void create_cpu_share_uvas(
 	gmem_mmu_ops_t *mmu_ops,
 	void *dev_data)
 {
+	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
+	map->uvas = uvas;
+
 	// allocate and create the pmap with dev->mmu_ops
 	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
+
 	// allocate and create the uvas
 	gmem_uvas_t *uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
+
+	if (atomic_cmpset_ptr())
+
 	mtx_init(&uvas->lock, "uvas", NULL, MTX_DEF);
 	mtx_init(&uvas->enqueue_lock, "uvas unmap request enqueue", NULL, MTX_DEF);
 	mtx_init(&uvas->dequeue_lock, "uvas unmap request dequeue", NULL, MTX_DEF);

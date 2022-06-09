@@ -217,6 +217,7 @@ struct vm_map {
 #ifdef DIAGNOSTIC
 	int nupdates;
 #endif
+    struct gmem_uvas *uvas;  /* shared uvas */
 };
 
 /*
@@ -294,7 +295,6 @@ struct vmspace {
 	caddr_t vm_daddr;	/* (c) user virtual address of data */
 	caddr_t vm_maxsaddr;	/* user VA at max stack growth */
 	u_int vm_refcnt;	/* number of references */
-    // struct gmem_uvas uvas;  /* shared uvas */
 	/*
 	 * Keep the PMAP last, so that CPU-specific variations of that
 	 * structure on a single architecture don't result in offset
