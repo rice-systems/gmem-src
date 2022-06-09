@@ -124,6 +124,7 @@ gmem_test_boundary(vm_offset_t start, vm_offset_t size, vm_offset_t boundary)
 	return (start + size <= ((start + boundary) & ~(boundary - 1)));
 }
 
+#include <sys/tree.h>
 RB_HEAD(gmem_uvas_entries_tree, gmem_uvas_entry);
 RB_PROTOTYPE(gmem_uvas_entries_tree, gmem_uvas_entry, rb_entry,
     gmem_uvas_cmp_entries);
