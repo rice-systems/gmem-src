@@ -110,6 +110,9 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_pager.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_reserv.h>
+#include <vm/gmem.h>
+#include <vm/gmem_dev.h>
+#include <vm/gmem_uvas.h>
 
 #define PFBAK 4
 #define PFFOR 4
