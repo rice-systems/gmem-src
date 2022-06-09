@@ -266,6 +266,7 @@ get_user_pages(unsigned long start, unsigned long nr_pages, int gup_flags,
 	vm_map_t map;
 
 	map = &curthread->td_proc->p_vmspace->vm_map;
+	printf("faulting GPU at vm map %p\n", map);
 	return (linux_get_user_pages_internal(map, start, nr_pages,
 	    !!(gup_flags & FOLL_WRITE), pages));
 }

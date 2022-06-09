@@ -183,6 +183,8 @@ static inline void create_cpu_replicate_uvas(
 	dev_pmap_t *cpu_pmap;
 	gmem_uvas_t *uvas;
 
+	printf("Attaching dev pmap to cpu map %p\n", map);
+
 	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
 	if (map->gmem_pmap != NULL) {
 		cpu_pmap = map->gmem_pmap;
