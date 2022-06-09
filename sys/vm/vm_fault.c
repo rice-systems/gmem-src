@@ -1615,7 +1615,7 @@ RetryFault:
 		if (map->gmem_pmap->pmap_replica->npmaps != 1)
 			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
 		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-			printf("vm fault mapping dev pmap\n");
+			// printf("vm fault mapping dev pmap\n");
 			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
 				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
 				vaddr >> 12 << 12,
@@ -1884,7 +1884,7 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 			    VM_FAULT_NORMAL, mp) != KERN_SUCCESS)
 				goto error;
 	}
-	printf("I have faulted %d pages, vm_fault triggered? %d\n", count, !pmap_failed);
+	// printf("I have faulted %d pages, vm_fault triggered? %d\n", count, !pmap_failed);
 	return (count);
 error:	
 	for (mp = ma; mp < ma + count; mp++)
