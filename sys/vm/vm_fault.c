@@ -1614,15 +1614,15 @@ RetryFault:
 
 		if (map->gmem_pmap->pmap_replica->npmaps != 1)
 			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
-		// for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-		// 	map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
-		// 		map->gmem_pmap->pmap_replica->replicated_pmaps[i],
-		// 		vaddr >> 12 << 12,
-		// 		PAGE_SIZE,
-		// 		VM_PAGE_TO_PHYS(fs.m),
-		// 		fault_type,
-		// 		0);
-		// }
+		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
+			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
+				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
+				vaddr >> 12 << 12,
+				PAGE_SIZE,
+				VM_PAGE_TO_PHYS(fs.m),
+				fault_type,
+				0);
+		}
 	}
 
 
