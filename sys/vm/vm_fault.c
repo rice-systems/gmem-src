@@ -1884,6 +1884,7 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 			    VM_FAULT_NORMAL, mp) != KERN_SUCCESS)
 				goto error;
 	}
+	printf("I have faulted %d pages, vm_fault triggered? %d\n", count, !pmap_failed);
 	return (count);
 error:	
 	for (mp = ma; mp < ma + count; mp++)

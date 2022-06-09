@@ -207,6 +207,9 @@ static inline void create_cpu_replicate_uvas(
 
 		// No VA allocation should be done by gmem
 		uvas->allocator = CPU_VM;
+
+		// attach it to cpu vm space
+		map->gmem_pmap = cpu_pmap;
 	}
 
 	// allocate and create the pmap with dev->mmu_ops
