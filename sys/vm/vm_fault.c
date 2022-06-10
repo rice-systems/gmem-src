@@ -1606,25 +1606,25 @@ RetryFault:
 		vm_page_wire(fs.m);
 	}
 
-	// gmem uvas
-	if (map->gmem_pmap != NULL) {
-		// pin it anyways (actually, we should check if it is desirable)
-		if (fs.m_hold == NULL)
-			vm_page_wire(fs.m);
+	// // gmem uvas
+	// if (map->gmem_pmap != NULL) {
+	// 	// pin it anyways (actually, we should check if it is desirable)
+	// 	if (fs.m_hold == NULL)
+	// 		vm_page_wire(fs.m);
 
-		if (map->gmem_pmap->pmap_replica->npmaps != 1)
-			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
-		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-			// printf("vm fault mapping dev pmap\n");
-			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
-				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
-				vaddr >> 12 << 12,
-				PAGE_SIZE,
-				VM_PAGE_TO_PHYS(fs.m),
-				fault_type,
-				0);
-		}
-	}
+	// 	if (map->gmem_pmap->pmap_replica->npmaps != 1)
+	// 		printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
+	// 	for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
+	// 		// printf("vm fault mapping dev pmap\n");
+	// 		map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
+	// 			map->gmem_pmap->pmap_replica->replicated_pmaps[i],
+	// 			vaddr >> 12 << 12,
+	// 			PAGE_SIZE,
+	// 			VM_PAGE_TO_PHYS(fs.m),
+	// 			fault_type,
+	// 			0);
+	// 	}
+	// }
 
 
 	vm_page_xunbusy(fs.m);
@@ -1883,6 +1883,25 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 			if (*mp == NULL && vm_fault(map, va, prot,
 			    VM_FAULT_NORMAL, mp) != KERN_SUCCESS)
 				goto error;
+	}
+
+	// gmem uvas
+	// Let's assume that the pmap is not capable of fault so it must use pinnning to fault pages
+	if (map->gmem_pmap != NULL) {
+		// pin it anyways (actually, we should check if it is desirable)
+
+		if (map->gmem_pmap->pmap_replica->npmaps != 1)
+			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
+		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
+			// printf("vm fault mapping dev pmap\n");
+			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
+				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
+				vaddr >> 12 << 12,
+				PAGE_SIZE * count,
+				VM_PAGE_TO_PHYS(ma[0]),
+				fault_type,
+				0);
+		}
 	}
 	// printf("I have faulted %d pages, vm_fault triggered? %d\n", count, !pmap_failed);
 	return (count);
