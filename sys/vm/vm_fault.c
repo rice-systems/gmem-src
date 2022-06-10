@@ -1899,7 +1899,7 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 				vaddr >> 12 << 12,
 				PAGE_SIZE * count,
 				VM_PAGE_TO_PHYS(ma[0]),
-				fault_type,
+				prot,
 				0);
 		}
 	}
