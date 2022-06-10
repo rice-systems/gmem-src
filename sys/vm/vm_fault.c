@@ -1896,7 +1896,7 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 			// printf("vm fault mapping dev pmap\n");
 			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
 				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
-				vaddr >> 12 << 12,
+				addr >> 12 << 12,
 				PAGE_SIZE * count,
 				VM_PAGE_TO_PHYS(ma[0]),
 				prot,
