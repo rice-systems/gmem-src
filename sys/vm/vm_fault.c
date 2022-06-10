@@ -1893,7 +1893,7 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 		if (map->gmem_pmap->pmap_replica->npmaps != 1)
 			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
 		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-			// printf("vm fault mapping dev pmap\n");
+			printf("CPU VM is preparing gpu page table, size %d\n", PAGE_SIZE * count);
 			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
 				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
 				addr >> 12 << 12,
