@@ -378,6 +378,6 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	void (* unmap_callback)(void *), void *callback_args);
 gmem_error_t pmap_reload_mmu(dev_pmap_t *pmap, gmem_mmu_ops_t *new_mmu);
 
-int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot);
+int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out);
 
 #endif

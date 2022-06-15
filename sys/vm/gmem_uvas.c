@@ -822,7 +822,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 }
 
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
-int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot) {
+int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) {
 
 	vm_offset_t end, va;
 	vm_page_t *ma, *mp;
@@ -835,9 +835,13 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 
 	count = atop(end - addr);
 
-	ma = (vm_page_t *) malloc(sizeof(vm_page_t) * count, M_DEVBUF, M_WAITOK | M_ZERO);
-	if (ma == NULL)
-		return -1;
+	if (out != NULL)
+		ma = out
+	else {
+		ma = (vm_page_t *) malloc(sizeof(vm_page_t) * count, M_DEVBUF, M_WAITOK | M_ZERO);
+		if (ma == NULL)
+			return -1;
+	}
 
 	printf("[gmem_uvas_fault] preparing CPU pages\n");
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
