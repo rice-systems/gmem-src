@@ -1570,7 +1570,7 @@ RetryFault:
 
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 		if (m_left != NULL && nzeropages > 1) {
-			// printf("[vm_fault] faulting %d pages\n", nzeropages);
+			printf("[vm_fault] faulting %d pages\n", nzeropages);
 			pmap_zero_pages_idle(m_left, nzeropages);
 			for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
 				if (m_tmp == fs.first_m) {

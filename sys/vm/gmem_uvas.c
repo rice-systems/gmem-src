@@ -823,7 +823,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
 int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) {
-
+	unsigned long delta;
 	vm_offset_t end, va;
 	vm_page_t *ma, *mp;
 	int count, last_i;
@@ -843,8 +843,9 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 			return -1;
 	}
 
-	printf("[gmem_uvas_fault] preparing CPU pages\n");
+	printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", vm_cnt.v_zfod, vm_cnt.v_ozfod);
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
+	delta = rdtscp();
 	if (pmap->replica_of_cpu != NULL) {
 		vm_map_t map = pmap->replica_of_cpu->data;
 		if (!vm_map_range_valid(map, addr, end))
@@ -865,7 +866,9 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	else
 		printf("Device physical memory management is not implemented\n");
 
-	printf("[gmem_uvas_fault] preparing CPU pages done\n");
+	delta = rdtscp() - delta;
+	printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
+		delta, vm_cnt.v_zfod, vm_cnt.v_ozfod);
 	// perform dev fault if it was not faulted by CPU vm fault
 	if (!pmap->policy.fault_with_replica) {
 		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
