@@ -1538,7 +1538,7 @@ RetryFault:
 			if (next != NULL && next->pindex < right_pindex)
 				right_pindex = next->pindex;
 			if (prev != NULL && prev->pindex + 1 > left_pindex)
-				left_pindex = prev->pindex;
+				left_pindex = prev->pindex + 1;
 
 			rv_pa = VM_PAGE_TO_PHYS(fs.first_m) >> PDRSHIFT << PDRSHIFT;
 
