@@ -873,7 +873,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 				pmap->mmu_ops->mmu_pmap_enter(
 					pmap,
 					addr + last_i * PAGE_SIZE,
-					i - last_i,
+					(i - last_i) * PAGE_SIZE,
 					VM_PAGE_TO_PHYS(ma[last_i]),
 					prot,
 					0);
