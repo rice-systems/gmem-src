@@ -1543,7 +1543,7 @@ RetryFault:
 			rv_pa = VM_PAGE_TO_PHYS(fs.first_m) >> PDRSHIFT << PDRSHIFT;
 
 			printf("%s %d\n", __func__, __LINE__);
-			printf("[vm_fault] allocation range: [%d, %d), [%d, %d)\n", left_pindex, fs.pindex, fs.pindex + 1, right_pindex);
+			printf("[vm_fault] allocation range: [%lu, %lu), [%lu, %lu)\n", left_pindex, fs.pindex, fs.pindex + 1, right_pindex);
 			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
 			// m_left = m_right = NULL;
 			if (left_pindex < fs.pindex)
