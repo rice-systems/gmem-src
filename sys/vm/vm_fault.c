@@ -1278,12 +1278,13 @@ vm_fault_busy_sleep(struct faultstate *fs)
 
 int
 vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
-    int fault_flags, vm_page_t *m_hold, dev_pmap_t *dev_pmap)
+    int fault_flags, vm_page_t *m_hold, void *dev_pmap_data)
 {
 	struct faultstate fs;
 	int ahead, behind, faultcount;
 	int nera, result, rv;
 	bool dead, hardfault;
+	dev_pmap_t *dev_pmap = (dev_pmap_t *) dev_pmap_data;
 
 	VM_CNT_INC(v_vm_faults);
 
