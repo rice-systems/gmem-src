@@ -1571,7 +1571,10 @@ RetryFault:
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 		if (m_left != NULL && nzeropages > 1) {
 			printf("[vm_fault] faulting %d pages\n", nzeropages);
+			unsigned long delta = rdtscp();
 			pmap_zero_pages_idle(m_left, nzeropages);
+			delta = rdtscp() - delta;
+			printf("[vm_fault] avg page zeroing time: %lu cycles\n", delta / nzeropages);
 			for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
 				if (m_tmp == fs.first_m) {
 					// prevent another zeroing in vm_fault_zerofill
