@@ -36,6 +36,7 @@
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
+#include <vm/vm_fault.h>
 
 #include <vm/gmem.h>
 #include <vm/gmem_dev.h>
@@ -110,9 +111,9 @@ static inline void init_uvas(struct gmem_uvas *uvas)
 }
 
 void gmem_uvas_set_pmap_policy(dev_pmap_t *pmap, bool fault_with_replica, bool pin_on_fault, uint8_t prepare_page_order) {
-	pmap->fault_with_replica = fault_with_replica;
-	pmap->pin_on_fault = pin_on_fault;
-	pmap->prepare_page_order = prepare_page_order;
+	pmap->policy.fault_with_replica = fault_with_replica;
+	pmap->policy.pin_on_fault = pin_on_fault;
+	pmap->policy.prepare_page_order = prepare_page_order;
 }
 
 static inline void create_unique_uvas(
@@ -193,7 +194,7 @@ static inline void insert_pmap_replica(dev_pmap_t *a, dev_pmap_t *b)
 		memcpy(tmp_pmaps, a->pmap_replica->replicated_pmaps, a->pmap_replica->npmaps * sizeof(dev_pmap_t *));
 		free(a->pmap_replica->replicated_pmaps, M_DEVBUF);
 	}
-	tmp_pmaps[tmp - 1] = pmap;
+	tmp_pmaps[tmp - 1] = b;
 	a->pmap_replica->npmaps = tmp;
 	a->pmap_replica->replicated_pmaps = tmp_pmaps;
 }
@@ -229,8 +230,6 @@ static inline void create_cpu_replicate_uvas(
 		cpu_pmap->data = map;
 		cpu_pmap->uvas = uvas;
 
-		cpu_pmap->pin_on_fault = false;
-		cpu_pmap->prepare_granularity = 1;
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, cpu_pmap, unified_pmap_list);
 
 		gmem_uvas_set_pmap_policy(cpu_pmap, false, false, 1);
@@ -833,23 +832,20 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	end = round_page(addr + len);
 	addr = trunc_page(addr);
 
-	if (!vm_map_range_valid(map, addr, end))
-		return (-1);
-
-	if (atop(end - addr) > max_count)
-		panic("vm_fault_quick_hold_pages: count > max_count");
 	count = atop(end - addr);
 
-	ma = malloc(sizeof(vm_page_t *) * count, M_DEVBUF);
+	ma = (vm_page_t *) malloc(sizeof(vm_page_t) * count, M_DEVBUF, M_WAITOK | M_ZERO);
 
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
 	if (pmap->replica_of_cpu != NULL) {
-		vm_map_t map = (vm_map_t) pmap->replica_of_cpu->dev_data;
+		vm_map_t map = (vm_map_t) pmap->replica_of_cpu->data;
+		if (!vm_map_range_valid(map, addr, end))
+			return (-1);
 		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
 			*mp = pmap_extract_and_hold(map->pmap, va, prot);
 			if (*mp == NULL)
 				// We actually always pin it and ignore pin_on_fault flag for now
-				vm_fault(map, va, prot, VM_FAULT_NORMAL, pmap->pin_on_fault ? mp : NULL, pmap)
+				vm_fault(map, va, prot, VM_FAULT_NORMAL, pmap->policy.pin_on_fault ? mp : NULL, pmap)
 			else if ((prot & VM_PROT_WRITE) != 0 &&
 			    (*mp)->dirty != VM_PAGE_BITS_ALL) {
 				vm_page_dirty(*mp);
@@ -859,23 +855,37 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	else
 		printf("Device physical memory management is not implemented\n");
 
-	// perform dev fault
+	// perform dev fault if it was not faulted by CPU vm fault
 	if (!pmap->policy.fault_with_replica) {
-		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-			printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
-			
-			last_i = 0;
-			for (int i = 1; i <= count; i ++) {
-				if (VM_PAGE_TO_PHYS(ma[i]) - VM_PAGE_TO_PHYS(ma[i - 1]) != PAGE_SIZE || i == count) {
-					map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
-						map->gmem_pmap->pmap_replica->replicated_pmaps[i],
-						addr + last_i * PAGE_SIZE,
-						i - last_i,
-						VM_PAGE_TO_PHYS(ma[last_i]),
-						prot,
-						0);
-					last_i = i;
-				}
+		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
+		
+		last_i = 0;
+		for (int i = 1; i <= count; i ++) {
+			if (VM_PAGE_TO_PHYS(ma[i]) - VM_PAGE_TO_PHYS(ma[i - 1]) != PAGE_SIZE || i == count) {
+
+				pmap->mmu_ops->mmu_pmap_enter(
+					pmap,
+					addr + last_i * PAGE_SIZE,
+					i - last_i,
+					VM_PAGE_TO_PHYS(ma[last_i]),
+					prot,
+					0);
+
+				// right now do not coordinate with peer dev pmaps.
+				// for (int i = 0; i < pmap->pmap_replica->npmaps; i ++) {
+				// 	dev_pmap_t sub_pmap = pmap->pmap_replica->replicated_pmaps[i];
+
+				// 	if (sub_pmap->policy.fault_with_replica)
+				// 		sub_pmap->mmu_ops->mmu_pmap_enter(
+				// 			pmap->pmap_replica->replicated_pmaps[i],
+				// 			addr + last_i * PAGE_SIZE,
+				// 			i - last_i,
+				// 			VM_PAGE_TO_PHYS(ma[last_i]),
+				// 			prot,
+				// 			0);
+				// }
+
+				last_i = i;
 			}
 		}
 	}
