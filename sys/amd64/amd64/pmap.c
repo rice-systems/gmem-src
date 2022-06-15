@@ -7776,6 +7776,23 @@ pmap_zero_page(vm_page_t m)
 	pagezero((void *)va);
 }
 
+void
+pmap_zero_pages_idle(vm_page_t m, int npages)
+{
+	vm_offset_t va = PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
+	/*
+		[fast page zeroing]
+		npages is supposed to be <= 512
+		one should always use this code to zero chunks of data
+		on graphchi(pagerank_3):
+			sse2_pagezero_chunk:
+				79.02 real       235.97 user        26.04 sys
+			sse2_pagezero:
+				80.04 real       240.45 user        27.29 sys
+	*/
+	sse2_pagezero_chunk((void *)va, npages << 12);
+}
+
 /*
  * Zero an an area within a single hardware page.  off and size must not
  * cover an area beyond a single hardware page.

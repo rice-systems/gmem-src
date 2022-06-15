@@ -632,7 +632,7 @@ vm_fault_trap(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
 		ktrfault(vaddr, fault_type);
 #endif
 	result = vm_fault(map, trunc_page(vaddr), fault_type, fault_flags,
-	    NULL);
+	    NULL, NULL);
 	KASSERT(result == KERN_SUCCESS || result == KERN_FAILURE ||
 	    result == KERN_INVALID_ADDRESS ||
 	    result == KERN_RESOURCE_SHORTAGE ||
@@ -1278,7 +1278,7 @@ vm_fault_busy_sleep(struct faultstate *fs)
 
 int
 vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
-    int fault_flags, vm_page_t *m_hold)
+    int fault_flags, vm_page_t *m_hold, dev_pmap_t *dev_pmap)
 {
 	struct faultstate fs;
 	int ahead, behind, faultcount;
@@ -1506,7 +1506,81 @@ RetryFault:
 			unlock_and_deallocate(&fs);
 			return (KERN_OUT_OF_BOUNDS);
 		}
+
+#if defined(__amd64__) && VM_NRESERVLEVEL > 0
+
+		// Added code for sync promotion
+		vm_page_t m_left, m_right, next, prev;
+		vm_paddr_t rv_pa;
+		vm_pindex_t rv_pindex, left_pindex, right_pindex;
+		int nzeropages = 1;
+
+		/* Do we have a device pmap policy that demands higher preparation throughput ? */
+		if(dev_pmap != NULL && dev_pmap->policy.prepare_page_order > 1
+			&& fs.first_m != NULL
+		    && (fault_flags & VM_FAULT_WIRE) == 0
+			&& fs.object != NULL
+			&& fs.object->type == OBJT_DEFAULT
+		    && fs.object->backing_object == NULL
+		    && (level = vm_reserv_level(fs.first_m)) >= 0) {
+
+			int granularity = dev_pmap->policy.prepare_page_order;
+			// The page is backed by a 2MB reservation
+			rv_pindex = vm_reserv_pindex_from_page(fs.first_m);
+			left_pindex = rv_pindex + (fs.pindex - rv->pindex) >> granularity << granularity
+			right_pindex = left_pindex + (1 << granularity);
+			next = TAILQ_NEXT(fs.first_m, listq);
+			prev = TAILQ_PREV(m, pglist, listq);
+			if (next->pindex < right_pindex)
+				right_pindex = next->pindex;
+			if (prev->pindex + 1 > left_pindex)
+				left_pindex = prev->pindex;
+
+			rv_pa = VM_PAGE_TO_PHYS(fs.m) >> PDRSHIFT << PDRSHIFT;
+
+			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
+			if (left_pindex < fs.pindex)
+				m_left = vm_page_alloc_contig(fs.object, left_pindex,
+					VM_ALLOC_NORMAL,
+					fs.pindex - left_pindex,
+					rv_pa, rv_pa + NBPDR,
+					PAGE_SIZE, NBPDR, VM_MEMATTR_DEFAULT);
+
+			if (fs.pindex + 1 < right_pindex)
+				m_right = vm_page_alloc_contig(fs.object, fs.pindex + 1,
+					VM_ALLOC_NORMAL,
+					right_pindex - fs.pindex - 1,
+					rv_pa, rv_pa + NBPDR,
+					PAGE_SIZE, NBPDR, VM_MEMATTR_DEFAULT);
+
+			if (m_left == NULL)
+				m_left = fs.first_m;
+			else
+				nzeropages += fs.pindex - left_pindex;
+
+			if (m_right != NULL)
+				nzeropages += right_pindex - fs.pindex - 1;
+		}
+#endif
+
 		VM_OBJECT_WUNLOCK(fs.object);
+
+
+#if defined(__amd64__) && VM_NRESERVLEVEL > 0
+		pmap_zero_pages_idle(m_left, nzeropages);
+		for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
+			if (m_tmp == fs.first_m) {
+				// prevent another zeroing in vm_fault_zerofill
+				fs.first_m->flags |= PG_ZERO;
+				continue;
+			}
+			VM_CNT_INC(v_zfod);
+			vm_page_valid(m_tmp);
+			vm_page_activate(m_tmp);
+			vm_page_xunbusy(m_tmp);
+		}
+#endif
+
 		vm_fault_zerofill(&fs);
 		/* Don't try to prefault neighboring pages. */
 		faultcount = 1;
@@ -1606,25 +1680,31 @@ RetryFault:
 		vm_page_wire(fs.m);
 	}
 
-	// // gmem uvas
-	// if (map->gmem_pmap != NULL) {
-	// 	// pin it anyways (actually, we should check if it is desirable)
-	// 	if (fs.m_hold == NULL)
-	// 		vm_page_wire(fs.m);
+	// coordinated mapping
+	if (map->gmem_pmap != NULL) {
+		bool should_pin = false;
+		// if (map->gmem_pmap->pmap_replica->npmaps != 1)
+		// 	printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
+		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
+			// printf("vm fault mapping dev pmap\n");
+			dev_pmap_t *pmap = map->gmem_pmap->pmap_replica->replicated_pmaps[i];
+			if (pmap->fault_with_replica) {
+				pmap->mmu_ops->mmu_pmap_enter(
+					pmap,
+					vaddr >> 12 << 12,
+					PAGE_SIZE,
+					VM_PAGE_TO_PHYS(fs.m),
+					fault_type,
+					0);
+				if (pmap->policy.pin_on_fault)
+					should_pin = true;
+			}
+		}
 
-	// 	if (map->gmem_pmap->pmap_replica->npmaps != 1)
-	// 		printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
-	// 	for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-	// 		// printf("vm fault mapping dev pmap\n");
-	// 		map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
-	// 			map->gmem_pmap->pmap_replica->replicated_pmaps[i],
-	// 			vaddr >> 12 << 12,
-	// 			PAGE_SIZE,
-	// 			VM_PAGE_TO_PHYS(fs.m),
-	// 			fault_type,
-	// 			0);
-	// 	}
-	// }
+		// pin it if we haven't
+		if (fs.m_hold == NULL && should_pin)
+			vm_page_wire(fs.m);
+	}
 
 
 	vm_page_xunbusy(fs.m);
@@ -1881,29 +1961,9 @@ vm_fault_quick_hold_pages(vm_map_t map, vm_offset_t addr, vm_size_t len,
 			goto error;
 		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE)
 			if (*mp == NULL && vm_fault(map, va, prot,
-			    VM_FAULT_NORMAL, mp) != KERN_SUCCESS)
+			    VM_FAULT_NORMAL, mp, NULL) != KERN_SUCCESS)
 				goto error;
 	}
-
-	// gmem uvas
-	// Let's assume that the pmap is not capable of fault so it must use pinnning to fault pages
-	if (map->gmem_pmap != NULL) {
-		// pin it anyways (actually, we should check if it is desirable)
-
-		if (map->gmem_pmap->pmap_replica->npmaps != 1)
-			printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
-		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-			printf("CPU VM is preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
-			map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
-				map->gmem_pmap->pmap_replica->replicated_pmaps[i],
-				addr,
-				PAGE_SIZE * count,
-				VM_PAGE_TO_PHYS(ma[0]),
-				prot,
-				0);
-		}
-	}
-	// printf("I have faulted %d pages, vm_fault triggered? %d\n", count, !pmap_failed);
 	return (count);
 error:	
 	for (mp = ma; mp < ma + count; mp++)

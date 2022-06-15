@@ -1568,7 +1568,7 @@ core_output(char *base, size_t len, off_t offset, struct coredump_params *p,
 		 */
 		for (runlen = 0; runlen < len; runlen += PAGE_SIZE) {
 			error = vm_fault(map, (uintptr_t)base + runlen,
-			    VM_PROT_READ, VM_FAULT_NOFILL, NULL);
+			    VM_PROT_READ, VM_FAULT_NOFILL, NULL, NULL);
 			if (runlen == 0)
 				success = error == KERN_SUCCESS;
 			else if ((error == KERN_SUCCESS) != success)

@@ -513,6 +513,11 @@ vm_reserv_from_page(vm_page_t m)
 #endif
 }
 
+vm_pindex_t vm_reserv_pindex_from_page(vm_page_t m)
+{
+	return vm_reserv_from_page(m)->pindex;
+}
+
 /*
  * Returns an existing reservation or NULL and initialized successor pointer.
  */

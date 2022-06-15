@@ -109,6 +109,12 @@ static inline void init_uvas(struct gmem_uvas *uvas)
 	gmem_uvas_async_unmap_start(uvas);
 }
 
+void gmem_uvas_set_pmap_policy(dev_pmap_t *pmap, bool fault_with_replica, bool pin_on_fault, uint8_t prepare_page_order) {
+	pmap->fault_with_replica = fault_with_replica;
+	pmap->pin_on_fault = pin_on_fault;
+	pmap->prepare_page_order = prepare_page_order;
+}
+
 static inline void create_unique_uvas(
 	gmem_uvas_t **uvas_res, 
 	dev_pmap_t **pmap_res, 
@@ -170,6 +176,28 @@ static inline void create_unique_uvas(
 	*pmap_res = pmap;
 }
 
+static inline void insert_pmap_replica(dev_pmap_t *a, dev_pmap_t *b) 
+{
+	int tmp;
+	dev_pmap_t **tmp_pmaps;
+	if (a->pmap_replica == NULL) {
+		a->pmap_replica = (struct dev_pmap_replica *) malloc(sizeof(struct dev_pmap_replica), M_DEVBUF, M_WAITOK | M_ZERO);
+		a->pmap_replica->npmaps = 0;
+		a->pmap_replica->replicated_pmaps = NULL;
+	}
+
+
+	tmp = a->pmap_replica->npmaps + 1;
+	tmp_pmaps = (dev_pmap_t **) malloc(sizeof(dev_pmap_t *) * tmp, M_DEVBUF, M_WAITOK | M_ZERO);
+	if (a->pmap_replica->npmaps > 0) {
+		memcpy(tmp_pmaps, a->pmap_replica->replicated_pmaps, a->pmap_replica->npmaps * sizeof(dev_pmap_t *));
+		free(a->pmap_replica->replicated_pmaps, M_DEVBUF);
+	}
+	tmp_pmaps[tmp - 1] = pmap;
+	a->pmap_replica->npmaps = tmp;
+	a->pmap_replica->replicated_pmaps = tmp_pmaps;
+}
+
 // pmap may replicate whatever happens in another pmap -- two coherent devices can replicate mappings
 // exclusive pmap may not need to be explicitly considered,
 //  because it should be handled by migration code from physical mm
@@ -197,13 +225,15 @@ static inline void create_cpu_replicate_uvas(
 
 		// Need to init a CPU dev_pmap
 		cpu_pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
-		cpu_pmap->pmap_replica = (struct dev_pmap_replica *) malloc(sizeof(struct dev_pmap_replica), M_DEVBUF, M_WAITOK | M_ZERO);
-		cpu_pmap->pmap_replica->npmaps = 0;
-		cpu_pmap->pmap_replica->replicated_pmaps = NULL;
-		cpu_pmap->data = map->pmap;
+		cpu_pmap->pmap_replica = NULL;
+		cpu_pmap->data = map;
 		cpu_pmap->uvas = uvas;
+
+		cpu_pmap->pin_on_fault = false;
+		cpu_pmap->prepare_granularity = 1;
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, cpu_pmap, unified_pmap_list);
 
+		gmem_uvas_set_pmap_policy(cpu_pmap, false, false, 1);
 
 		// No VA allocation should be done by gmem
 		uvas->allocator = CPU_VM;
@@ -220,16 +250,10 @@ static inline void create_cpu_replicate_uvas(
 	pmap->mmu_ops = mmu_ops;
 	pmap->mmu_ops->mmu_pmap_create(pmap);
 
-	// bind pmap as a replica to cpu_pmap
-	int tmp = cpu_pmap->pmap_replica->npmaps + 1;
-	struct dev_pmap **tmp_pmaps = (dev_pmap_t **) malloc(sizeof(dev_pmap_t *) * tmp, M_DEVBUF, M_WAITOK | M_ZERO);
-	if (tmp > 1) {
-		memcpy(tmp_pmaps, cpu_pmap->pmap_replica->replicated_pmaps, (tmp - 1) * sizeof(dev_pmap_t *));
-		free(cpu_pmap->pmap_replica->replicated_pmaps, M_DEVBUF);
-	}
-	tmp_pmaps[tmp - 1] = pmap;
-	cpu_pmap->pmap_replica->npmaps = tmp;
-	cpu_pmap->pmap_replica->replicated_pmaps = tmp_pmaps;
+	// insert pmap as a replica with cpu_pmap
+	insert_pmap_replica(cpu_pmap, pmap);
+	pmap->replica_of_cpu = cpu_pmap;
+	// insert_pmap_replica(pmap, cpu_pmap);
 
 	// bind pmap to uvas
 	pmap->uvas = uvas;
@@ -500,7 +524,7 @@ static inline gmem_error_t gmem_uvas_prepare_and_map_pages_sg(dev_pmap_t *pmap, 
 	return GMEM_OK;
 }
 
-// eager device uses buffer granualrity so that we do not support split operations.
+// eager device uses buffer granularity so that we do not support split operations.
 gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wait,
 	void (* unmap_callback)(void *), void *callback_args)
 {
@@ -794,18 +818,69 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 		"uvas");
 	if (error)
 		panic("uvas async daemon: error %d\n", error);
-	// td = FIRST_THREAD_IN_PROC(p);
-	// printf("Acquiring thread lock\n");
-	// thread_lock(td);
+}
 
-	// /* We're an idle task, don't count us in the load. */
-	// td->td_flags |= TDF_NOLOAD;
-	// sched_class(td, PRI_IDLE);
-	// sched_prio(td, PRI_MAX_IDLE);
-	// sched_add(td, SRQ_BORING);
-	// printf("Releasing thread lock\n");
-	// thread_unlock(td);
-	// printf("Done.\n");
+// There should be a fault handler that wraps vm_fault when pmap is replicating CPU
+int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot) {
+
+	vm_offset_t end, va, mapsize;
+	vm_page_t *ma, *mp;
+	int count, last_i;
+	boolean_t pmap_failed;
+
+	if (len == 0)
+		return (0);
+	end = round_page(addr + len);
+	addr = trunc_page(addr);
+
+	if (!vm_map_range_valid(map, addr, end))
+		return (-1);
+
+	if (atop(end - addr) > max_count)
+		panic("vm_fault_quick_hold_pages: count > max_count");
+	count = atop(end - addr);
+
+	ma = malloc(sizeof(vm_page_t *) * count, M_DEVBUF);
+
+	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
+	if (pmap->replica_of_cpu != NULL) {
+		vm_map_t map = (vm_map_t) pmap->replica_of_cpu->dev_data;
+		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
+			*mp = pmap_extract_and_hold(map->pmap, va, prot);
+			if (*mp == NULL)
+				// We actually always pin it and ignore pin_on_fault flag for now
+				vm_fault(map, va, prot, VM_FAULT_NORMAL, pmap->pin_on_fault ? mp : NULL, pmap)
+			else if ((prot & VM_PROT_WRITE) != 0 &&
+			    (*mp)->dirty != VM_PAGE_BITS_ALL) {
+				vm_page_dirty(*mp);
+			}
+		}
+	}
+	else
+		printf("Device physical memory management is not implemented\n");
+
+	// perform dev fault
+	if (!pmap->policy.fault_with_replica) {
+		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
+			printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
+			
+			last_i = 0;
+			for (int i = 1; i <= count; i ++) {
+				if (VM_PAGE_TO_PHYS(ma[i]) - VM_PAGE_TO_PHYS(ma[i - 1]) != PAGE_SIZE || i == count) {
+					map->gmem_pmap->pmap_replica->replicated_pmaps[i]->mmu_ops->mmu_pmap_enter(
+						map->gmem_pmap->pmap_replica->replicated_pmaps[i],
+						addr + last_i * PAGE_SIZE,
+						i - last_i,
+						VM_PAGE_TO_PHYS(ma[last_i]),
+						prot,
+						0);
+					last_i = i;
+				}
+			}
+		}
+	}
+
+	return count;
 }
 
 

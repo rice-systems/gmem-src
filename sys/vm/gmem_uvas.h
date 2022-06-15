@@ -286,6 +286,12 @@ struct unmap_request
 	TAILQ_ENTRY(unmap_request) next;
 };
 
+struct dev_pmap_policy {
+	bool fault_with_replica; // if you want to support system-level SVM (coordinated faulting)
+	bool pin_on_fault; // if you want eager preparation or don't support device page fault
+	uint8_t prepare_page_order; // (1 << #) of pages to prepare (zeroing, migration etc) at dev fault time
+};
+
 // device-dependent mapping data
 // A pmap is coupled with an mmu instance
 struct dev_pmap
@@ -293,9 +299,12 @@ struct dev_pmap
 	// An array of the mapping devices
 	uint8_t ndevices;
 
+	struct dev_pmap_policy policy;
+
 	// for convenience, use a tailq for devices sharing this dev_pmap
 	TAILQ_HEAD(gmem_dev_tailq, gmem_dev) gmem_dev_header;
 
+	dev_pmap_t *replica_of_cpu; // Let CPU replicate it
 	struct dev_pmap_replica *pmap_replica;
 
 	// A pointer to its unified address space
@@ -322,6 +331,7 @@ struct dev_pmap
 	uint8_t min_sp_shift;
 };
 
+void gmem_uvas_set_pmap_policy(dev_pmap_t *pmap, bool fault_with_replica, bool pin_on_fault, uint8_t prepare_page_order);
 struct gmem_uvas_entry* gmem_uvas_alloc_entry(struct gmem_uvas *uvas, u_int flags);
 void gmem_uvas_free_entry(struct gmem_uvas *uvas, struct gmem_uvas_entry *entry);
 gmem_error_t gmem_uvas_create(gmem_uvas_t **uvas_res, dev_pmap_t **pmap_res, gmem_dev_t *dev, gmem_mmu_ops_t *mmu_ops,
@@ -367,5 +377,7 @@ gmem_error_t gmem_uvas_unmap_external(gmem_uvas_t *uvas, struct gmem_uvas_entrie
 gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 	void (* unmap_callback)(void *), void *callback_args);
 gmem_error_t pmap_reload_mmu(dev_pmap_t *pmap, gmem_mmu_ops_t *new_mmu);
+
+int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot);
 
 #endif

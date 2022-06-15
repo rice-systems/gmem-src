@@ -1906,3 +1906,27 @@ ENTRY(mds_handler_silvermont)
 	popq	%rax
 	retq
 END(mds_handler_silvermont)
+
+/* va: rdi, pagesize: rsi */
+ENTRY(sse2_pagezero_chunk)
+        PUSH_FRAME_POINTER
+        addq    %rsi,%rdi
+        neg		%rsi
+        xorl    %eax,%eax
+        jmp     1f
+        /*
+         * The loop takes 29 bytes.  Ensure that it doesn`t cross a 32-byte
+         * cache line.
+         */
+        .p2align 5,0x90
+1:
+        movnti  %rax,(%rdi,%rsi)
+        movnti  %rax,8(%rdi,%rsi)
+        movnti  %rax,16(%rdi,%rsi)
+        movnti  %rax,24(%rdi,%rsi)
+        addq    $32,%rsi
+        jne     1b
+        sfence
+        POP_FRAME_POINTER
+        ret
+END(sse2_pagezero_chunk)

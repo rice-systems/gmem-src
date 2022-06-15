@@ -57,6 +57,7 @@ void		vm_reserv_break_all(vm_object_t object);
 boolean_t	vm_reserv_free_page(vm_page_t m);
 void		vm_reserv_init(void);
 bool		vm_reserv_is_page_free(vm_page_t m);
+vm_pindex_t vm_reserv_pindex_from_page(vm_page_t m);
 int		vm_reserv_level(vm_page_t m);
 int		vm_reserv_level_iffullpop(vm_page_t m);
 bool		vm_reserv_reclaim_contig(int domain, u_long npages,
