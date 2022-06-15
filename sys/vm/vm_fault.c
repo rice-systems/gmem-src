@@ -1511,7 +1511,7 @@ RetryFault:
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 
 		// Added code for sync promotion
-		vm_page_t m_left = NULL, m_right, next, prev, m_tmp;
+		vm_page_t m_left = NULL, m_right = NULL, next = NULL, prev = NULL, m_tmp;
 		vm_paddr_t rv_pa;
 		vm_pindex_t rv_pindex, left_pindex, right_pindex;
 		int nzeropages = 1, level;
@@ -1543,7 +1543,7 @@ RetryFault:
 
 			printf("%s %d\n", __func__, __LINE__);
 			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
-			m_left = m_right = NULL;
+			// m_left = m_right = NULL;
 			if (left_pindex < fs.pindex)
 				m_left = vm_page_alloc_contig(fs.object, left_pindex,
 					VM_ALLOC_NORMAL,
