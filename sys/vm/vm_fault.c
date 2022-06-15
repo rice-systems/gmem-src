@@ -1529,6 +1529,7 @@ RetryFault:
 			int granularity = dev_pmap->policy.prepare_page_order;
 			// The page is backed by a 2MB reservation
 			rv_pindex = vm_reserv_pindex_from_page(fs.first_m);
+			printf("page is backed by reservation, rv pindex %d, page pindex %d\n", rv_pindex, fs.pindex);
 			left_pindex = rv_pindex + ((fs.pindex - rv_pindex) >> granularity << granularity);
 			right_pindex = left_pindex + (1 << granularity);
 			next = TAILQ_NEXT(fs.first_m, listq);
@@ -1542,6 +1543,7 @@ RetryFault:
 			rv_pa = VM_PAGE_TO_PHYS(fs.first_m) >> PDRSHIFT << PDRSHIFT;
 
 			printf("%s %d\n", __func__, __LINE__);
+			printf("[vm_fault] allocation range: [%d, %d), [%d, %d)\n", left_pindex, fs.pindex, fs.pindex + 1, right_pindex);
 			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
 			// m_left = m_right = NULL;
 			if (left_pindex < fs.pindex)
