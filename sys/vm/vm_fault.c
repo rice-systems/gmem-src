@@ -1532,9 +1532,9 @@ RetryFault:
 			right_pindex = left_pindex + (1 << granularity);
 			next = TAILQ_NEXT(fs.first_m, listq);
 			prev = TAILQ_PREV(fs.first_m, pglist, listq);
-			if (next->pindex < right_pindex)
+			if (next != NULL && next->pindex < right_pindex)
 				right_pindex = next->pindex;
-			if (prev->pindex + 1 > left_pindex)
+			if (prev != NULL && prev->pindex + 1 > left_pindex)
 				left_pindex = prev->pindex;
 
 			rv_pa = VM_PAGE_TO_PHYS(fs.m) >> PDRSHIFT << PDRSHIFT;
@@ -1570,6 +1570,7 @@ RetryFault:
 
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 		if (m_left != NULL && nzeropages > 1) {
+			printf("[vm_fault] faulting %d pages\n", nzeropages);
 			pmap_zero_pages_idle(m_left, nzeropages);
 			for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
 				if (m_tmp == fs.first_m) {
