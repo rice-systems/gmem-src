@@ -1511,7 +1511,7 @@ RetryFault:
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 
 		// Added code for sync promotion
-		vm_page_t m_left, m_right, next, prev, m_tmp;
+		vm_page_t m_left = NULL, m_right, next, prev, m_tmp;
 		vm_paddr_t rv_pa;
 		vm_pindex_t rv_pindex, left_pindex, right_pindex;
 		int nzeropages = 1, level;
@@ -1569,17 +1569,19 @@ RetryFault:
 
 
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
-		pmap_zero_pages_idle(m_left, nzeropages);
-		for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
-			if (m_tmp == fs.first_m) {
-				// prevent another zeroing in vm_fault_zerofill
-				fs.first_m->flags |= PG_ZERO;
-				continue;
+		if (m_left != NULL && nzeropages > 1) {
+			pmap_zero_pages_idle(m_left, nzeropages);
+			for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
+				if (m_tmp == fs.first_m) {
+					// prevent another zeroing in vm_fault_zerofill
+					fs.first_m->flags |= PG_ZERO;
+					continue;
+				}
+				VM_CNT_INC(v_zfod);
+				vm_page_valid(m_tmp);
+				vm_page_activate(m_tmp);
+				vm_page_xunbusy(m_tmp);
 			}
-			VM_CNT_INC(v_zfod);
-			vm_page_valid(m_tmp);
-			vm_page_activate(m_tmp);
-			vm_page_xunbusy(m_tmp);
 		}
 #endif
 
