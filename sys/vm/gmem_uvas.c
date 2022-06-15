@@ -140,6 +140,7 @@ static inline void create_unique_uvas(
 	// TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
 
 	pmap->pmap_replica = NULL;
+	pmap->replica_of_cpu = NULL;
 	pmap->uvas = uvas;
 
 	// use mmu callback to initialize device-specific data
@@ -227,6 +228,7 @@ static inline void create_cpu_replicate_uvas(
 		// Need to init a CPU dev_pmap
 		cpu_pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 		cpu_pmap->pmap_replica = NULL;
+		cpu_pmap->replica_of_cpu = NULL;
 		cpu_pmap->data = map;
 		cpu_pmap->uvas = uvas;
 
@@ -840,10 +842,11 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	printf("[gmem_uvas_fault] preparing CPU pages\n");
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
 	if (pmap->replica_of_cpu != NULL) {
-		vm_map_t map = (vm_map_t) pmap->replica_of_cpu->data;
+		vm_map_t map = pmap->replica_of_cpu->data;
 		if (!vm_map_range_valid(map, addr, end))
 			return (-1);
 		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
+			printf("[gmem_uvas_fault] pinning va %lx\n", va);
 			*mp = pmap_extract_and_hold(map->pmap, va, prot);
 			if (*mp == NULL)
 				// We actually always pin it and ignore pin_on_fault flag for now
