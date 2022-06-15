@@ -845,7 +845,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 			*mp = pmap_extract_and_hold(map->pmap, va, prot);
 			if (*mp == NULL)
 				// We actually always pin it and ignore pin_on_fault flag for now
-				vm_fault(map, va, prot, VM_FAULT_NORMAL, pmap->policy.pin_on_fault ? mp : NULL, pmap)
+				vm_fault(map, va, prot, VM_FAULT_NORMAL, pmap->policy.pin_on_fault ? mp : NULL, pmap);
 			else if ((prot & VM_PROT_WRITE) != 0 &&
 			    (*mp)->dirty != VM_PAGE_BITS_ALL) {
 				vm_page_dirty(*mp);
