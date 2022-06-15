@@ -836,7 +836,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	count = atop(end - addr);
 
 	if (out != NULL)
-		ma = out
+		ma = out;
 	else {
 		ma = (vm_page_t *) malloc(sizeof(vm_page_t) * count, M_DEVBUF, M_WAITOK | M_ZERO);
 		if (ma == NULL)
