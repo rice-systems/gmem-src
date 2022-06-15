@@ -851,7 +851,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		if (!vm_map_range_valid(map, addr, end))
 			return (-1);
 		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
-			// printf("[gmem_uvas_fault] pinning va %lx\n", va);
+			printf("[gmem_uvas_fault] pinning va %lx\n", va);
 			*mp = pmap_extract_and_hold(map->pmap, va, prot);
 			if (*mp == NULL)
 				// We actually always pin it and ignore pin_on_fault flag for now
