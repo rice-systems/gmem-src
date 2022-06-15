@@ -834,7 +834,10 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	count = atop(end - addr);
 
 	ma = (vm_page_t *) malloc(sizeof(vm_page_t) * count, M_DEVBUF, M_WAITOK | M_ZERO);
+	if (ma == NULL)
+		return -1;
 
+	printf("[gmem_uvas_fault] preparing CPU pages\n");
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
 	if (pmap->replica_of_cpu != NULL) {
 		vm_map_t map = (vm_map_t) pmap->replica_of_cpu->data;
@@ -854,6 +857,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	else
 		printf("Device physical memory management is not implemented\n");
 
+	printf("[gmem_uvas_fault] preparing CPU pages done\n");
 	// perform dev fault if it was not faulted by CPU vm fault
 	if (!pmap->policy.fault_with_replica) {
 		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
