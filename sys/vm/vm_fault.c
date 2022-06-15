@@ -1689,7 +1689,7 @@ RetryFault:
 		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
 			// printf("vm fault mapping dev pmap\n");
 			dev_pmap_t *pmap = map->gmem_pmap->pmap_replica->replicated_pmaps[i];
-			if (pmap->fault_with_replica) {
+			if (pmap->policy.fault_with_replica) {
 				pmap->mmu_ops->mmu_pmap_enter(
 					pmap,
 					vaddr >> 12 << 12,
