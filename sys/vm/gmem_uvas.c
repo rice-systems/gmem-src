@@ -822,10 +822,9 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
 int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot) {
 
-	vm_offset_t end, va, mapsize;
+	vm_offset_t end, va;
 	vm_page_t *ma, *mp;
 	int count, last_i;
-	boolean_t pmap_failed;
 
 	if (len == 0)
 		return (0);
