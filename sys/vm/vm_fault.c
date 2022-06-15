@@ -1529,7 +1529,7 @@ RetryFault:
 			int granularity = dev_pmap->policy.prepare_page_order;
 			// The page is backed by a 2MB reservation
 			rv_pindex = vm_reserv_pindex_from_page(fs.first_m);
-			printf("page is backed by reservation, rv pindex %d, page pindex %d\n", rv_pindex, fs.pindex);
+			printf("page is backed by reservation, rv pindex %lu, page pindex %lu\n", rv_pindex, fs.pindex);
 			left_pindex = rv_pindex + ((fs.pindex - rv_pindex) >> granularity << granularity);
 			right_pindex = left_pindex + (1 << granularity);
 			next = TAILQ_NEXT(fs.first_m, listq);
