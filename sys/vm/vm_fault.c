@@ -1540,6 +1540,7 @@ RetryFault:
 			rv_pa = VM_PAGE_TO_PHYS(fs.m) >> PDRSHIFT << PDRSHIFT;
 
 			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
+			m_left = m_right = NULL;
 			if (left_pindex < fs.pindex)
 				m_left = vm_page_alloc_contig(fs.object, left_pindex,
 					VM_ALLOC_NORMAL,
