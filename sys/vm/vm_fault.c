@@ -1525,6 +1525,7 @@ RetryFault:
 		    && fs.object->backing_object == NULL
 		    && (level = vm_reserv_level(fs.first_m)) >= 0) {
 
+			printf("%s %d\n", __func__, __LINE__);
 			int granularity = dev_pmap->policy.prepare_page_order;
 			// The page is backed by a 2MB reservation
 			rv_pindex = vm_reserv_pindex_from_page(fs.first_m);
@@ -1532,6 +1533,7 @@ RetryFault:
 			right_pindex = left_pindex + (1 << granularity);
 			next = TAILQ_NEXT(fs.first_m, listq);
 			prev = TAILQ_PREV(fs.first_m, pglist, listq);
+			printf("%s %d\n", __func__, __LINE__);
 			if (next != NULL && next->pindex < right_pindex)
 				right_pindex = next->pindex;
 			if (prev != NULL && prev->pindex + 1 > left_pindex)
@@ -1539,6 +1541,7 @@ RetryFault:
 
 			rv_pa = VM_PAGE_TO_PHYS(fs.m) >> PDRSHIFT << PDRSHIFT;
 
+			printf("%s %d\n", __func__, __LINE__);
 			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
 			m_left = m_right = NULL;
 			if (left_pindex < fs.pindex)
@@ -1555,6 +1558,7 @@ RetryFault:
 					rv_pa, rv_pa + NBPDR,
 					PAGE_SIZE, NBPDR, VM_MEMATTR_DEFAULT);
 
+			printf("%s %d\n", __func__, __LINE__);
 			if (m_left == NULL)
 				m_left = fs.first_m;
 			else
@@ -1562,6 +1566,7 @@ RetryFault:
 
 			if (m_right != NULL)
 				nzeropages += right_pindex - fs.pindex - 1;
+			printf("%s %d\n", __func__, __LINE__);
 		}
 #endif
 
