@@ -1539,7 +1539,7 @@ RetryFault:
 			if (prev != NULL && prev->pindex + 1 > left_pindex)
 				left_pindex = prev->pindex;
 
-			rv_pa = VM_PAGE_TO_PHYS(fs.m) >> PDRSHIFT << PDRSHIFT;
+			rv_pa = VM_PAGE_TO_PHYS(fs.first_m) >> PDRSHIFT << PDRSHIFT;
 
 			printf("%s %d\n", __func__, __LINE__);
 			// [left_pindex, fs.pindex), [fs.pindex + 1, right_pindex)
