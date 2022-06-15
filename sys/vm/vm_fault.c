@@ -1511,7 +1511,7 @@ RetryFault:
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 
 		// Added code for sync promotion
-		vm_page_t m_left, m_right, next, prev;
+		vm_page_t m_left, m_right, next, prev, m_tmp;
 		vm_paddr_t rv_pa;
 		vm_pindex_t rv_pindex, left_pindex, right_pindex;
 		int nzeropages = 1, level;
@@ -1531,7 +1531,7 @@ RetryFault:
 			left_pindex = rv_pindex + ((fs.pindex - rv_pindex) >> granularity << granularity);
 			right_pindex = left_pindex + (1 << granularity);
 			next = TAILQ_NEXT(fs.first_m, listq);
-			prev = TAILQ_PREV(m, pglist, listq);
+			prev = TAILQ_PREV(fs.first_m, pglist, listq);
 			if (next->pindex < right_pindex)
 				right_pindex = next->pindex;
 			if (prev->pindex + 1 > left_pindex)
