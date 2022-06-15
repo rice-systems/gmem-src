@@ -843,7 +843,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 			return -1;
 	}
 
-	printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", *vm_cnt.v_zfod, *vm_cnt.v_ozfod);
+	printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
 	delta = rdtscp();
 	if (pmap->replica_of_cpu != NULL) {
@@ -868,7 +868,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 
 	delta = rdtscp() - delta;
 	printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
-		delta, *vm_cnt.v_zfod, *vm_cnt.v_ozfod);
+		delta, VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
 	// perform dev fault if it was not faulted by CPU vm fault
 	if (!pmap->policy.fault_with_replica) {
 		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
