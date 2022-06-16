@@ -846,6 +846,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
 	delta = rdtscp();
+	int faulted = 0, mapped = 0;
 	if (pmap->replica_of_cpu != NULL) {
 		vm_map_t map = pmap->replica_of_cpu->data;
 		if (!vm_map_range_valid(map, addr, end))
@@ -853,13 +854,18 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
 			// printf("[gmem_uvas_fault] pinning va %lx\n", va);
 			*mp = pmap_extract_and_hold(map->pmap, va, prot);
-			if (*mp == NULL)
+			if (*mp == NULL) {
 				// We actually always pin it and ignore pin_on_fault flag for now
 				// vm_fault(map, va, prot, VM_FAULT_NORMAL, pmap->policy.pin_on_fault ? mp : NULL, pmap);
 				vm_fault(map, va, prot, VM_FAULT_NORMAL, mp, pmap);
-			else if ((prot & VM_PROT_WRITE) != 0 &&
-			    (*mp)->dirty != VM_PAGE_BITS_ALL) {
-				vm_page_dirty(*mp);
+				faulted ++;
+			}
+			else {
+				mapped ++;
+				if ((prot & VM_PROT_WRITE) != 0 &&
+				    (*mp)->dirty != VM_PAGE_BITS_ALL) {
+					vm_page_dirty(*mp);
+				}
 			}
 		}
 	}
@@ -869,8 +875,13 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	delta = rdtscp() - delta;
 	printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
 		delta, VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
+	printf("[gmem_uvas_fault] faulted %d, mapped %d\n", faulted, mapped);
+
 	// perform dev fault if it was not faulted by CPU vm fault
-	if (!pmap->policy.fault_with_replica) {
+	// if (!pmap->policy.fault_with_replica) {
+	// We insert dev mappings anyways, because even if fault_with_replica is enabled, 
+	// we do not replicate all mappings at the clContextCreate time, so some populated vm region
+	// may skip the GPU PTE installation.
 		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
 		
 		last_i = 0;
@@ -902,7 +913,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 				last_i = i;
 			}
 		}
-	}
+	// }
 
 	return count;
 }
