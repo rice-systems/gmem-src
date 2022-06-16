@@ -5356,7 +5356,9 @@ vm_page_ps_test(vm_page_t m, int flags, vm_page_t skip_m)
 			continue;
 		if ((flags & PS_NONE_BUSY) != 0 && vm_page_busied(&m[i]))
 			return (false);
-		if ((flags & PS_ALL_DIRTY) != 0) {
+		// ignore prefaulted anonymous pages
+		if (!(object->type == OBJT_DEFAULT && object->backing_object == NULL)
+			&& (flags & PS_ALL_DIRTY) != 0) {
 			/*
 			 * Calling vm_page_test_dirty() or pmap_is_modified()
 			 * might stop this case from spuriously returning
