@@ -870,7 +870,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
 		delta, VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
 	// perform dev fault if it was not faulted by CPU vm fault
-	// if (!pmap->policy.fault_with_replica) {
+	if (!pmap->policy.fault_with_replica) {
 		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
 		
 		last_i = 0;
@@ -902,7 +902,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 				last_i = i;
 			}
 		}
-	// }
+	}
 
 	return count;
 }
