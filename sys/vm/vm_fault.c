@@ -1572,7 +1572,7 @@ RetryFault:
 		if (m_left != NULL && nzeropages > 1) {
 			// printf("[vm_fault] faulting %d pages\n", nzeropages);
 			// unsigned long delta = rdtscp();
-			pmap_zero_pages_idle(m_left, nzeropages);
+			// pmap_zero_pages_idle(m_left, nzeropages);
 			// delta = rdtscp() - delta;
 			// printf("[vm_fault] avg page zeroing time: %lu cycles\n", delta / nzeropages);
 			for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
@@ -1581,6 +1581,7 @@ RetryFault:
 					fs.first_m->flags |= PG_ZERO;
 					continue;
 				}
+				pmap_zero_page(m_tmp);
 				VM_CNT_INC(v_zfod);
 				vm_page_valid(m_tmp);
 				vm_page_activate(m_tmp);
