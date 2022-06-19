@@ -213,7 +213,7 @@ static inline void create_cpu_replicate_uvas(
 	dev_pmap_t *cpu_pmap;
 	gmem_uvas_t *uvas;
 
-	printf("Attaching dev pmap to cpu map %p\n", map);
+	// printf("Attaching dev pmap to cpu map %p\n", map);
 
 	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
 	if (map->gmem_pmap != NULL) {
@@ -298,11 +298,11 @@ gmem_error_t gmem_uvas_create(
 				dev_data, alignment, boundary, size, guard);
 			break;
 		case GMEM_UVAS_REPLICATE_CPU:
-			printf("[gmem] %s: trying to share CPU process address space with a replicate pmap\n", __func__);
+			// printf("[gmem] %s: trying to share CPU process address space with a replicate pmap\n", __func__);
 			if (!(mmu_ops != NULL && dev_data != NULL))
 				return GMEM_EINVALIDARGS;
 			create_cpu_replicate_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
-			printf("Binding UVAS to CPU VM successful\n");
+			// printf("Binding UVAS to CPU VM successful\n");
 			break;
 		default:
 			printf("Other UVAS creation modes are not implemented\n");
@@ -814,7 +814,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 	struct proc *p;
 	// struct thread *td;
 
-	printf("Creating daemon\n");
+	// printf("Creating daemon\n");
 	error = kproc_create(&gmem_uvas_async_unmap, (void *) uvas, &p, 0, 0,
 		"uvas");
 	if (error)
@@ -823,7 +823,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
 int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) {
-	unsigned long delta;
+	// unsigned long delta;
 	vm_offset_t end, va;
 	vm_page_t *ma, *mp;
 	int count, last_i;
@@ -843,9 +843,9 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 			return -1;
 	}
 
-	printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
+	// printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
 	// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
-	delta = rdtscp();
+	// delta = rdtscp();
 	int faulted = 0, mapped = 0;
 	if (pmap->replica_of_cpu != NULL) {
 		vm_map_t map = pmap->replica_of_cpu->data;
@@ -872,47 +872,46 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	else
 		printf("Device physical memory management is not implemented\n");
 
-	delta = rdtscp() - delta;
-	printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
-		delta, VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
-	printf("[gmem_uvas_fault] faulted %d, mapped %d\n", faulted, mapped);
+	// delta = rdtscp() - delta;
+	// printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
+	// 	delta, VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
+	// printf("[gmem_uvas_fault] faulted %d, mapped %d\n", faulted, mapped);
 
 	// perform dev fault if it was not faulted by CPU vm fault
 	// if (!pmap->policy.fault_with_replica) {
 	// We insert dev mappings anyways, because even if fault_with_replica is enabled, 
 	// we do not replicate all mappings at the clContextCreate time, so some populated vm region
 	// may skip the GPU PTE installation.
-		printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
-		
-		last_i = 0;
-		for (int i = 1; i <= count; i ++) {
-			if (VM_PAGE_TO_PHYS(ma[i]) - VM_PAGE_TO_PHYS(ma[i - 1]) != PAGE_SIZE || i == count) {
 
-				pmap->mmu_ops->mmu_pmap_enter(
-					pmap,
-					addr + last_i * PAGE_SIZE,
-					(i - last_i) * PAGE_SIZE,
-					VM_PAGE_TO_PHYS(ma[last_i]),
-					prot,
-					0);
-
-				// right now do not coordinate with peer dev pmaps.
-				// for (int i = 0; i < pmap->pmap_replica->npmaps; i ++) {
-				// 	dev_pmap_t sub_pmap = pmap->pmap_replica->replicated_pmaps[i];
-
-				// 	if (sub_pmap->policy.fault_with_replica)
-				// 		sub_pmap->mmu_ops->mmu_pmap_enter(
-				// 			pmap->pmap_replica->replicated_pmaps[i],
-				// 			addr + last_i * PAGE_SIZE,
-				// 			i - last_i,
-				// 			VM_PAGE_TO_PHYS(ma[last_i]),
-				// 			prot,
-				// 			0);
-				// }
-
-				last_i = i;
-			}
+	// printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
+	
+	last_i = 0;
+	for (int i = 1; i <= count; i ++) {
+		if (VM_PAGE_TO_PHYS(ma[i]) - VM_PAGE_TO_PHYS(ma[i - 1]) != PAGE_SIZE || i == count) {
+			pmap->mmu_ops->mmu_pmap_enter(
+				pmap,
+				addr + last_i * PAGE_SIZE,
+				(i - last_i) * PAGE_SIZE,
+				VM_PAGE_TO_PHYS(ma[last_i]),
+				prot,
+				0);
+			// right now do not coordinate with peer dev pmaps.
+			// for (int i = 0; i < pmap->pmap_replica->npmaps; i ++) {
+			// 	dev_pmap_t sub_pmap = pmap->pmap_replica->replicated_pmaps[i];
+			// 	if (sub_pmap->policy.fault_with_replica)
+			// 		sub_pmap->mmu_ops->mmu_pmap_enter(
+			// 			pmap->pmap_replica->replicated_pmaps[i],
+			// 			addr + last_i * PAGE_SIZE,
+			// 			i - last_i,
+			// 			VM_PAGE_TO_PHYS(ma[last_i]),
+			// 			prot,
+			// 			0);
+			// }
+			last_i = i;
 		}
+	}
+
+
 	// }
 
 	return count;
