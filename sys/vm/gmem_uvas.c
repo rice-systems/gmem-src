@@ -824,9 +824,8 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
 int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) {
 	// unsigned long delta;
-	vm_offset_t end, va;
+	vm_offset_t end, va, count, last_i;
 	vm_page_t *ma, *mp;
-	int count, last_i;
 
 	if (len == 0)
 		return (0);
@@ -886,7 +885,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	// printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
 	
 	last_i = 0;
-	for (int i = 1; i <= count; i ++) {
+	for (vm_offset_t i = 1; i <= count; i ++) {
 		if (VM_PAGE_TO_PHYS(ma[i]) - VM_PAGE_TO_PHYS(ma[i - 1]) != PAGE_SIZE || i == count) {
 			pmap->mmu_ops->mmu_pmap_enter(
 				pmap,
