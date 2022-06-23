@@ -155,7 +155,7 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	/* account for zero termination */
 	len++;
 
-	// printf("%s:%d\n", __func__, __LINE__);
+	printf("%s:%d, len %d\n", __func__, __LINE__, len);
 	/* check for error */
 	if (len < 1)
 		return (-EINVAL);
