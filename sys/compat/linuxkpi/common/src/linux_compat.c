@@ -134,7 +134,7 @@ RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
 int
 kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 {
-	va_list tmp_va;
+	// va_list tmp_va;
 	int len;
 	char *old;
 	char *name;
