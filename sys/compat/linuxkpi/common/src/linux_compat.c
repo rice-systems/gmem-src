@@ -164,11 +164,14 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	name = kzalloc(len, GFP_KERNEL);
 	if (name == NULL)
 		return (-ENOMEM);
+	printf("%s:%d\n", __func__, __LINE__);
 	vsnprintf(name, len, fmt, args);
+	printf("%s:%d\n", __func__, __LINE__);
 	kobj->name = name;
 
 	/* free old string */
 	kfree(old);
+	printf("%s:%d\n", __func__, __LINE__);
 
 	/* filter new string */
 	for (; *name != '\0'; name++)
