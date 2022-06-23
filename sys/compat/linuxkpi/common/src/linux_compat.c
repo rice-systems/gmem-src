@@ -140,7 +140,7 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	char *name;
 	char dummy;
 
-	printf("%s:%d\n", __func__, __LINE__);
+	printf("%s:%d, args: %p %p\n", __func__, __LINE__, kobj, fmt);
 	old = kobj->name;
 
 	if (old && fmt == NULL)
