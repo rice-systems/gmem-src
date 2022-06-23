@@ -146,10 +146,11 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 		return (0);
 
 	/* compute length of string */
-	va_copy(tmp_va, args);
-	len = vsnprintf(&dummy, 0, fmt, tmp_va);
-	va_end(tmp_va);
-
+	// va_copy(tmp_va, args);
+	// len = vsnprintf(&dummy, 0, fmt, tmp_va);
+	// va_end(tmp_va);
+	len = 128;
+	
 	/* account for zero termination */
 	len++;
 
@@ -162,7 +163,6 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	if (name == NULL)
 		return (-ENOMEM);
 	vsnprintf(name, len, fmt, args);
-
 	kobj->name = name;
 
 	/* free old string */
