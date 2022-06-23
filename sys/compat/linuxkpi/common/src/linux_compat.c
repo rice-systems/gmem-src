@@ -173,13 +173,14 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	vsnprintf(name, len, fmt, args);
 	// va_end(tmp_va);
 
+	kobj->name = name;
+
 	if (kobj->name == NULL)
 		printf("%s:%d kobj->name %p\n", __func__, __LINE__, kobj->name);
 
-	kobj->name = name;
-
 	/* free old string */
-	kfree(old);
+	if (old != NULL)
+		kfree(old);
 	// printf("%s:%d\n", __func__, __LINE__);
 
 	/* filter new string */
