@@ -165,7 +165,11 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	if (name == NULL)
 		return (-ENOMEM);
 	printf("%s:%d, name %p\n", __func__, __LINE__, name);
-	vsnprintf(name, len, fmt, args);
+
+	va_copy(tmp_va, args);
+	vsnprintf(name, len, fmt, tmp_va);
+	va_end(tmp_va);
+	
 	// printf("%s:%d\n", __func__, __LINE__);
 	kobj->name = name;
 
