@@ -138,7 +138,7 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	int len;
 	char *old;
 	char *name;
-	char dummy;
+	// char dummy;
 
 	old = kobj->name;
 
