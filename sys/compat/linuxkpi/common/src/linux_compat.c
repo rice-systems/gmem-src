@@ -140,14 +140,14 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	char *name;
 	char dummy;
 
-	printf("%s:%d, args: %p %p\n", __func__, __LINE__, kobj, fmt);
+	// printf("%s:%d, args: %p %p\n", __func__, __LINE__, kobj, fmt);
 	old = kobj->name;
 
 	if (old && fmt == NULL)
 		return (0);
 
-	if (old == NULL || fmt == NULL)
-		printf("%s:%d, old name %p, fmt %p\n", __func__, __LINE__, old, fmt);
+	// if (old == NULL || fmt == NULL)
+	// 	printf("%s:%d, old name %p, fmt %p\n", __func__, __LINE__, old, fmt);
 
 	/* compute length of string */
 	va_copy(tmp_va, args);
@@ -166,8 +166,8 @@ kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
 	if (name == NULL)
 		return (-ENOMEM);
 
-	if (name == NULL)
-		printf("%s:%d, name %p\n", __func__, __LINE__, name);
+	// if (name == NULL)
+	// 	printf("%s:%d, name %p\n", __func__, __LINE__, name);
 
 	// va_copy(tmp_va, args);
 	vsnprintf(name, len, fmt, args);
