@@ -84,6 +84,7 @@ kobject_init(struct kobject *kobj, const struct kobj_type *ktype)
 	INIT_LIST_HEAD(&kobj->entry);
 	kobj->ktype = ktype;
 	kobj->oidp = NULL;
+	kobj->parent = NULL;
 	kobj->name = NULL;
 }
 
