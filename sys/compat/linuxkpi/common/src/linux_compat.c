@@ -181,7 +181,6 @@ kobject_set_name(struct kobject *kobj, const char *fmt, ...)
 	va_list args;
 	int error;
 
-	printf("%s %d: args %p, kobj %p, fmt %p\n", __func__, __LINE__, args, kobj, fmt);
 	va_start(args, fmt);
 	error = kobject_set_name_vargs(kobj, fmt, args);
 	va_end(args);
