@@ -543,6 +543,8 @@ gmem_error_t gmem_uvas_unmap(dev_pmap_t *pmap, gmem_uvas_entry_t *entry, int wai
 		gmem_uvas_free_span(entry->uvas, entry);
 	} else {
 		// The unmap will be async
+		// should be implemented, but currently not needed so nobody will test it.
+		printf("async gmem_uvas_unmap operation not implemented; unasync unmapping requires a list and should be called by another API\n");
 		// gmem_uvas_enqueue_unmap_request(pmap, entry);
 	}
 

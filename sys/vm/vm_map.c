@@ -3933,6 +3933,7 @@ int
 vm_map_delete(vm_map_t map, vm_offset_t start, vm_offset_t end)
 {
 	vm_map_entry_t entry, next_entry, scratch_entry;
+	dev_pmap_t pmap = map->gmem_pmap, sub_pmap;
 	int rv;
 
 	VM_MAP_ASSERT_LOCKED(map);
@@ -4013,6 +4014,20 @@ vm_map_delete(vm_map_t map, vm_offset_t start, vm_offset_t end)
 		 */
 		vm_map_entry_delete(map, entry);
 	}
+
+	// uvas processing replicated mappings
+	for (int i = 0; i < pmap->pmap_replica->npmaps; i ++) {
+		sub_pmap = pmap->pmap_replica->replicated_pmaps[i];
+		if (sub_pmap->policy.fault_with_replica) {
+			// should really just use gmem_uvas_unmap API (which should either supports async or dev tlb batching)
+			// But I don't want to create a gmem_uvas_entry
+			// Need to rethink the code here
+			// Not an important topic for research. (philosophically we used the API.)
+			sub_pmap->mmu_ops->mmu_pmap_release(sub_pmap, start, end - start);
+			sub_pmap->mmu_ops->mmu_tlb_invl(sub_pmap, start, end - start);
+		}
+	}
+
 	return (rv);
 }
 
