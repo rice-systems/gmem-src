@@ -980,7 +980,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		vm_map_t map = pmap->data;
 		// simply forward it to CPU?
 		// Let's still allow some device policy passed by pmap
-		vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
+		vm_fault(map, addr, prot, VM_FAULT_NORMAL, NULL, pmap);
 	}
 
 	return count;
