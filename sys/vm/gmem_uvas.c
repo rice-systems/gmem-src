@@ -139,6 +139,7 @@ static inline void create_unique_uvas(
 	// TAILQ_INIT(&pmap->gmem_dev_header);
 	// TAILQ_INSERT_TAIL(&pmap->gmem_dev_header, dev, gmem_dev_list);
 
+	pmap->mode = UNIQUE;
 	pmap->pmap_replica = NULL;
 	pmap->replica_of_cpu = NULL;
 	pmap->uvas = uvas;
@@ -200,30 +201,19 @@ static inline void insert_pmap_replica(dev_pmap_t *a, dev_pmap_t *b)
 	a->pmap_replica->replicated_pmaps = tmp_pmaps;
 }
 
-// pmap may replicate whatever happens in another pmap -- two coherent devices can replicate mappings
-// exclusive pmap may not need to be explicitly considered,
-//  because it should be handled by migration code from physical mm
-static inline void create_cpu_replicate_uvas(
-	gmem_uvas_t **uvas_res, 
-	dev_pmap_t **pmap_res, 
-	gmem_mmu_ops_t *mmu_ops,
-	void *dev_data)
+// Do we ever have a chance to use uvas_to_attach as non-NULL? 
+static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_map_t map)
 {
-	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
-	dev_pmap_t *cpu_pmap;
 	gmem_uvas_t *uvas;
-
-	// printf("Attaching dev pmap to cpu map %p\n", map);
-
-	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
-	if (map->gmem_pmap != NULL) {
-		cpu_pmap = map->gmem_pmap;
-		uvas = cpu_pmap->uvas;
-	}
+	if (map->gmem_pmap != NULL)
+		return map->gmem_pmap;
 	else {
 		// allocate and create the uvas
-		uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
-		init_uvas(uvas);
+		if (uvas_to_attach == NULL) {		
+			uvas = (gmem_uvas_t *) malloc(sizeof(gmem_uvas_t), M_DEVBUF, M_WAITOK | M_ZERO);
+			init_uvas(uvas);
+		} else
+			uvas = uvas_to_attach;
 
 		// Need to init a CPU dev_pmap
 		cpu_pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -242,9 +232,31 @@ static inline void create_cpu_replicate_uvas(
 		// attach it to cpu vm space
 		map->gmem_pmap = cpu_pmap;
 	}
+}
+
+// pmap may replicate whatever happens in another pmap -- two coherent devices can replicate mappings
+// exclusive pmap may not need to be explicitly considered,
+//  because it should be handled by migration code from physical mm
+static inline void create_cpu_replicate_uvas(
+	gmem_uvas_t **uvas_res, 
+	dev_pmap_t **pmap_res, 
+	gmem_mmu_ops_t *mmu_ops,
+	void *dev_data)
+{
+	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
+	dev_pmap_t *cpu_pmap;
+	gmem_uvas_t *uvas;
+
+	// printf("Attaching dev pmap to cpu map %p\n", map);
+
+	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
+	cpu_pmap = get_or_init_cpu_pmap(NULL, map);
+	uvas = cpu_pmap->uvas;
 
 	// allocate and create the pmap with dev->mmu_ops
 	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
+
+	pmap->mode = REPLICATE_CPU;
 	pmap->pmap_replica = NULL;
 	mmu_ops->mmu_init(mmu_ops);
 	pmap->data = dev_data;
@@ -255,6 +267,40 @@ static inline void create_cpu_replicate_uvas(
 	insert_pmap_replica(cpu_pmap, pmap);
 	pmap->replica_of_cpu = cpu_pmap;
 	// insert_pmap_replica(pmap, cpu_pmap);
+
+	// bind pmap to uvas
+	pmap->uvas = uvas;
+
+	// insert pmap to uvas pmap list
+	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
+
+	if (uvas_res != NULL)
+		*uvas_res = uvas;
+	if (pmap_res != NULL)
+		*pmap_res = pmap;
+}
+
+static inline void create_cpu_share_uvas(
+	gmem_uvas_t **uvas_res, 
+	dev_pmap_t **pmap_res)
+{
+	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
+	dev_pmap_t *cpu_pmap;
+	gmem_uvas_t *uvas;
+
+	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
+	cpu_pmap = get_or_init_cpu_pmap(NULL, map);
+	uvas = cpu_pmap->uvas;
+
+	// allocate and create the pmap with dev->mmu_ops
+	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
+
+	pmap->mode = SHARE_CPU;
+	pmap->pmap_replica = NULL;
+	pmap->data = cpu_pmap->data; // Just share the page table data so you may do context switch...
+	pmap->mmu_ops = NULL;
+
+	// Do we need some data structure to save its shared parent?
 
 	// bind pmap to uvas
 	pmap->uvas = uvas;
@@ -303,6 +349,9 @@ gmem_error_t gmem_uvas_create(
 				return GMEM_EINVALIDARGS;
 			create_cpu_replicate_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
 			// printf("Binding UVAS to CPU VM successful\n");
+			break;
+		case GMEM_UVAS_SHARE_CPU:
+			create_cpu_share_uvas(uvas_res, pmap_res);
 			break;
 		default:
 			printf("Other UVAS creation modes are not implemented\n");

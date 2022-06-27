@@ -97,6 +97,7 @@ extern struct hist instrument_hist[UVAS_INST_MAXPGCNT];
 #define GMEM_UVAS_REPLICATED 0x2
 #define GMEM_UVAS_EXCLUSIVE  0x3
 #define GMEM_UVAS_REPLICATE_CPU  0x4
+#define GMEM_UVAS_SHARE  0x5
 
 
 
@@ -292,10 +293,21 @@ struct dev_pmap_policy {
 	uint8_t prepare_page_order; // (1 << #) of pages to prepare (zeroing, migration etc) at dev fault time
 };
 
+enum gmem_vm_mode {
+	UNIQUE = 0,
+	REPLICATE,
+	SHARE,
+	REPLICATE_CPU,
+	SHARE_CPU
+};
+typedef gmem_vm_mode gmem_vm_mode;
+
 // device-dependent mapping data
 // A pmap is coupled with an mmu instance
 struct dev_pmap
 {
+	gmem_vm_mode mode;
+	
 	// An array of the mapping devices
 	uint8_t ndevices;
 
