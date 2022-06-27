@@ -3937,7 +3937,7 @@ int
 vm_map_delete(vm_map_t map, vm_offset_t start, vm_offset_t end)
 {
 	vm_map_entry_t entry, next_entry, scratch_entry;
-	dev_pmap_t pmap = map->gmem_pmap, sub_pmap;
+	dev_pmap_t *pmap = map->gmem_pmap, *sub_pmap;
 	int rv;
 
 	VM_MAP_ASSERT_LOCKED(map);
