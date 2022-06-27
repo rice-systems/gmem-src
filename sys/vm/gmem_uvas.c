@@ -320,11 +320,12 @@ static inline void create_cpu_share_uvas(
 	// insert pmap to uvas pmap list
 	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
 
-	printf("[gmem uvas] %s %d\n", __func__, __LINE__);
+	printf("[gmem uvas] %s %d, you want to save pmap %p to %p\n", __func__, __LINE__, pmap, pmap_res);
 	if (uvas_res != NULL)
 		*uvas_res = uvas;
 	if (pmap_res != NULL)
 		*pmap_res = pmap;
+	printf("[gmem uvas] %s %d, you want to save pmap to %p\n", __func__, __LINE__, pmap_res);
 }
 
 // Four modes to use uvas:
