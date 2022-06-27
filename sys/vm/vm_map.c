@@ -4020,7 +4020,7 @@ vm_map_delete(vm_map_t map, vm_offset_t start, vm_offset_t end)
 	}
 
 	// uvas processing replicated mappings
-	if (map->gmem_pmap != NULL) {
+	if (map->gmem_pmap != NULL && pmap->pmap_replica != NULL) {
 		pmap = map->gmem_pmap;
 		for (int i = 0; i < pmap->pmap_replica->npmaps; i ++) {
 			sub_pmap = pmap->pmap_replica->replicated_pmaps[i];
