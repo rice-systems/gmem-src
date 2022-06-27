@@ -204,6 +204,7 @@ static inline void insert_pmap_replica(dev_pmap_t *a, dev_pmap_t *b)
 // Do we ever have a chance to use uvas_to_attach as non-NULL? 
 static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_map_t map)
 {
+	dev_pmap_t *cpu_pmap;
 	gmem_uvas_t *uvas;
 	if (map->gmem_pmap != NULL)
 		return map->gmem_pmap;
