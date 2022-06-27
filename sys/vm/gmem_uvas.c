@@ -206,7 +206,10 @@ static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_m
 {
 	dev_pmap_t *cpu_pmap;
 	gmem_uvas_t *uvas;
+
+	printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 	if (map->gmem_pmap != NULL)
+		printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 		return map->gmem_pmap;
 	else {
 		// allocate and create the uvas
@@ -215,6 +218,7 @@ static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_m
 			init_uvas(uvas);
 		} else
 			uvas = uvas_to_attach;
+		printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 
 		// Need to init a CPU dev_pmap
 		cpu_pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -225,6 +229,7 @@ static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_m
 
 		TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, cpu_pmap, unified_pmap_list);
 
+		printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 		gmem_uvas_set_pmap_policy(cpu_pmap, false, false, 1);
 
 		// No VA allocation should be done by gmem
@@ -233,6 +238,7 @@ static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_m
 		// attach it to cpu vm space
 		map->gmem_pmap = cpu_pmap;
 
+		printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 		return map->gmem_pmap;
 	}
 }
@@ -291,10 +297,12 @@ static inline void create_cpu_share_uvas(
 	dev_pmap_t *cpu_pmap;
 	gmem_uvas_t *uvas;
 
+	printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 	// Will need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
 	cpu_pmap = get_or_init_cpu_pmap(NULL, map);
 	uvas = cpu_pmap->uvas;
 
+	printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 	// allocate and create the pmap with dev->mmu_ops
 	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
 
@@ -311,6 +319,7 @@ static inline void create_cpu_share_uvas(
 	// insert pmap to uvas pmap list
 	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
 
+	printf("[gmem uvas] %s %d\n", __func__, __FILE__);
 	if (uvas_res != NULL)
 		*uvas_res = uvas;
 	if (pmap_res != NULL)
@@ -354,6 +363,7 @@ gmem_error_t gmem_uvas_create(
 			// printf("Binding UVAS to CPU VM successful\n");
 			break;
 		case GMEM_UVAS_SHARE_CPU:
+			printf("[gmem uva create]: creating uvas to share CPU pmap\n");
 			create_cpu_share_uvas(uvas_res, pmap_res);
 			break;
 		default:
