@@ -1689,8 +1689,8 @@ RetryFault:
 		vm_page_wire(fs.m);
 	}
 
-	// coordinated mapping
-	if (map->gmem_pmap != NULL) {
+	// coordinated mapping mechanism for replicated mappings
+	if (map->gmem_pmap != NULL && map->gmem_pmap->pmap_replica != NULL) {
 		bool should_pin = false;
 		// if (map->gmem_pmap->pmap_replica->npmaps != 1)
 		// 	printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
