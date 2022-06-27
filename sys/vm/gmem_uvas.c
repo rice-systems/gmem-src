@@ -208,9 +208,10 @@ static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_m
 	gmem_uvas_t *uvas;
 
 	printf("[gmem uvas] %s %d\n", __func__, __LINE__);
-	if (map->gmem_pmap != NULL)
+	if (map->gmem_pmap != NULL) {
 		printf("[gmem uvas] %s %d\n", __func__, __LINE__);
 		return map->gmem_pmap;
+	}
 	else {
 		// allocate and create the uvas
 		if (uvas_to_attach == NULL) {		
