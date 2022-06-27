@@ -1532,6 +1532,7 @@ linux_file_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *cred,
 	const char *p;
 	int error, i;
 
+	printf("[linux_compat] %s %d, data: %p\n", __func__, __LINE__, data);
 	error = 0;
 	filp = (struct linux_file *)fp->f_data;
 	filp->f_flags = fp->f_flag;
