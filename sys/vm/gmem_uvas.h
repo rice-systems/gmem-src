@@ -300,14 +300,14 @@ enum gmem_vm_mode {
 	REPLICATE_CPU,
 	SHARE_CPU
 };
-typedef gmem_vm_mode gmem_vm_mode;
+typedef enum gmem_vm_mode gmem_vm_mode;
 
 // device-dependent mapping data
 // A pmap is coupled with an mmu instance
 struct dev_pmap
 {
 	gmem_vm_mode mode;
-	
+
 	// An array of the mapping devices
 	uint8_t ndevices;
 

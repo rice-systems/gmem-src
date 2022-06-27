@@ -100,6 +100,10 @@ __FBSDID("$FreeBSD$");
 #include <vm/swap_pager.h>
 #include <vm/uma.h>
 
+#include <vm/gmem.h>
+#include <vm/gmem_dev.h>
+#include <vm/gmem_uvas.h>
+
 /*
  *	Virtual memory maps provide for the mapping, protection,
  *	and sharing of virtual memory objects.  In addition,
