@@ -2408,6 +2408,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		}
 
 	} else if (pmap->mode == EXCLUSIVE) {
+		vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
 		// We don't consider soft page faults at this moment.
 		for (va = addr; va < end; va += PAGE_SIZE) {
 			vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
