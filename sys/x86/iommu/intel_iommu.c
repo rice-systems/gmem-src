@@ -329,8 +329,10 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 						pm->ref_count = pm->ref_count - 1; // atomic_add_int(&pm->ref_count, -1); // protected by writer lock
 					}
 					rw_wunlock(&domain->lock);
-					for (k = 0; k < j; k ++)
+					for (k = 0; k < j; k ++) {
+						printf("Free iommu pt page\n");
 						dmar_pgfree_null(p[k]);
+					}
 					// while (last_free < leaf_lvl) {
 					// 	// printf("Free iommu pt page\n");
 					// 	dmar_pgfree_null(p[last_free]);
