@@ -322,10 +322,11 @@ vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		if (((m->flags & PG_NOCPU) && dev_pmap == NULL) // migration: from device to cpu
 			|| ((m->flags & PG_NOCPU) == 0 && dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) // migration: from cpu to device
 			|| ((m->flags & PG_NOCPU) && dev_pmap != NULL && // migration: device to device
-			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max)))
+			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max))) {
 			fs->src_m = m;
 			rv = KERN_MIGRATE;
 			goto out;
+		}
 	}
 
 	/* A busy page can be mapped for read|execute access. */
