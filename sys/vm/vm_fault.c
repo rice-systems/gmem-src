@@ -1093,22 +1093,22 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
 		// It is time to release our src_m
 
-		if (fs.src_m & PG_NOCPU) {
+		if (fs.src_m->flags & PG_NOCPU) {
 			// This is a device page, let's find the corresponding pmap
 			cpu_pmap = map->gmem_pmap;
 			if (cpu_pmap == NULL)
 				panic("A device page is installed in a vm_object which does not back any UVAS\n");
 			uvas = cpu_pmap->uvas;
 			TAILQ_FOREACH(tmp_pmap, &uvas->dev_pmap_header, unified_pmap_list) {
-				if (tmp_pmap != cpu_pmap && tmp_pmap->pa_min <= VM_PAGE_TO_PHYS(fs.src_m) 
-					&& VM_PAGE_TO_PHYS(fs.src_m) < tmp_pmap.pa_max) {
-					tmp_pmap->mmu_ops->free_page(fs.src_m);
+				if (tmp_pmap != cpu_pmap && tmp_pmap->mmu->pa_min <= VM_PAGE_TO_PHYS(fs.src_m) 
+					&& VM_PAGE_TO_PHYS(fs->src_m) < tmp_pmap->mmu->pa_max) {
+					tmp_pmap->mmu_ops->free_page(fs->src_m);
 					break;
 				}
 			}
 		} else {
 			// This is a CPU page, unmap it by CPU VM code
-			vm_page_free(fs.src_m);
+			vm_page_free(fs->src_m);
 		}
 	}
 	vm_page_valid(fs->m);
@@ -1118,7 +1118,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
  * Allocate a page directly or via the object populate method.
  */
 static int
-vm_fault_allocate(struct faultstate *fs, dev_pmap_t dev_pmap)
+vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 {
 	struct domainset *dset;
 	int alloc_req;
@@ -1176,7 +1176,7 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t dev_pmap)
 		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
 			fs->m = dev_pmap->alloc_page();
-			if ((fs->m & PG_NOCPU) == 0)
+			if ((fs->m->flags & PG_NOCPU) == 0)
 				panic("Allocating a device page with wrong flag\n");
 			vm_page_xbusy(fs->m);
 			vm_page_insert(fs->m, fs->object, fs->pindex); // This function shouldn't exist at all. vm_page_alloc should be able to take an argument of dev_pmap
@@ -1336,7 +1336,7 @@ vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
 	int ahead, behind, faultcount;
 	int nera, result, rv;
 	bool dead, hardfault;
-	dev_pmap_t *dev_pmap = (dev_pmap_t *) dev_pmap_data, *cpu_pmap;
+	dev_pmap_t *dev_pmap = (dev_pmap_t *) dev_pmap_data, *cpu_pmap, tmp_pmap;
 	gmem_uvas_t *uvas;
 	vm_page_t src_page = NULL;
 
@@ -1394,7 +1394,7 @@ RetryFault:
 			vm_page_remove(fs.src_m);
 
 			// Also uninstall the mapping after destroying the logical mappnig
-			if (fs.src_m & PG_NOCPU) {
+			if (fs.src_m->flags & PG_NOCPU) {
 				// This is a device page, let's find the corresponding pmap
 				cpu_pmap = map->gmem_pmap;
 				if (cpu_pmap == NULL)
