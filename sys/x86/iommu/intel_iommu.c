@@ -352,7 +352,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 	int lvl;
 	vm_page_t p[4];
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
-	int i, last_free, leaf_lvl;
+	int i, last_free = 0, leaf_lvl = 0;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
@@ -371,14 +371,18 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
 					rw_wlock(&domain->lock);
-					last_free = leaf_lvl = lvl + 1;
-					while(p[lvl]->ref_count == 1 && lvl > 0)
-					{
-						last_free = lvl;
-						lvl --;
-						*ptes[lvl] = 0;
-						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-						p[lvl]->ref_count --; // atomic_add_int(&p[lvl]->ref_count, -1);
+					// When we have acquired this w lock, some map thread might have installed some pte in the page.
+					// Make sure we can really reclaim this page
+					if (p[lvl]->ref_count == 1) {			
+						last_free = leaf_lvl = lvl + 1;
+						while(p[lvl]->ref_count == 1 && lvl > 0)
+						{
+							last_free = lvl;
+							lvl --;
+							*ptes[lvl] = 0;
+							dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
+							p[lvl]->ref_count --; // atomic_add_int(&p[lvl]->ref_count, -1);
+						}
 					}
 					rw_wunlock(&domain->lock);
 					while (last_free < leaf_lvl) {

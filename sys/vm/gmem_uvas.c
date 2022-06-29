@@ -639,7 +639,7 @@ gmem_error_t gmem_uvas_unmap_all(gmem_uvas_t *uvas, int wait,
 int unmap_coalesce_threshold = 1024;
 int tlb_coalescing_threshold = 5;
 int enable_daemon = 1;
-int enable_async = 1;
+int enable_async = 0;
 int wakeup_time = 1; // 1 runs per 1 second
 int instrument = 1;
 
