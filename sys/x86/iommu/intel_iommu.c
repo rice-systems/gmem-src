@@ -346,7 +346,6 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 // }
 
 int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
-int domain_pmap_release_fast_test(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
 	vm_page_t p[4];
