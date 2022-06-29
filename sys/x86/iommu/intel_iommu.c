@@ -382,6 +382,9 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 								spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
 						}
 					}
+					if (spin > 10000)
+						printf("Acquired wlock %d, Reclaming va %lx, lvl %d, page %lx, father page %lx\n", 
+							spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
 					// When we have acquired this w lock, some map thread might have installed some pte in the page.
 					// Make sure we can really reclaim this page
 					if (p[lvl]->ref_count == 1) {			
@@ -397,7 +400,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 					}
 					rw_unlock(&domain->lock);
 					if (spin > 10000)
-						printf("Release wlock %d, Reclaming va %lx, lvl %d, page %lx, father page %lx\n", 
+						printf("Release wlock %d, Reclaming va %lx, lvl %d\n", 
 							spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
 
 					while (last_free < leaf_lvl) {
@@ -407,6 +410,9 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 					}
 				}
 skip_pt_reclaim:
+				if (spin > 10000)
+					printf("Skip wlock %d, Reclaming va %lx, lvl %d\n", 
+						spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
 				// we have reached the leaf node and we are done.
 				break;
 			}
