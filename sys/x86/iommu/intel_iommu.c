@@ -377,8 +377,8 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 							goto skip_pt_reclaim;
 						spin ++;
 						if (spin % 10000 == 0) {
-							printf("Trylock %d, Reclaming va %lx, lvl %d, page %lx, father page %lx\n", 
-								spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
+							printf("Trylock %d, Reclaming va %lx, lvl %d, page %lx, ref_count %x father page %lx\n", 
+								spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), p[lvl]->ref_count, VM_PAGE_TO_PHYS(p[lvl - 1]));
 						}
 					}
 					if (spin > 10000)
@@ -394,7 +394,8 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 							lvl --;
 							*ptes[lvl] = 0;
 							dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-							p[lvl]->ref_count --; // atomic_add_int(&p[lvl]->ref_count, -1);
+							// p[lvl]->ref_count --; // 
+							atomic_add_int(&p[lvl]->ref_count, -1);
 						}
 					}
 					rw_unlock(&domain->lock);
