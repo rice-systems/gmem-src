@@ -353,6 +353,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 	vm_page_t p[4];
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
 	int i, last_free = 0, leaf_lvl = 0;
+	int spin = 0;
 
 	// rw_rlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
@@ -371,10 +372,16 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 				*pte = 0;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
-
-					while(rw_try_wlock(&domain->lock) == 0)
+					spin = 0;
+					while(rw_try_wlock(&domain->lock) == 0) {
 						if (p[lvl]->ref_count != 1) // While failing to enter exclusive mode, check if we can skip reclamation
 							goto skip_pt_reclaim;
+						spin ++;
+						if (spin % 10000 == 0) {
+							printf("Trylock %d, Reclaming va %p, lvl %d, page %lx, father page %lx", 
+								spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
+						}
+					}
 					// When we have acquired this w lock, some map thread might have installed some pte in the page.
 					// Make sure we can really reclaim this page
 					if (p[lvl]->ref_count == 1) {			
