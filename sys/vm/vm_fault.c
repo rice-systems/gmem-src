@@ -325,6 +325,7 @@ vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max))) {
 			fs->src_m = m;
 			rv = KERN_MIGRATE;
+			panic("Migration is not available yet\n");
 			goto out;
 		}
 	}
@@ -1090,6 +1091,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		} else
 			dev_pmap->mmu_ops->zero_page(fs->m);
 	} else {
+		panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
 		// It is time to release our src_m
@@ -1352,6 +1354,7 @@ vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
 	fs.map = map;
 	fs.lookup_still_valid = false;
 	fs.oom = 0;
+	fs.src_m = NULL;
 	faultcount = 0;
 	nera = -1;
 	hardfault = false;
