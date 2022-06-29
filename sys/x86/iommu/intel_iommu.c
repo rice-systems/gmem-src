@@ -354,6 +354,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
 	int i, last_free = 0, leaf_lvl = 0;
 
+	rw_rlock(&domain->lock);
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
@@ -370,7 +371,10 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 				*pte = 0;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
 				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
-					rw_wlock(&domain->lock);
+
+					while(rw_try_upgrade(&domain->lock) == 0)
+						if (p[lvl]->ref_count != 1) // While failing to enter exclusive mode, check if we can skip reclamation
+							goto skip_pt_reclaim;
 					// When we have acquired this w lock, some map thread might have installed some pte in the page.
 					// Make sure we can really reclaim this page
 					if (p[lvl]->ref_count == 1) {			
@@ -384,18 +388,21 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 							p[lvl]->ref_count --; // atomic_add_int(&p[lvl]->ref_count, -1);
 						}
 					}
-					rw_wunlock(&domain->lock);
+					rw_downgrade(&domain->lock);
+
 					while (last_free < leaf_lvl) {
 						// printf("Free iommu pt page\n");
 						dmar_pgfree_null(p[last_free]);
 						last_free ++;
 					}
 				}
+skip_pt_reclaim:
 				// we have reached the leaf node and we are done.
 				break;
 			}
 		}
 	}
+	rw_runlock(&domain->lock);
 	return 0;
 }
 
