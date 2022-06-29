@@ -319,15 +319,13 @@ vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	/* Do we need to perform page migration? */
 	// For real device, PG_NOCPU is not required. Additionally, one must examine if the dev_pmap allows the CPU to map a dev page
 	if (m != NULL) {
-		if (
-		    ((m->flags & PG_NOCPU) && dev_pmap == NULL) // migration: from device to cpu
+		if (((m->flags & PG_NOCPU) && dev_pmap == NULL) // migration: from device to cpu
 			|| ((m->flags & PG_NOCPU) == 0 && dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) // migration: from cpu to device
-			|| ((m->flags & PG_NOCPU) && dev_pmap != NULL && (VM_PAGE_TO_PHYS(m) < dev_pmap->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->pa_max)) // dev to dev
-			)
-			fs.src_m = m;
+			|| ((m->flags & PG_NOCPU) && dev_pmap != NULL && // migration: device to device
+			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max)))
+			fs->src_m = m;
 			rv = KERN_MIGRATE;
 			goto out;
-		}
 	}
 
 	/* A busy page can be mapped for read|execute access. */
