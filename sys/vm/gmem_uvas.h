@@ -245,6 +245,7 @@ struct gmem_mmu_ops
 	unsigned long pgsize_bitmap;
 	bool mmu_has_range_tlb;
 	int inited;
+	vm_paddr_t pa_min, pa_max;
 
 	// init function that initializes this mmu ops, including a global queue for tlb inv
 	gmem_error_t (*mmu_init)(struct gmem_mmu_ops *);
@@ -268,6 +269,12 @@ struct gmem_mmu_ops
 	gmem_error_t (*mmu_tlb_flush)(struct gmem_uvas_entries_tailq *entries);
 	gmem_error_t (*mmu_pmap_kill)(dev_pmap_t *pmap, struct gmem_uvas_entries_tailq *ext_entries);
 	void (*mmu_tlb_invl_coalesced)(dev_pmap_t *pmap);
+
+	// hacks for simulating exclusive mode
+	// real device should have vm_page struct registered at boot time and let CPU VM manage them.
+	vm_page_t (*alloc_page) (void *);
+	void (*zero_page)(vm_page_t m);
+	gmem_error_t (*free_page) (vm_page_t m);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas
@@ -298,7 +305,8 @@ enum gmem_vm_mode {
 	REPLICATE,
 	SHARE,
 	REPLICATE_CPU,
-	SHARE_CPU
+	SHARE_CPU,
+	EXCLUSIVE,
 };
 typedef enum gmem_vm_mode gmem_vm_mode;
 

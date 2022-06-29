@@ -328,6 +328,48 @@ static inline void create_cpu_share_uvas(
 	printf("[gmem uvas] %s %d, you want to save pmap to %p\n", __func__, __LINE__, pmap_res);
 }
 
+
+// A mapping should exclusively exist in either dev pmap or CPU pmap
+static inline void create_cpu_exclusive_uvas(
+	gmem_uvas_t **uvas_res, 
+	dev_pmap_t **pmap_res, 
+	gmem_mmu_ops_t *mmu_ops,
+	void *dev_data)
+{
+	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
+	dev_pmap_t *cpu_pmap;
+	gmem_uvas_t *uvas;
+
+	// May need lock protection in the future to simultaneously attach multiple dev_pmaps to a CPU VM
+	cpu_pmap = get_or_init_cpu_pmap(NULL, map);
+	uvas = cpu_pmap->uvas;
+
+	// Set the CPU pmap as exclusive mode to acknowledge the CPU VM to react correctly
+	// We shouldn't need this flag if the device physical memory is real and can be identified by dev ranges.
+	cpu_pmap->mode = EXCLUSIVE;
+
+	// allocate and create the pmap with dev->mmu_ops
+	dev_pmap_t *pmap = (dev_pmap_t *) malloc(sizeof(dev_pmap_t), M_DEVBUF, M_WAITOK | M_ZERO);
+
+	pmap->mode = EXCLUSIVE;
+	pmap->pmap_replica = NULL;
+	mmu_ops->mmu_init(mmu_ops);
+	pmap->data = dev_data;
+	pmap->mmu_ops = mmu_ops;
+	pmap->mmu_ops->mmu_pmap_create(pmap);
+
+	// bind pmap to uvas
+	pmap->uvas = uvas;
+
+	// insert pmap to uvas pmap list
+	TAILQ_INSERT_TAIL(&uvas->dev_pmap_header, pmap, unified_pmap_list);
+
+	if (uvas_res != NULL)
+		*uvas_res = uvas;
+	if (pmap_res != NULL)
+		*pmap_res = pmap;
+}
+
 // Four modes to use uvas:
 // 	1. private: pmap is NULL && replicate == false
 //  2. shared: uvas and pmap are both not NULL, replicate == false
@@ -365,9 +407,12 @@ gmem_error_t gmem_uvas_create(
 			// printf("Binding UVAS to CPU VM successful\n");
 			break;
 		case GMEM_UVAS_SHARE_CPU:
-			printf("[gmem uva create]: creating uvas to share CPU pmap\n");
+			printf("[gmem uvas create]: creating uvas to share CPU pmap\n");
 			create_cpu_share_uvas(uvas_res, pmap_res);
 			break;
+		case GMEM_UVAS_EXCLUSIVE:
+			printf("[gmem uvas create]: creating uvas, dev pmap and CPU pmap have exclusive mappings\n");
+			create_cpu_exclusive_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
 		default:
 			printf("Other UVAS creation modes are not implemented\n");
 			return GMEM_EINVALIDARGS;
@@ -888,6 +933,7 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 }
 
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
+// Some lock must be aqcuired by this fault handler. Because we don't really test it, no need to write it now.
 int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) {
 	// unsigned long delta;
 	vm_offset_t end, va, count, last_i;
@@ -980,7 +1026,37 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		vm_map_t map = pmap->data;
 		// simply forward it to CPU?
 		// Let's still allow some device policy passed by pmap
-		vm_fault(map, addr, prot, VM_FAULT_NORMAL, NULL, pmap);
+		for (va = addr; va < end; va += PAGE_SIZE) {
+			if (pmap_extract(map->pmap, va) != 0)
+				continue;
+			else {
+				vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
+				faulted ++;
+			}
+		}
+
+	} else if (pmap->mode == EXCLUSIVE) {
+		// We don't consider soft page faults at this moment.
+		for (va = addr; va < end; va += PAGE_SIZE) {
+			// search the vm object to determine if the page was previously mapped by any device or host
+			if (va cannot be looked up in the vm_object) {
+				// This should really just be done by vm_page_alloc_contig with a given physical range from the device
+				vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU
+				pmap->mmu_ops->zero_page(m);
+				Install m in the vm_object
+				pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
+			} else {
+				vm_page_t mapped_m = find the current page in the vm_object
+				unmap the current page, (CPU VM must use the paddr to look up the pmap and issue the right unmap calls)
+				Uninstall it from the vm_object
+
+				vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU
+				copy mapped_m -> m
+				Install m in the vm_object
+				pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
+				Free mapped_m
+			}
+		}
 	}
 
 	return count;

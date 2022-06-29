@@ -461,6 +461,7 @@ extern struct mtx_padalign pa_lock[];
 #define	PG_ZERO		0x04		/* page is zeroed */
 #define	PG_MARKER	0x08		/* special queue marker page */
 #define	PG_NODUMP	0x10		/* don't include this page in a dump */
+#define PG_NOCPU    0x20        /* this is not a CPU page, if vm_fault finds it, a hard page fault must be triggered */
 
 /*
  * Misc constants.
