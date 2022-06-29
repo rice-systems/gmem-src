@@ -288,20 +288,77 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 }
 
 // No need to consider demotion since it never splits mappings.
+// int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
+// {
+// 	int lvl;
+// 	vm_page_t pm;
+// 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
+// 	int i, j, k;
+// 	vm_page_t p[4];
+// 	// int last_free, leaf_lvl;
+
+// 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
+// 		pte = root;
+// 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
+// 			i = domain_pgtbl_pte_off(domain, va, lvl);
+// 			pte = &pte[i];
+// 			ptes[lvl] = pte;
+
+
+// 			if (lvl < domain->pglvl - 1 && (*pte & DMAR_PTE_SP) == 0)
+// 				pte = (dmar_pte_t*) PHYS_TO_DMAP(*pte & PG_FRAME);
+// 			else
+// 			{
+// 				*pte = 0;
+// 				dmar_flush_pte_to_ram(domain->dmar, pte);
+// 				// This is the point to insert demotion code, if DMAR_PTE_SP
+
+// 				// This is the point we start to try to reclaim page table pages
+// 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
+// 				if (atomic_fetchadd_int(&pm->ref_count, -1) == 2) {
+// 					rw_wlock(&domain->lock);
+// 					j = 0;
+// 					// last_free = leaf_lvl = lvl + 1;
+// 					while(pm->ref_count == 1 && lvl > 0)
+// 					{
+// 						p[j] = pm; j ++; // dmar_pgfree_null(pm); // last_free = lvl;
+// 						lvl --;
+// 						*ptes[lvl] = 0;
+// 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
+// 						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
+// 						pm->ref_count = pm->ref_count - 1; // atomic_add_int(&pm->ref_count, -1); // protected by writer lock
+// 					}
+// 					rw_wunlock(&domain->lock);
+// 					for (k = 0; k < j; k ++)
+// 						dmar_pgfree_null(p[k]);
+// 					// while (last_free < leaf_lvl) {
+// 					// 	// printf("Free iommu pt page\n");
+// 					// 	dmar_pgfree_null(p[last_free]);
+// 					// 	last_free ++;
+// 					// }
+// 				}
+// 				// we have reached the leaf node and we are done.
+// 				break;
+// 			}
+// 		}
+// 	}
+// 	return 0;
+// }
+
+// Opt failed, use older version
 int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;
-	vm_page_t pm;
-	dmar_pte_t *pte, *root = domain->root, *ptes[4];
-	int i, j, k;
 	vm_page_t p[4];
-	// int last_free, leaf_lvl;
+	dmar_pte_t *pte, *root = domain->root, *ptes[4];
+	int i, last_free, leaf_lvl;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
 		pte = root;
 		for (lvl = 0; lvl < domain->pglvl; lvl ++) {
 			i = domain_pgtbl_pte_off(domain, va, lvl);
 			pte = &pte[i];
+			p[lvl] = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) pte));
 			ptes[lvl] = pte;
 
 
@@ -311,31 +368,23 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 			{
 				*pte = 0;
 				dmar_flush_pte_to_ram(domain->dmar, pte);
-				// This is the point to insert demotion code, if DMAR_PTE_SP
-
-				// This is the point we start to try to reclaim page table pages
-				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-				if (atomic_fetchadd_int(&pm->ref_count, -1) == 2) {
+				if (atomic_fetchadd_int(&p[lvl]->ref_count, -1) == 2) {
 					rw_wlock(&domain->lock);
-					j = 0;
-					// last_free = leaf_lvl = lvl + 1;
-					while(pm->ref_count == 1 && lvl > 0)
+					last_free = leaf_lvl = lvl + 1;
+					while(p[lvl]->ref_count == 1 && lvl > 0)
 					{
-						p[j] = pm; j ++; // dmar_pgfree_null(pm); // last_free = lvl;
+						last_free = lvl;
 						lvl --;
 						*ptes[lvl] = 0;
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-						pm->ref_count = pm->ref_count - 1; // atomic_add_int(&pm->ref_count, -1); // protected by writer lock
+						p[lvl]->ref_count --; // atomic_add_int(&p[lvl]->ref_count, -1);
 					}
 					rw_wunlock(&domain->lock);
-					for (k = 0; k < j; k ++)
-						dmar_pgfree_null(p[k]);
-					// while (last_free < leaf_lvl) {
-					// 	// printf("Free iommu pt page\n");
-					// 	dmar_pgfree_null(p[last_free]);
-					// 	last_free ++;
-					// }
+					while (last_free < leaf_lvl) {
+						// printf("Free iommu pt page\n");
+						dmar_pgfree_null(p[last_free]);
+						last_free ++;
+					}
 				}
 				// we have reached the leaf node and we are done.
 				break;
