@@ -345,7 +345,7 @@ int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t va, vm_
 // 	return 0;
 // }
 
-// Opt failed, use older version
+// Opt failed, use older version, this still crafts race condition bugs under set_sync for tcp tx
 int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size)
 {
 	int lvl;

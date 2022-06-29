@@ -115,6 +115,9 @@ struct xswdev {
 #define	KERN_NO_ACCESS		8
 #define	KERN_OUT_OF_BOUNDS	9
 #define	KERN_RESTART		10
+#define KERN_MIGRATE_TO_DEV        11
+#define KERN_MIGRATE_TO_CPU        12
+#define KERN_MIGRATE        13
 
 #ifndef PA_LOCK_COUNT
 #ifdef SMP

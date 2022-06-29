@@ -150,6 +150,9 @@ struct faultstate {
 	int		map_generation;
 	bool		lookup_still_valid;
 
+	/* Migration for EXCLUSIVE mode */
+	vm_page_t   src_m;
+
 	/* Vnode if locked. */
 	struct vnode	*vp;
 };
@@ -298,7 +301,7 @@ vm_fault_dirty(struct faultstate *fs, vm_page_t m)
  * Unlocks fs.first_object and fs.map on success.
  */
 static int
-vm_fault_soft_fast(struct faultstate *fs)
+vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 {
 	vm_page_t m, m_map;
 #if VM_NRESERVLEVEL > 0
@@ -312,6 +315,21 @@ vm_fault_soft_fast(struct faultstate *fs)
 	vaddr = fs->vaddr;
 	vm_object_busy(fs->first_object);
 	m = vm_page_lookup(fs->first_object, fs->first_pindex);
+
+	/* Do we need to perform page migration? */
+	// For real device, PG_NOCPU is not required. Additionally, one must examine if the dev_pmap allows the CPU to map a dev page
+	if (m != NULL) {
+		if (
+		    ((m->flags & PG_NOCPU) && dev_pmap == NULL) // migration: from device to cpu
+			|| ((m->flags & PG_NOCPU) == 0 && dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) // migration: from cpu to device
+			|| ((m->flags & PG_NOCPU) && dev_pmap != NULL && (VM_PAGE_TO_PHYS(m) < dev_pmap->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->pa_max)) // dev to dev
+			)
+			fs.src_m = m;
+			rv = KERN_MIGRATE;
+			goto out;
+		}
+	}
+
 	/* A busy page can be mapped for read|execute access. */
 	if (m == NULL || ((fs->prot & VM_PROT_WRITE) != 0 &&
 	    vm_page_busied(m)) || !vm_page_all_valid(m)) {
@@ -1041,9 +1059,10 @@ vm_fault_next(struct faultstate *fs)
 }
 
 static void
-vm_fault_zerofill(struct faultstate *fs)
+vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 {
-
+	dev_pmap_t *tmp_pmap, *cpu_pmap;
+	gmem_uvas_t *uvas;
 	/*
 	 * If there's no object left, fill the page in the top
 	 * object with zeros.
@@ -1058,15 +1077,42 @@ vm_fault_zerofill(struct faultstate *fs)
 	fs->m = fs->first_m;
 	fs->first_m = NULL;
 
-	/*
-	 * Zero the page if necessary and mark it valid.
-	 */
-	if ((fs->m->flags & PG_ZERO) == 0) {
-		pmap_zero_page(fs->m);
+	if (fs.src_m == NULL) {
+		/*
+		 * Zero the page if necessary and mark it valid.
+		 */
+		if (dev_pmap == NULL || dev_pmap->mode != EXCLUSIVE) {			
+			if ((fs->m->flags & PG_ZERO) == 0) {
+				pmap_zero_page(fs->m);
+			} else {
+				VM_CNT_INC(v_ozfod);
+			}
+			VM_CNT_INC(v_zfod);
+		} else
+			dev_pmap->mmu_ops->zero_page(fs->m);
 	} else {
-		VM_CNT_INC(v_ozfod);
+		/* It is a migration request */
+		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
+		// It is time to release our src_m
+
+		if (fs.src_m & PG_NOCPU) {
+			// This is a device page, let's find the corresponding pmap
+			cpu_pmap = map->gmem_pmap;
+			if (cpu_pmap == NULL)
+				panic("A device page is installed in a vm_object which does not back any UVAS\n");
+			uvas = cpu_pmap->uvas;
+			TAILQ_FOREACH(tmp_pmap, &uvas->dev_pmap_header, unified_pmap_list) {
+				if (tmp_pmap != cpu_pmap && tmp_pmap->pa_min <= VM_PAGE_TO_PHYS(fs.src_m) 
+					&& VM_PAGE_TO_PHYS(fs.src_m) < tmp_pmap.pa_max) {
+					tmp_pmap->mmu_ops->free_page(fs.src_m);
+					break;
+				}
+			}
+		} else {
+			// This is a CPU page, unmap it by CPU VM code
+			vm_page_free(fs.src_m);
+		}
 	}
-	VM_CNT_INC(v_zfod);
 	vm_page_valid(fs->m);
 }
 
@@ -1074,7 +1120,7 @@ vm_fault_zerofill(struct faultstate *fs)
  * Allocate a page directly or via the object populate method.
  */
 static int
-vm_fault_allocate(struct faultstate *fs)
+vm_fault_allocate(struct faultstate *fs, dev_pmap_t dev_pmap)
 {
 	struct domainset *dset;
 	int alloc_req;
@@ -1129,7 +1175,15 @@ vm_fault_allocate(struct faultstate *fs)
 		if (fs->object->type != OBJT_VNODE &&
 		    fs->object->backing_object == NULL)
 			alloc_req |= VM_ALLOC_ZERO;
-		fs->m = vm_page_alloc(fs->object, fs->pindex, alloc_req);
+		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
+			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
+			fs->m = dev_pmap->alloc_page();
+			if ((fs->m & PG_NOCPU) == 0)
+				panic("Allocating a device page with wrong flag\n");
+			vm_page_xbusy(fs->m);
+			vm_page_insert(fs->m, fs->object, fs->pindex); // This function shouldn't exist at all. vm_page_alloc should be able to take an argument of dev_pmap
+		} else
+			fs->m = vm_page_alloc(fs->object, fs->pindex, alloc_req);
 	}
 	if (fs->m == NULL) {
 		unlock_and_deallocate(fs);
@@ -1284,7 +1338,9 @@ vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
 	int ahead, behind, faultcount;
 	int nera, result, rv;
 	bool dead, hardfault;
-	dev_pmap_t *dev_pmap = (dev_pmap_t *) dev_pmap_data;
+	dev_pmap_t *dev_pmap = (dev_pmap_t *) dev_pmap_data, *cpu_pmap;
+	gmem_uvas_t *uvas;
+	vm_page_t src_page = NULL;
 
 	VM_CNT_INC(v_vm_faults);
 
@@ -1327,12 +1383,40 @@ RetryFault:
 	    (fs.entry->eflags & MAP_ENTRY_SPLIT_BOUNDARY_MASK) == 0 &&
 	    (fs.fault_flags & (VM_FAULT_WIRE | VM_FAULT_DIRTY)) == 0) {
 		VM_OBJECT_RLOCK(fs.first_object);
-		rv = vm_fault_soft_fast(&fs);
+		rv = vm_fault_soft_fast(&fs, dev_pmap);
 		if (rv == KERN_SUCCESS)
 			return (rv);
 		if (!VM_OBJECT_TRYUPGRADE(fs.first_object)) {
 			VM_OBJECT_RUNLOCK(fs.first_object);
 			VM_OBJECT_WLOCK(fs.first_object);
+		}
+		if (rv == KERN_MIGRATE) {
+			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
+			vm_page_xbusy(fs.src_m);
+			vm_page_remove(fs.src_m);
+
+			// Also uninstall the mapping after destroying the logical mappnig
+			if (fs.src_m & PG_NOCPU) {
+				// This is a device page, let's find the corresponding pmap
+				cpu_pmap = map->gmem_pmap;
+				if (cpu_pmap == NULL)
+					panic("A device page is installed in a vm_object which does not back any UVAS\n");
+				uvas = cpu_pmap->uvas;
+				TAILQ_FOREACH(tmp_pmap, &uvas->dev_pmap_header, unified_pmap_list) {
+					if (tmp_pmap != cpu_pmap && tmp_pmap->pa_min <= VM_PAGE_TO_PHYS(fs.src_m) 
+						&& VM_PAGE_TO_PHYS(fs.src_m) < tmp_pmap.pa_max) {
+						tmp_pmap->mmu_ops->mmu_pmap_release(tmp_pmap, vaddr, PAGE_SIZE);
+						tmp_pmap->mmu_ops->mmu_tlb_invl(tmp_pmap, vaddr, PAGE_SIZE);
+
+						// We might need to consider if any device replicates this pmap. But not considered at this moment
+						break;
+					}
+				}
+			} else {
+				// This is a CPU page, unmap it by CPU VM code
+				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
+			}
+			// src_m is now invisible to be copied.
 		}
 	} else {
 		VM_OBJECT_WLOCK(fs.first_object);
@@ -1359,7 +1443,7 @@ RetryFault:
 	fs.pindex = fs.first_pindex;
 
 	if ((fs.entry->eflags & MAP_ENTRY_SPLIT_BOUNDARY_MASK) != 0) {
-		rv = vm_fault_allocate(&fs);
+		rv = vm_fault_allocate(&fs, dev_pmap);
 		switch (rv) {
 		case KERN_RESTART:
 			unlock_and_deallocate(&fs);
@@ -1426,7 +1510,7 @@ RetryFault:
 		 */
 		if (fs.m == NULL && (fs.object->type != OBJT_DEFAULT ||
 		    fs.object == fs.first_object)) {
-			rv = vm_fault_allocate(&fs);
+			rv = vm_fault_allocate(&fs, dev_pmap);
 			switch (rv) {
 			case KERN_RESTART:
 				unlock_and_deallocate(&fs);
@@ -1516,8 +1600,8 @@ RetryFault:
 		vm_pindex_t rv_pindex, left_pindex, right_pindex;
 		int nzeropages = 1, level;
 
-		/* Do we have a device pmap policy that demands higher preparation throughput ? */
-		if(dev_pmap != NULL && dev_pmap->policy.prepare_page_order > 1
+		/* Do we have a non-exclusive device pmap policy that demands higher preparation throughput ? */
+		if(dev_pmap != NULL && dev_pmap->mode != EXCLUSIVE && dev_pmap->policy.prepare_page_order > 1
 			&& fs.first_m != NULL
 		    && (fault_flags & VM_FAULT_WIRE) == 0
 			&& fs.object != NULL
@@ -1590,7 +1674,7 @@ RetryFault:
 		}
 #endif
 
-		vm_fault_zerofill(&fs);
+		vm_fault_prepare(&fs, dev_pmap);
 		/* Don't try to prefault neighboring pages. */
 		faultcount = 1;
 		break;	/* break to PAGE HAS BEEN FOUND. */
@@ -1662,19 +1746,25 @@ RetryFault:
 
 	vm_fault_dirty(&fs, fs.m);
 
-	/*
-	 * Put this page into the physical map.  We had to do the unlock above
-	 * because pmap_enter() may sleep.  We don't put the page
-	 * back on the active queue until later so that the pageout daemon
-	 * won't find it (yet).
-	 */
-	pmap_enter(fs.map->pmap, vaddr, fs.m, fs.prot,
-	    fs.fault_type | (fs.wired ? PMAP_ENTER_WIRED : 0), 0);
-	if (faultcount != 1 && (fs.fault_flags & VM_FAULT_WIRE) == 0 &&
-	    fs.wired == 0)
-		vm_fault_prefault(&fs, vaddr,
-		    faultcount > 0 ? behind : PFBAK,
-		    faultcount > 0 ? ahead : PFFOR, false);
+	// More elegent code should simply use a callback from cpu pmap to avoid this if branch...
+	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE)) {	
+		/*
+		 * Put this page into the physical map.  We had to do the unlock above
+		 * because pmap_enter() may sleep.  We don't put the page
+		 * back on the active queue until later so that the pageout daemon
+		 * won't find it (yet).
+		 */
+		pmap_enter(fs.map->pmap, vaddr, fs.m, fs.prot,
+		    fs.fault_type | (fs.wired ? PMAP_ENTER_WIRED : 0), 0);
+		if (faultcount != 1 && (fs.fault_flags & VM_FAULT_WIRE) == 0 &&
+		    fs.wired == 0)
+			vm_fault_prefault(&fs, vaddr,
+			    faultcount > 0 ? behind : PFBAK,
+			    faultcount > 0 ? ahead : PFFOR, false);
+	} else {
+		// Ok install the mapping on the device side.
+		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
+	}
 
 	/*
 	 * If the page is not wired down, then put it where the pageout daemon
@@ -1690,6 +1780,7 @@ RetryFault:
 	}
 
 	// coordinated mapping mechanism for replicated mappings
+	// should adjust the if condition to support replicating a device in the future
 	if (map->gmem_pmap != NULL && map->gmem_pmap->pmap_replica != NULL) {
 		bool should_pin = false;
 		// if (map->gmem_pmap->pmap_replica->npmaps != 1)
@@ -2216,10 +2307,11 @@ vm_fault_enable_pagefaults(int save)
 
 // There should be a fault handler that wraps vm_fault when pmap is replicating CPU
 // Some lock must be aqcuired by this fault handler. Because we don't really test it, no need to write it now.
-int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) {
-	// unsigned long delta;
+int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out) 
+{
 	vm_offset_t end, va, count, last_i;
 	vm_page_t *ma, *mp;
+	struct faultstate fs;
 
 	if (len == 0)
 		return (0);
@@ -2320,24 +2412,36 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	} else if (pmap->mode == EXCLUSIVE) {
 		// We don't consider soft page faults at this moment.
 		for (va = addr; va < end; va += PAGE_SIZE) {
-			// search the vm object to determine if the page was previously mapped by any device or host
-			if (va cannot be looked up in the vm_object) {
-				// This should really just be done by vm_page_alloc_contig with a given physical range from the device
-				vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU
-				pmap->mmu_ops->zero_page(m);
-				Install m in the vm_object
-				pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
-			} else {
-				vm_page_t mapped_m = find the current page in the vm_object
-				unmap the current page, (CPU VM must use the paddr to look up the pmap and issue the right unmap calls)
-				Uninstall it from the vm_object
+			vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
 
-				vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU
-				copy mapped_m -> m
-				Install m in the vm_object
-				pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
-				Free mapped_m
-			}
+			// fs.vp = NULL;
+			// fs.vaddr = va;
+			// fs.m_hold = pmap->policy.pin_on_fault ? mp : NULL;
+			// fs.fault_flags = fault_flags;
+			// fs.map = map;
+			// fs.lookup_still_valid = false;
+			// fs.oom = 0;
+			// fs.fault_type = fault_type;
+			// vm_fault_lookup(&fs);
+
+			// // search the vm object to determine if the page was previously mapped by any device or host
+			// if (va cannot be looked up in the vm_object) {
+			// 	// This should really just be done by vm_page_alloc_contig with a given physical range from the device
+			// 	vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU
+			// 	pmap->mmu_ops->zero_page(m);
+			// 	Install m in the vm_object
+			// 	pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
+			// } else {
+			// 	vm_page_t mapped_m = find the current page in the vm_object
+			// 	unmap the current page, (CPU VM must use the paddr to look up the pmap and issue the right unmap calls)
+			// 	Uninstall it from the vm_object
+
+			// 	vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU, this flag  should be set up at boot time
+			// 	copy mapped_m -> m
+			// 	Install m in the vm_object
+			// 	pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
+			// 	Free mapped_m
+			// }
 		}
 	}
 
