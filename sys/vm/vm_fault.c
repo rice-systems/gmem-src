@@ -2309,7 +2309,6 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 {
 	vm_offset_t end, va, count, last_i;
 	vm_page_t *ma, *mp;
-	struct faultstate fs;
 
 	if (len == 0)
 		return (0);
