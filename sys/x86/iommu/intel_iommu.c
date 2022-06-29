@@ -326,7 +326,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 						*ptes[lvl] = 0;
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
 						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-						pm->ref_count = pm->ref_count - 1; // atomic_add_int(&pm->ref_count, -1); // protected by writer lock
+						atomic_add_int(&pm->ref_count, -1); // pm->ref_count = pm->ref_count - 1; // protected by writer lock
 					}
 					rw_wunlock(&domain->lock);
 					for (k = 0; k < j; k ++) {
