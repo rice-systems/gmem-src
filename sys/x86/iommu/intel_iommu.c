@@ -378,7 +378,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 						lvl --;
 						*ptes[lvl] = 0;
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
-						atomic_add_int(&p[lvl]->ref_count, -1);
+						p[lvl]->ref_count --; // atomic_add_int(&p[lvl]->ref_count, -1);
 					}
 					rw_wunlock(&domain->lock);
 					while (last_free < leaf_lvl) {
