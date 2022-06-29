@@ -401,7 +401,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 					rw_unlock(&domain->lock);
 					if (spin > 10000)
 						printf("Release wlock %d, Reclaming va %lx, lvl %d\n", 
-							spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
+							spin, va, lvl);
 
 					while (last_free < leaf_lvl) {
 						// printf("Free iommu pt page\n");
@@ -412,7 +412,7 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 skip_pt_reclaim:
 				if (spin > 10000)
 					printf("Skip wlock %d, Reclaming va %lx, lvl %d\n", 
-						spin, va, lvl, VM_PAGE_TO_PHYS(p[lvl]), VM_PAGE_TO_PHYS(p[lvl - 1]));
+						spin, va, lvl);
 				// we have reached the leaf node and we are done.
 				break;
 			}
