@@ -1101,7 +1101,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 				panic("A device page is installed in a vm_object which does not back any UVAS\n");
 			uvas = cpu_pmap->uvas;
 			TAILQ_FOREACH(tmp_pmap, &uvas->dev_pmap_header, unified_pmap_list) {
-				if (tmp_pmap != cpu_pmap && tmp_pmap->mmu_ops->pa_min <= VM_PAGE_TO_PHYS(fs.src_m) 
+				if (tmp_pmap != cpu_pmap && tmp_pmap->mmu_ops->pa_min <= VM_PAGE_TO_PHYS(fs->src_m) 
 					&& VM_PAGE_TO_PHYS(fs->src_m) < tmp_pmap->mmu_ops->pa_max) {
 					tmp_pmap->mmu_ops->free_page(fs->src_m);
 					break;
@@ -1339,7 +1339,6 @@ vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
 	bool dead, hardfault;
 	dev_pmap_t *dev_pmap = (dev_pmap_t *) dev_pmap_data, *cpu_pmap, *tmp_pmap;
 	gmem_uvas_t *uvas;
-	vm_page_t src_page = NULL;
 
 	VM_CNT_INC(v_vm_faults);
 
@@ -2404,7 +2403,7 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 				continue;
 			else {
 				vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
-				faulted ++;
+				// faulted ++;
 			}
 		}
 
