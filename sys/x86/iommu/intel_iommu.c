@@ -293,7 +293,8 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 	int lvl;
 	vm_page_t pm;
 	dmar_pte_t *pte, *root = domain->root, *ptes[4];
-	int i;
+	int i, j, k;
+	vm_page_t p[4];
 	// int last_free, leaf_lvl;
 
 	for (; size > 0; va += PAGE_SIZE, size -= PAGE_SIZE) {
@@ -316,19 +317,20 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 				pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
 				if (atomic_fetchadd_int(&pm->ref_count, -1) == 2) {
 					rw_wlock(&domain->lock);
+					j = 0;
 					// last_free = leaf_lvl = lvl + 1;
 					while(pm->ref_count == 1 && lvl > 0)
 					{
-						// last_free = lvl;
+						p[j] = pm; j ++; // dmar_pgfree_null(pm); // last_free = lvl;
 						lvl --;
 						*ptes[lvl] = 0;
 						dmar_flush_pte_to_ram(domain->dmar, ptes[lvl]);
 						pm = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t) ptes[lvl]));
-						// atomic_add_int(&pm->ref_count, -1);
-						pm->ref_count = pm->ref_count + 1; // protected by writer lock
-						dmar_pgfree_null(pm);
+						pm->ref_count = pm->ref_count - 1; // atomic_add_int(&pm->ref_count, -1); // protected by writer lock
 					}
 					rw_wunlock(&domain->lock);
+					for (k = 0; k < j; k ++)
+						dmar_pgfree_null(p[k]);
 					// while (last_free < leaf_lvl) {
 					// 	// printf("Free iommu pt page\n");
 					// 	dmar_pgfree_null(p[last_free]);
@@ -342,7 +344,6 @@ int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset
 	}
 	return 0;
 }
-
 
 
 // This function has been changed to map a contiguous pa range.
