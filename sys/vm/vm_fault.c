@@ -1185,7 +1185,7 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 				// printf("[vm_fault] device is in short of memory, vm_fault cannot succeed\n");
 				// return KERN_FAILURE;
 				// Let's reclaim a device page
-				victim_m = dev_pmap->mmu_ops->get_evict_victim();
+				victim_m = dev_pmap->mmu_ops->get_victim_page();
 				victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
 				// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 				// These flags should actually be recalculated if you want to support shadow dirty bits
