@@ -275,6 +275,7 @@ struct gmem_mmu_ops
 	vm_page_t (*alloc_page) (void);
 	void (*zero_page)(vm_page_t m);
 	gmem_error_t (*free_page) (vm_page_t m);
+	vm_page_t (*get_victim_page) (void);
 };
 
 // A collection of pmaps that are registed in replication mode for a uvas

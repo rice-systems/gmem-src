@@ -173,5 +173,8 @@ void		 pmap_zero_page_area(vm_page_t, int off, int size);
 #define	pmap_resident_count(pm)	((pm)->pm_stats.resident_count)
 #define	pmap_wired_count(pm)	((pm)->pm_stats.wired_count)
 
+void pmap_insert_pv_entry(pmap_t pmap, vm_offset_t va, vm_page_t m);
+vm_offset_t pmap_delete_pv_entry(pmap_t pmap, vm_page_t m);
+
 #endif /* _KERNEL */
 #endif /* _PMAP_VM_ */

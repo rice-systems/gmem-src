@@ -5532,6 +5532,17 @@ pmap_pvh_free(struct md_page *pvh, pmap_t pmap, vm_offset_t va)
 	free_pv_entry(pmap, pv);
 }
 
+void pmap_insert_pv_entry(pmap_t pmap, vm_offset_t va, vm_page_t m)
+{
+	struct rwlock *lock;
+	lock = NULL;
+	PMAP_LOCK(pmap);
+	pmap_try_insert_pv_entry(pmap, va, m, &lock);
+	if (lock != NULL)
+		rw_wunlock(lock);
+	PMAP_UNLOCK(pmap);
+}
+
 /*
  * Conditionally create the PV entry for a 4KB page mapping if the required
  * memory can be allocated without resorting to reclamation.
@@ -6255,6 +6266,49 @@ retry:
 	rw_wunlock(lock);
 	pmap_delayed_invl_wait(m);
 	vm_page_free_pages_toq(&free, true);
+}
+
+vm_offset_t pmap_delete_pv_entry(pmap_t pmap, vm_page_t m)
+{
+
+	struct md_page *pvh;
+	pv_entry_t pv;
+	pmap_t pmap;
+	struct rwlock *lock;
+	vm_offset_t va;
+	int pvh_gen, md_gen;
+
+	lock = VM_PAGE_TO_PV_LIST_LOCK(m);
+	pvh = pa_to_pvh(VM_PAGE_TO_PHYS(m));
+
+retry:
+	rw_wlock(lock);
+	while ((pv = TAILQ_FIRST(&m->md.pv_list)) != NULL) {
+		va = pv->pv_va;
+		pmap = PV_PMAP(pv);
+		if (!PMAP_TRYLOCK(pmap)) {
+			pvh_gen = pvh->pv_gen;
+			md_gen = m->md.pv_gen;
+			rw_wunlock(lock);
+			PMAP_LOCK(pmap);
+			rw_wlock(lock);
+			if (pvh_gen != pvh->pv_gen || md_gen != m->md.pv_gen) {
+				rw_wunlock(lock);
+				PMAP_UNLOCK(pmap);
+				goto retry;
+			}
+		}
+		TAILQ_REMOVE(&m->md.pv_list, pv, pv_next);
+		m->md.pv_gen++;
+		free_pv_entry(pmap, pv);
+		PMAP_UNLOCK(pmap);
+
+		// You are not supposed to have multiple va returned.
+		// However, if we integrate pmap with dev_pmap, issue mmu callbacks to release dev mappings, we can have multiple
+		// va mapped to the same page supported.
+	}
+	rw_wunlock(lock);
+	return va;
 }
 
 /*

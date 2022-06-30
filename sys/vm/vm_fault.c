@@ -1126,6 +1126,8 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	struct domainset *dset;
 	int alloc_req;
 	int rv;
+	vm_page_t victim_m;
+	vm_offset_t victim_va;
 
 	if ((fs->object->flags & OBJ_SIZEVNLOCK) != 0) {
 		rv = vm_fault_lock_vnode(fs, true);
@@ -1179,6 +1181,19 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
 			fs->m = dev_pmap->mmu_ops->alloc_page();
+			if (fs->m == NULL) {
+				// printf("[vm_fault] device is in short of memory, vm_fault cannot succeed\n");
+				// return KERN_FAILURE;
+				// Let's reclaim a device page
+				victim_m = dev_pmap->mmu_ops->get_evict_victim();
+				victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
+				// Simply fault it by cpu, the fault handler will migrate the page back to CPU
+				// These flags should actually be recalculated if you want to support shadow dirty bits
+				vm_fault(fs->map, victim_va, fs->fault_type, fs->fault_flags, NULL, NULL);
+
+				// At this time victim_m should be reclaimed. 
+				fs->m = victim_m;
+			}
 			if ((fs->m->flags & PG_NOCPU) == 0)
 				panic("Allocating a device page with wrong flag\n");
 			vm_page_xbusy(fs->m);
@@ -1413,6 +1428,9 @@ RetryFault:
 						break;
 					}
 				}
+
+				// Now destroy its reverse mapping. The reverse mapping support will be broken if multiple devices map to the page
+				pmap_delete_pv_entry(map->pmap, fs.src_m);
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
@@ -1766,7 +1784,10 @@ RetryFault:
 		// Ok install the mapping on the device side.
 		if (VM_PAGE_TO_PHYS(fs.m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(fs.m) >= dev_pmap->mmu_ops->pa_max)
 			printf("%s %d: mapping va %lx - pa %lx out of range\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
-		// printf("%s %d: mapping va %lx - pa %lx with cb\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
+
+		// install the reverse mapping so that we can reclaim the page.
+		pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
+
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
 	}
 
