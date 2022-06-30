@@ -1766,7 +1766,7 @@ RetryFault:
 		// Ok install the mapping on the device side.
 		if (VM_PAGE_TO_PHYS(fs.m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(fs.m) >= dev_pmap->mmu_ops->pa_max)
 			printf("%s %d: mapping va %lx - pa %lx out of range\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
-		printf("%s %d: mapping va %lx - pa %lx with cb\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
+		// printf("%s %d: mapping va %lx - pa %lx with cb\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
 	}
 
