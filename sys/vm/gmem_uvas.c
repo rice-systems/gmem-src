@@ -413,6 +413,7 @@ gmem_error_t gmem_uvas_create(
 		case GMEM_UVAS_EXCLUSIVE:
 			printf("[gmem uvas create]: creating uvas, dev pmap and CPU pmap have exclusive mappings\n");
 			create_cpu_exclusive_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
+			printf("[gmem uvas create]: exclusive mapping prepared\n");
 			break;
 		default:
 			printf("Other UVAS creation modes are not implemented\n");
