@@ -1764,6 +1764,8 @@ RetryFault:
 			    faultcount > 0 ? ahead : PFFOR, false);
 	} else {
 		// Ok install the mapping on the device side.
+		if (VM_PAGE_TO_PHYS(fs.m) > 0x800000000)
+			printf("%s %d: mapping va %lx - pa %lx\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
 	}
 
