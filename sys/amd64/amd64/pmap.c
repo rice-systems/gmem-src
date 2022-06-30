@@ -6268,7 +6268,7 @@ retry:
 	vm_page_free_pages_toq(&free, true);
 }
 
-vm_offset_t pmap_delete_pv_entry(pmap_t pmap, vm_page_t m)
+vm_offset_t pmap_delete_pv_entry(pmap_t pmap_to_delete, vm_page_t m)
 {
 
 	struct md_page *pvh;
@@ -6284,8 +6284,10 @@ vm_offset_t pmap_delete_pv_entry(pmap_t pmap, vm_page_t m)
 retry:
 	rw_wlock(lock);
 	while ((pv = TAILQ_FIRST(&m->md.pv_list)) != NULL) {
-		va = pv->pv_va;
 		pmap = PV_PMAP(pv);
+		if (pmap != pmap_to_delete)
+			continue;
+		va = pv->pv_va;
 		if (!PMAP_TRYLOCK(pmap)) {
 			pvh_gen = pvh->pv_gen;
 			md_gen = m->md.pv_gen;
