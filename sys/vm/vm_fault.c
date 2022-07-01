@@ -1121,6 +1121,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	vm_page_valid(fs->m);
 }
 
+static int reclaiming = 0;
 int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 {
 	int reclaimed = 0, i;
@@ -1148,7 +1149,9 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 			map, VM_PAGE_TO_PHYS(victim_m), victim_va, victim_m->flags & PG_NOCPU);
 
 		// Simulate a CPU fault to migrate it back
+		reclaiming = 1;
 		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
+		reclaiming = 0;
 		printf("[vm_fault] victim should be migrated back to CPU now\n");
 
 		// At this time victim_m should be reclaimed. 
@@ -1413,6 +1416,9 @@ RetryFault:
 	 * Find the backing store object and offset into it to begin the
 	 * search.
 	 */
+	if (reclaiming)
+		printf("%s %d\n", __func__, __LINE__);
+
 	result = vm_fault_lookup(&fs);
 	if (result != KERN_SUCCESS) {
 		printf("%s %d: %d\n", __func__, __LINE__, result);
@@ -1428,17 +1434,25 @@ RetryFault:
 	 * Under this condition, a read lock on the object suffices, allowing
 	 * multiple page faults of a similar type to run in parallel.
 	 */
+	if (reclaiming)
+		printf("%s %d\n", __func__, __LINE__);
 	if (fs.vp == NULL /* avoid locked vnode leak */ &&
 	    (fs.entry->eflags & MAP_ENTRY_SPLIT_BOUNDARY_MASK) == 0 &&
 	    (fs.fault_flags & (VM_FAULT_WIRE | VM_FAULT_DIRTY)) == 0) {
 		VM_OBJECT_RLOCK(fs.first_object);
+		if (reclaiming)
+			printf("%s %d\n", __func__, __LINE__);
 		rv = vm_fault_soft_fast(&fs, dev_pmap);
+		if (reclaiming)
+			printf("%s %d\n", __func__, __LINE__);
 		if (rv == KERN_SUCCESS)
 			return (rv);
 		if (!VM_OBJECT_TRYUPGRADE(fs.first_object)) {
 			VM_OBJECT_RUNLOCK(fs.first_object);
 			VM_OBJECT_WLOCK(fs.first_object);
 		}
+		if (reclaiming)
+			printf("%s %d\n", __func__, __LINE__);
 		if (rv == KERN_MIGRATE) {
 			printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
@@ -1480,6 +1494,8 @@ RetryFault:
 		VM_OBJECT_WLOCK(fs.first_object);
 	}
 
+	if (reclaiming)
+		printf("%s %d\n", __func__, __LINE__);
 	/*
 	 * Make a reference to this object to prevent its disposal while we
 	 * are messing with it.  Once we have the reference, the map is free
@@ -1542,7 +1558,11 @@ RetryFault:
 		 * See if page is resident
 		 */
 		fs.m = vm_page_lookup(fs.object, fs.pindex);
+		if (reclaiming)
+			printf("%s %d\n", __func__, __LINE__);
 		if (fs.m != NULL) {
+			if (reclaiming)
+				printf("%s %d\n", __func__, __LINE__);
 			if (vm_page_tryxbusy(fs.m) == 0) {
 				vm_fault_busy_sleep(&fs);
 				goto RetryFault;
