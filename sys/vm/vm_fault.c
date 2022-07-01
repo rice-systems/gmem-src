@@ -1089,7 +1089,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			}
 			VM_CNT_INC(v_zfod);
 		} else {
-			printf("%s %d\n", __func__, __LINE__);
+			// printf("%s %d\n", __func__, __LINE__);
 			dev_pmap->mmu_ops->zero_page(fs->m);
 		}
 	} else {
@@ -1098,7 +1098,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
 		// It is time to release our src_m
 
-		printf("%s %d\n", __func__, __LINE__);
+		// printf("%s %d\n", __func__, __LINE__);
 		if (fs->src_m->flags & PG_NOCPU) {
 			// This is a device page, let's find the corresponding pmap
 			cpu_pmap = fs->map->gmem_pmap;
@@ -1153,8 +1153,8 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	int alloc_req;
 	int rv;
 
-	if (dev_pmap != NULL) 
-		printf("%s %d\n", __func__, __LINE__);
+	// if (dev_pmap != NULL) 
+	// 	printf("%s %d\n", __func__, __LINE__);
 
 	if ((fs->object->flags & OBJ_SIZEVNLOCK) != 0) {
 		rv = vm_fault_lock_vnode(fs, true);
@@ -1208,7 +1208,7 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
 			fs->m = dev_pmap->mmu_ops->alloc_page(dev_pmap);
-			printf("%s %d, paddr %lx\n", __func__, __LINE__, fs->m ? VM_PAGE_TO_PHYS(fs->m) : 0);
+			// printf("%s %d, paddr %lx\n", __func__, __LINE__, fs->m ? VM_PAGE_TO_PHYS(fs->m) : 0);
 			if (fs->m == NULL)
 				panic("Device pm management failed to reclaim pages\n");
 			if ((fs->m->flags & PG_NOCPU) == 0)
@@ -1424,11 +1424,11 @@ RetryFault:
 			VM_OBJECT_WLOCK(fs.first_object);
 		}
 		if (rv == KERN_MIGRATE) {
-			printf("%s %d\n", __func__, __LINE__);
+			// printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
-			printf("%s %d\n", __func__, __LINE__);
+			// printf("%s %d\n", __func__, __LINE__);
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
@@ -1454,7 +1454,7 @@ RetryFault:
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
-				printf("%s %d\n", __func__, __LINE__);
+				// printf("%s %d\n", __func__, __LINE__);
 			}
 			// src_m is now invisible to be copied.
 		}
@@ -1827,7 +1827,7 @@ RetryFault:
 		// pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
 		*((vm_offset_t*) &fs.m->md) = vaddr >> 12 << 12;
 
-		printf("%s %d\n", __func__, __LINE__);
+		// printf("%s %d\n", __func__, __LINE__);
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
 	}
 
@@ -2464,9 +2464,9 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
 		// We don't consider soft page faults at this moment.
 		for (va = addr; va < end; va += PAGE_SIZE) {
-			printf("Faulting va %lx\n", va);
+			// printf("Faulting va %lx\n", va);
 			vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
-			printf("Done\n");
+			// printf("Done\n");
 
 
 			// fs.vp = NULL;
