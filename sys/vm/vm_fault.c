@@ -1134,6 +1134,7 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE))
 		return 0;
 
+	printf("[reclaim_dev_page] start\n");
 	for (i = 0; i < target; i ++) {
 		// Let's reclaim a device page
 		victim_m = dev_pmap->mmu_ops->get_victim_page();
