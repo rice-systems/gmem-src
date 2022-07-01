@@ -87,7 +87,7 @@ void kmeminit(void);
 
 int kernacc(void *, int, int);
 int useracc(void *, int, int);
-vm_page_t reclaim_dev_page(dev_pmap_t *dev_pmap);
+int reclaim_dev_page(dev_pmap_t *dev_pmap, int target);
 int vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
     int fault_flags, vm_page_t *m_hold, void *dev_pmap);
 void vm_fault_copy_entry(vm_map_t, vm_map_t, vm_map_entry_t, vm_map_entry_t,

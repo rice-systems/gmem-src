@@ -1120,27 +1120,37 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	vm_page_valid(fs->m);
 }
 
-vm_page_t reclaim_dev_page(dev_pmap_t *dev_pmap)
+int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 {
+	int reclaimed = 0, i;
 	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE))
 		return NULL;
-	// Let's reclaim a device page
-	vm_page_t victim_m = dev_pmap->mmu_ops->get_victim_page();
-	// victim_va = victim_m->p_links.mem_guard
-	// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
-	// temporarily hack to load/save the va here
-	vm_offset_t victim_va = *((vm_offset_t *) (&victim_m->md));
-	*((vm_offset_t*) &victim_m->md) = 0;
-	// Simply fault it by cpu, the fault handler will migrate the page back to CPU
-	// These flags should actually be recalculated if you want to support shadow dirty bits
-	printf("[vm_fault] reclamation candidate: %lx, va %lx\n", VM_PAGE_TO_PHYS(victim_m), victim_va);
 
-	// Simulate a CPU fault to migrate it back
-	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
-	vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
-	printf("[vm_fault] victim should be migrated back to CPU now\n");
-	// At this time victim_m should be reclaimed. 
-	return victim_m;
+	for (i = 0; i < target; i ++) {
+		// Let's reclaim a device page
+		vm_page_t victim_m = dev_pmap->mmu_ops->get_victim_page();
+		if (victim_m == NULL)
+			break;
+
+		// victim_va = victim_m->p_links.mem_guard
+		// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
+		// temporarily hack to load/save the va here
+		vm_offset_t victim_va = *((vm_offset_t *) (&victim_m->md));
+		*((vm_offset_t*) &victim_m->md) = 0;
+		// Simply fault it by cpu, the fault handler will migrate the page back to CPU
+		// These flags should actually be recalculated if you want to support shadow dirty bits
+		printf("[vm_fault] reclamation candidate: %lx, va %lx\n", VM_PAGE_TO_PHYS(victim_m), victim_va);
+
+		// Simulate a CPU fault to migrate it back
+		vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
+		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
+		// printf("[vm_fault] victim should be migrated back to CPU now\n");
+
+		// At this time victim_m should be reclaimed. 
+		dev_pmap->free_page(victim_m);
+	}
+	printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", reclaimed, target);
+	return reclaimed;
 }
 
 /*
