@@ -1420,6 +1420,7 @@ RetryFault:
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
+			printf("%s %d\n", __func__, __LINE__);
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
@@ -1445,6 +1446,7 @@ RetryFault:
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
+				printf("%s %d\n", __func__, __LINE__);
 			}
 			// src_m is now invisible to be copied.
 		}
@@ -1518,6 +1520,7 @@ RetryFault:
 		fs.m = vm_page_lookup(fs.object, fs.pindex);
 		if (fs.m != NULL) {
 			if (vm_page_tryxbusy(fs.m) == 0) {
+				printf("%s %d\n", __func__, __LINE__);
 				vm_fault_busy_sleep(&fs);
 				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
