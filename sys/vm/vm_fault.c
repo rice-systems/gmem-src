@@ -1415,6 +1415,7 @@ RetryFault:
 	 */
 	result = vm_fault_lookup(&fs);
 	if (result != KERN_SUCCESS) {
+		printf("%s %d: %d\n", __func__, __LINE__, result);
 		if (result == KERN_RESOURCE_SHORTAGE)
 			goto RetryFault;
 		return (result);
