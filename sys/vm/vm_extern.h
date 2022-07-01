@@ -46,6 +46,8 @@ struct cdev;
 struct cdevsw;
 struct domainset;
 
+#include <vm/gmem.h>
+
 /* These operate on kernel virtual addresses only. */
 vm_offset_t kva_alloc(vm_size_t);
 void kva_free(vm_offset_t, vm_size_t);
