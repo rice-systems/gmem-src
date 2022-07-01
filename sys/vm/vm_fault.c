@@ -1182,15 +1182,17 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
 			fs->m = dev_pmap->mmu_ops->alloc_page();
 			if (fs->m == NULL) {
-				// printf("[vm_fault] device is in short of memory, vm_fault cannot succeed\n");
+				printf("[vm_fault] device is in short of memory, try to oversubscribe memory\n");
 				// return KERN_FAILURE;
 				// Let's reclaim a device page
 				victim_m = dev_pmap->mmu_ops->get_victim_page();
+				// victim_va = victim_m->p_links.mem_guard
 				victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
 				// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 				// These flags should actually be recalculated if you want to support shadow dirty bits
+				printf("[vm_fault] reclamation candidate: %lx, va %lx\n", VM_PAGE_TO_PHYS(victim_m), victim_va);
 				vm_fault(fs->map, victim_va, fs->fault_type, fs->fault_flags, NULL, NULL);
-
+				printf("[vm_fault] victim should be migrated back to CPU now\n");
 				// At this time victim_m should be reclaimed. 
 				fs->m = victim_m;
 			}
