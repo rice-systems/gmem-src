@@ -272,7 +272,7 @@ struct gmem_mmu_ops
 
 	// hacks for simulating exclusive mode
 	// real device should have vm_page struct registered at boot time and let CPU VM manage them.
-	vm_page_t (*alloc_page) (void);
+	vm_page_t (*alloc_page) (dev_pmap_t *pmap);
 	void (*zero_page)(vm_page_t m);
 	gmem_error_t (*free_page) (vm_page_t m);
 	vm_page_t (*get_victim_page) (void);

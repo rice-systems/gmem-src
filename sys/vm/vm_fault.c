@@ -1120,6 +1120,29 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	vm_page_valid(fs->m);
 }
 
+vm_page_t reclaim_dev_page(dev_pmap_t *dev_pmap)
+{
+	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE))
+		return NULL;
+	// Let's reclaim a device page
+	vm_page_t victim_m = dev_pmap->mmu_ops->get_victim_page();
+	// victim_va = victim_m->p_links.mem_guard
+	// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
+	// temporarily hack to load/save the va here
+	vm_offset_t victim_va = *((vm_offset_t *) (&victim_m->md));
+	*((vm_offset_t*) &victim_m->md) = 0;
+	// Simply fault it by cpu, the fault handler will migrate the page back to CPU
+	// These flags should actually be recalculated if you want to support shadow dirty bits
+	printf("[vm_fault] reclamation candidate: %lx, va %lx\n", VM_PAGE_TO_PHYS(victim_m), victim_va);
+
+	// Simulate a CPU fault to migrate it back
+	vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
+	vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
+	printf("[vm_fault] victim should be migrated back to CPU now\n");
+	// At this time victim_m should be reclaimed. 
+	return victim_m;
+}
+
 /*
  * Allocate a page directly or via the object populate method.
  */
@@ -1129,12 +1152,10 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	struct domainset *dset;
 	int alloc_req;
 	int rv;
-	vm_page_t victim_m;
-	vm_offset_t victim_va;
 
 	if (dev_pmap != NULL) 
 		printf("%s %d\n", __func__, __LINE__);
-	
+
 	if ((fs->object->flags & OBJ_SIZEVNLOCK) != 0) {
 		rv = vm_fault_lock_vnode(fs, true);
 		MPASS(rv == KERN_SUCCESS || rv == KERN_RESOURCE_SHORTAGE);
@@ -1186,25 +1207,10 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			alloc_req |= VM_ALLOC_ZERO;
 		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
-			fs->m = dev_pmap->mmu_ops->alloc_page();
+			fs->m = dev_pmap->mmu_ops->alloc_page(dev_pmap);
 			printf("%s %d, paddr %lx\n", __func__, __LINE__, fs->m ? VM_PAGE_TO_PHYS(fs->m) : 0);
-			if (fs->m == NULL) {
-				printf("[vm_fault] device is in short of memory, try to oversubscribe memory\n");
-				// return KERN_FAILURE;
-				// Let's reclaim a device page
-				victim_m = dev_pmap->mmu_ops->get_victim_page();
-				// victim_va = victim_m->p_links.mem_guard
-				// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
-				victim_va = *((vm_offset_t *) (&victim_m->md));
-				*((vm_offset_t*) &victim_m->md) = 0;
-				// Simply fault it by cpu, the fault handler will migrate the page back to CPU
-				// These flags should actually be recalculated if you want to support shadow dirty bits
-				printf("[vm_fault] reclamation candidate: %lx, va %lx\n", VM_PAGE_TO_PHYS(victim_m), victim_va);
-				vm_fault(fs->map, victim_va, fs->fault_type, fs->fault_flags, NULL, NULL);
-				printf("[vm_fault] victim should be migrated back to CPU now\n");
-				// At this time victim_m should be reclaimed. 
-				fs->m = victim_m;
-			}
+			if (fs->m == NULL)
+				panic("Device pm management failed to reclaim pages\n");
 			if ((fs->m->flags & PG_NOCPU) == 0)
 				panic("Allocating a device page with wrong flag\n");
 			vm_page_xbusy(fs->m);
@@ -1394,10 +1400,8 @@ RetryFault:
 	 */
 	result = vm_fault_lookup(&fs);
 	if (result != KERN_SUCCESS) {
-		if (result == KERN_RESOURCE_SHORTAGE) {
-			printf("%s %d\n", __func__, __LINE__);
+		if (result == KERN_RESOURCE_SHORTAGE)
 			goto RetryFault;
-		}
 		return (result);
 	}
 
@@ -1485,7 +1489,6 @@ RetryFault:
 			unlock_and_deallocate(&fs);
 			/* FALLTHROUGH */
 		case KERN_RESOURCE_SHORTAGE:
-			printf("%s %d\n", __func__, __LINE__);
 			goto RetryFault;
 		case KERN_SUCCESS:
 		case KERN_FAILURE:
@@ -1514,7 +1517,6 @@ RetryFault:
 			if (dead)
 				return (KERN_PROTECTION_FAILURE);
 			pause("vmf_de", 1);
-			printf("%s %d\n", __func__, __LINE__);
 			goto RetryFault;
 		}
 
@@ -1524,9 +1526,7 @@ RetryFault:
 		fs.m = vm_page_lookup(fs.object, fs.pindex);
 		if (fs.m != NULL) {
 			if (vm_page_tryxbusy(fs.m) == 0) {
-				printf("%s %d\n", __func__, __LINE__);
 				vm_fault_busy_sleep(&fs);
-				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
 			}
 
@@ -1556,7 +1556,6 @@ RetryFault:
 				unlock_and_deallocate(&fs);
 				/* FALLTHROUGH */
 			case KERN_RESOURCE_SHORTAGE:
-				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
 			case KERN_SUCCESS:
 			case KERN_FAILURE:
@@ -1610,7 +1609,6 @@ RetryFault:
 				break; /* break to PAGE HAS BEEN FOUND. */
 			}
 			if (rv == KERN_RESOURCE_SHORTAGE){
-				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
 			}
 			VM_OBJECT_WLOCK(fs.object);
@@ -1764,7 +1762,6 @@ RetryFault:
 		if (result != KERN_SUCCESS) {
 			fault_deallocate(&fs);
 			if (result == KERN_RESTART) {
-				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
 			}
 			return (result);
