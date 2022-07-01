@@ -1090,13 +1090,15 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			}
 			VM_CNT_INC(v_zfod);
 		} else {
-			// printf("%s %d\n", __func__, __LINE__);
+			printf("%s %d: zeroing device page %lx\n", __func__, __LINE__, VM_PAGE_TO_PHYS(fs->m));
 			dev_pmap->mmu_ops->zero_page(fs->m);
 		}
 	} else {
 		// panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
+		printf("%s %d: migrating page %lx -> %lx\n", __func__, __LINE__, 
+			VM_PAGE_TO_PHYS(fs->src_m), VM_PAGE_TO_PHYS(fs->m));
 		// It is time to release our src_m
 
 		// printf("%s %d\n", __func__, __LINE__);
@@ -1157,7 +1159,7 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 		// At this time victim_m should be reclaimed. 
 		dev_pmap->mmu_ops->free_page(victim_m);
 	}
-	printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", reclaimed, target);
+	printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", i, target);
 	return reclaimed;
 }
 
@@ -1457,15 +1459,15 @@ RetryFault:
 		if (reclaiming)
 			printf("%s %d\n", __func__, __LINE__);
 		if (rv == KERN_MIGRATE) {
-			printf("%s %d\n", __func__, __LINE__);
+			// printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
-			printf("%s %d\n", __func__, __LINE__);
+			// printf("%s %d\n", __func__, __LINE__);
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
-				printf("%s %d: migrating back a device page\n", __func__, __LINE__);
+				printf("%s %d: MIGRATION: device -> host\n", __func__, __LINE__);
 				// This is a device page, let's find the corresponding pmap
 				cpu_pmap = map->gmem_pmap;
 				if (cpu_pmap == NULL)
@@ -1487,7 +1489,7 @@ RetryFault:
 				*((vm_offset_t*) &fs.src_m->md) = 0;
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
-				printf("%s %d migratin from CPU to device\n", __func__, __LINE__);
+				printf("%s %d MIGRATION: host -> device\n", __func__, __LINE__);
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
 				// printf("%s %d\n", __func__, __LINE__);
 			}
@@ -1497,8 +1499,6 @@ RetryFault:
 		VM_OBJECT_WLOCK(fs.first_object);
 	}
 
-	if (reclaiming)
-		printf("%s %d\n", __func__, __LINE__);
 	/*
 	 * Make a reference to this object to prevent its disposal while we
 	 * are messing with it.  Once we have the reference, the map is free
@@ -1561,11 +1561,7 @@ RetryFault:
 		 * See if page is resident
 		 */
 		fs.m = vm_page_lookup(fs.object, fs.pindex);
-		if (reclaiming)
-			printf("%s %d\n", __func__, __LINE__);
 		if (fs.m != NULL) {
-			if (reclaiming)
-				printf("%s %d\n", __func__, __LINE__);
 			if (vm_page_tryxbusy(fs.m) == 0) {
 				vm_fault_busy_sleep(&fs);
 				goto RetryFault;
