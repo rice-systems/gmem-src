@@ -1838,6 +1838,7 @@ RetryFault:
 
 		// install the reverse mapping so that we can reclaim the page.
 		// pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
+		printf("Reverse mapping pa %lx -> va %lx\n", VM_PAGE_TO_PHYS(fs.m), vaddr >> 12 << 12);
 		*((vm_offset_t*) &fs.m->md) = vaddr >> 12 << 12;
 
 		// printf("%s %d\n", __func__, __LINE__);
