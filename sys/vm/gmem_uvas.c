@@ -401,16 +401,20 @@ gmem_error_t gmem_uvas_create(
 			break;
 		case GMEM_UVAS_REPLICATE_CPU:
 			// printf("[gmem] %s: trying to share CPU process address space with a replicate pmap\n", __func__);
-			if (!(mmu_ops != NULL && dev_data != NULL))
+			if (mmu_ops == NULL)
 				return GMEM_EINVALIDARGS;
 			create_cpu_replicate_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
 			// printf("Binding UVAS to CPU VM successful\n");
 			break;
 		case GMEM_UVAS_SHARE_CPU:
+			if (mmu_ops != NULL)
+				return GMEM_EINVALIDARGS;
 			printf("[gmem uvas create]: creating uvas to share CPU pmap\n");
 			create_cpu_share_uvas(uvas_res, pmap_res);
 			break;
 		case GMEM_UVAS_EXCLUSIVE:
+			if (mmu_ops == NULL)
+				return GMEM_EINVALIDARGS;
 			printf("[gmem uvas create]: creating uvas, dev pmap and CPU pmap have exclusive mappings\n");
 			create_cpu_exclusive_uvas(uvas_res, pmap_res, mmu_ops, dev_data);
 			printf("[gmem uvas create]: exclusive mapping prepared\n");
