@@ -1143,7 +1143,7 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 		*((vm_offset_t*) &victim_m->md) = 0;
 		// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 		// These flags should actually be recalculated if you want to support shadow dirty bits
-		printf("[vm_fault] map %lx, reclamation candidate: %lx, va %lx\n", 
+		printf("[vm_fault] map %p, reclamation candidate: %lx, va %lx\n", 
 			map, VM_PAGE_TO_PHYS(victim_m), victim_va);
 
 		// Simulate a CPU fault to migrate it back
