@@ -325,7 +325,7 @@ vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max))) {
 			fs->src_m = m;
 			rv = KERN_MIGRATE;
-			printf("%s %d: MIGRATE\n", __func__, __LINE__);
+			// printf("%s %d: MIGRATE\n", __func__, __LINE__);
 			// panic("Migration is not available yet\n");
 			goto out;
 		}
@@ -1090,15 +1090,15 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			}
 			VM_CNT_INC(v_zfod);
 		} else {
-			printf("%s %d: zeroing device page %lx\n", __func__, __LINE__, VM_PAGE_TO_PHYS(fs->m));
+			// printf("%s %d: zeroing device page %lx\n", __func__, __LINE__, VM_PAGE_TO_PHYS(fs->m));
 			dev_pmap->mmu_ops->zero_page(fs->m);
 		}
 	} else {
 		// panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
-		printf("%s %d: migrating page %lx -> %lx\n", __func__, __LINE__, 
-			VM_PAGE_TO_PHYS(fs->src_m), VM_PAGE_TO_PHYS(fs->m));
+		// printf("%s %d: migrating page %lx -> %lx\n", __func__, __LINE__, 
+		// 	VM_PAGE_TO_PHYS(fs->src_m), VM_PAGE_TO_PHYS(fs->m));
 		// It is time to release our src_m
 
 		// printf("%s %d\n", __func__, __LINE__);
@@ -1134,7 +1134,7 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE))
 		return 0;
 
-	printf("[reclaim_dev_page] start\n");
+	// printf("[reclaim_dev_page] start\n");
 	for (i = 0; i < target; i ++) {
 		// Let's reclaim a device page
 		victim_m = dev_pmap->mmu_ops->get_victim_page();
@@ -1148,17 +1148,17 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 		*((vm_offset_t*) &victim_m->md) = 0;
 		// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 		// These flags should actually be recalculated if you want to support shadow dirty bits
-		printf("[vm_fault] map %p, reclamation candidate: %lx, va %lx, page flags %d\n", 
-			map, VM_PAGE_TO_PHYS(victim_m), victim_va, victim_m->flags & PG_NOCPU);
+		// printf("[vm_fault] map %p, reclamation candidate: %lx, va %lx, page flags %d\n", 
+		// 	map, VM_PAGE_TO_PHYS(victim_m), victim_va, victim_m->flags & PG_NOCPU);
 
 		// Simulate a CPU fault to migrate it back
 		// reclaiming = 1;
 		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
 		// reclaiming = 0;
-		printf("[vm_fault] victim should be migrated back to CPU now\n");
+		// printf("[vm_fault] victim should be migrated back to CPU now\n");
 		// At this time victim_m should be reclaimed. 
 	}
-	printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", i, target);
+	// printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", i, target);
 	return reclaimed;
 }
 
@@ -1438,25 +1438,18 @@ RetryFault:
 	 * Under this condition, a read lock on the object suffices, allowing
 	 * multiple page faults of a similar type to run in parallel.
 	 */
-	if (reclaiming)
-		printf("%s %d\n", __func__, __LINE__);
 	if (fs.vp == NULL /* avoid locked vnode leak */ &&
 	    (fs.entry->eflags & MAP_ENTRY_SPLIT_BOUNDARY_MASK) == 0 &&
 	    (fs.fault_flags & (VM_FAULT_WIRE | VM_FAULT_DIRTY)) == 0) {
 		VM_OBJECT_RLOCK(fs.first_object);
-		if (reclaiming)
-			printf("%s %d\n", __func__, __LINE__);
 		rv = vm_fault_soft_fast(&fs, dev_pmap);
-		if (reclaiming)
-			printf("%s %d\n", __func__, __LINE__);
 		if (rv == KERN_SUCCESS)
 			return (rv);
 		if (!VM_OBJECT_TRYUPGRADE(fs.first_object)) {
 			VM_OBJECT_RUNLOCK(fs.first_object);
 			VM_OBJECT_WLOCK(fs.first_object);
 		}
-		if (reclaiming)
-			printf("%s %d\n", __func__, __LINE__);
+
 		if (rv == KERN_MIGRATE) {
 			// printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
@@ -1466,7 +1459,7 @@ RetryFault:
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
-				printf("%s %d: MIGRATION: device -> host\n", __func__, __LINE__);
+				// printf("%s %d: MIGRATION: device -> host\n", __func__, __LINE__);
 				// This is a device page, let's find the corresponding pmap
 				cpu_pmap = map->gmem_pmap;
 				if (cpu_pmap == NULL)
@@ -1488,7 +1481,7 @@ RetryFault:
 				*((vm_offset_t*) &fs.src_m->md) = 0;
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
-				printf("%s %d MIGRATION: host -> device\n", __func__, __LINE__);
+				// printf("%s %d MIGRATION: host -> device\n", __func__, __LINE__);
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
 				// printf("%s %d\n", __func__, __LINE__);
 			}
