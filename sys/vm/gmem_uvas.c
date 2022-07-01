@@ -239,7 +239,7 @@ static inline dev_pmap_t* get_or_init_cpu_pmap(gmem_uvas_t *uvas_to_attach, vm_m
 		// attach it to cpu vm space
 		map->gmem_pmap = cpu_pmap;
 
-		printf("[gmem uvas] %s %d\n", __func__, __LINE__);
+		printf("[gmem uvas] %s %d, cpu map: %p\n", __func__, __LINE__, map);
 		return map->gmem_pmap;
 	}
 }
