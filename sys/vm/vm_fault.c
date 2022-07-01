@@ -1123,19 +1123,22 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 {
 	int reclaimed = 0, i;
+	vm_page_t victim_m;
+	vm_offset_t victim_va;
+
 	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE))
-		return NULL;
+		return 0;
 
 	for (i = 0; i < target; i ++) {
 		// Let's reclaim a device page
-		vm_page_t victim_m = dev_pmap->mmu_ops->get_victim_page();
+		victim_m = dev_pmap->mmu_ops->get_victim_page();
 		if (victim_m == NULL)
 			break;
 
 		// victim_va = victim_m->p_links.mem_guard
 		// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
 		// temporarily hack to load/save the va here
-		vm_offset_t victim_va = *((vm_offset_t *) (&victim_m->md));
+		victim_va = *((vm_offset_t *) (&victim_m->md));
 		*((vm_offset_t*) &victim_m->md) = 0;
 		// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 		// These flags should actually be recalculated if you want to support shadow dirty bits
@@ -1147,7 +1150,7 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 		// printf("[vm_fault] victim should be migrated back to CPU now\n");
 
 		// At this time victim_m should be reclaimed. 
-		dev_pmap->free_page(victim_m);
+		dev_pmap->mmu_ops->free_page(victim_m);
 	}
 	printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", reclaimed, target);
 	return reclaimed;
