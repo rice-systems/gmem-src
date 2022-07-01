@@ -1387,8 +1387,10 @@ RetryFault:
 	 */
 	result = vm_fault_lookup(&fs);
 	if (result != KERN_SUCCESS) {
-		if (result == KERN_RESOURCE_SHORTAGE)
+		if (result == KERN_RESOURCE_SHORTAGE) {
+			printf("%s %d\n", __func__, __LINE__);
 			goto RetryFault;
+		}
 		return (result);
 	}
 
@@ -1473,6 +1475,7 @@ RetryFault:
 			unlock_and_deallocate(&fs);
 			/* FALLTHROUGH */
 		case KERN_RESOURCE_SHORTAGE:
+			printf("%s %d\n", __func__, __LINE__);
 			goto RetryFault;
 		case KERN_SUCCESS:
 		case KERN_FAILURE:
@@ -1501,6 +1504,7 @@ RetryFault:
 			if (dead)
 				return (KERN_PROTECTION_FAILURE);
 			pause("vmf_de", 1);
+			printf("%s %d\n", __func__, __LINE__);
 			goto RetryFault;
 		}
 
@@ -1511,6 +1515,7 @@ RetryFault:
 		if (fs.m != NULL) {
 			if (vm_page_tryxbusy(fs.m) == 0) {
 				vm_fault_busy_sleep(&fs);
+				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
 			}
 
@@ -1540,6 +1545,7 @@ RetryFault:
 				unlock_and_deallocate(&fs);
 				/* FALLTHROUGH */
 			case KERN_RESOURCE_SHORTAGE:
+				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
 			case KERN_SUCCESS:
 			case KERN_FAILURE:
@@ -1592,8 +1598,10 @@ RetryFault:
 				hardfault = true;
 				break; /* break to PAGE HAS BEEN FOUND. */
 			}
-			if (rv == KERN_RESOURCE_SHORTAGE)
+			if (rv == KERN_RESOURCE_SHORTAGE){
+				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
+			}
 			VM_OBJECT_WLOCK(fs.object);
 			if (rv == KERN_OUT_OF_BOUNDS) {
 				fault_page_free(&fs.m);
@@ -1744,8 +1752,10 @@ RetryFault:
 		result = vm_fault_relookup(&fs);
 		if (result != KERN_SUCCESS) {
 			fault_deallocate(&fs);
-			if (result == KERN_RESTART)
+			if (result == KERN_RESTART) {
+				printf("%s %d\n", __func__, __LINE__);
 				goto RetryFault;
+			}
 			return (result);
 		}
 	}
