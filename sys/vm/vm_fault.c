@@ -1187,7 +1187,9 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 				// Let's reclaim a device page
 				victim_m = dev_pmap->mmu_ops->get_victim_page();
 				// victim_va = victim_m->p_links.mem_guard
-				victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
+				// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
+				victim_va = (vm_offset_t) fs.src_m->md;
+				(vm_offset_t) fs.src_m->md = 0;
 				// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 				// These flags should actually be recalculated if you want to support shadow dirty bits
 				printf("[vm_fault] reclamation candidate: %lx, va %lx\n", VM_PAGE_TO_PHYS(victim_m), victim_va);
@@ -1432,7 +1434,8 @@ RetryFault:
 				}
 
 				// Now destroy its reverse mapping. The reverse mapping support will be broken if multiple devices map to the page
-				pmap_delete_pv_entry(map->pmap, fs.src_m);
+				// pmap_delete_pv_entry(map->pmap, fs.src_m);
+				(vm_offset_t) fs.src_m->md = 0;
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
@@ -1788,7 +1791,8 @@ RetryFault:
 			printf("%s %d: mapping va %lx - pa %lx out of range\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
 
 		// install the reverse mapping so that we can reclaim the page.
-		pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
+		// pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
+		(vm_offset_t) fs.m->md = vaddr >> 12 << 12;
 
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
 	}
