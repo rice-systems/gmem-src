@@ -1184,6 +1184,7 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
 			fs->m = dev_pmap->mmu_ops->alloc_page();
+			printf("%s %d, paddr %lx\n", __func__, __LINE__, fs->m ? VM_PAGE_TO_PHYS(fs->m) : 0);
 			if (fs->m == NULL) {
 				printf("[vm_fault] device is in short of memory, try to oversubscribe memory\n");
 				// return KERN_FAILURE;
