@@ -325,6 +325,7 @@ vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max))) {
 			fs->src_m = m;
 			rv = KERN_MIGRATE;
+			printf("%s %d: MIGRATE\n", __func__, __LINE__);
 			// panic("Migration is not available yet\n");
 			goto out;
 		}
@@ -1143,8 +1144,8 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 		*((vm_offset_t*) &victim_m->md) = 0;
 		// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 		// These flags should actually be recalculated if you want to support shadow dirty bits
-		printf("[vm_fault] map %p, reclamation candidate: %lx, va %lx\n", 
-			map, VM_PAGE_TO_PHYS(victim_m), victim_va);
+		printf("[vm_fault] map %p, reclamation candidate: %lx, va %lx, page flags %lx\n", 
+			map, VM_PAGE_TO_PHYS(victim_m), victim_va, victim_m->flags & PG_NOCPU);
 
 		// Simulate a CPU fault to migrate it back
 		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
@@ -1468,7 +1469,7 @@ RetryFault:
 				*((vm_offset_t*) &fs.src_m->md) = 0;
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
-				printf("%s %d\n", __func__, __LINE__);
+				printf("%s %d migratin from CPU to device\n", __func__, __LINE__);
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
 				// printf("%s %d\n", __func__, __LINE__);
 			}
