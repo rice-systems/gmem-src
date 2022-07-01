@@ -1438,10 +1438,11 @@ RetryFault:
 			VM_OBJECT_WLOCK(fs.first_object);
 		}
 		if (rv == KERN_MIGRATE) {
+			printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
-			// printf("%s %d\n", __func__, __LINE__);
+			printf("%s %d\n", __func__, __LINE__);
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
@@ -1467,6 +1468,7 @@ RetryFault:
 				*((vm_offset_t*) &fs.src_m->md) = 0;
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
+				printf("%s %d\n", __func__, __LINE__);
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
 				// printf("%s %d\n", __func__, __LINE__);
 			}
