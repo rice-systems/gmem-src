@@ -1156,9 +1156,7 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
 		// reclaiming = 0;
 		printf("[vm_fault] victim should be migrated back to CPU now\n");
-
 		// At this time victim_m should be reclaimed. 
-		dev_pmap->mmu_ops->free_page(victim_m);
 	}
 	printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", i, target);
 	return reclaimed;
