@@ -1088,14 +1088,17 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 				VM_CNT_INC(v_ozfod);
 			}
 			VM_CNT_INC(v_zfod);
-		} else
+		} else {
+			printf("%s %d\n", __func__, __LINE__);
 			dev_pmap->mmu_ops->zero_page(fs->m);
+		}
 	} else {
 		// panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
 		// It is time to release our src_m
 
+		printf("%s %d\n", __func__, __LINE__);
 		if (fs->src_m->flags & PG_NOCPU) {
 			// This is a device page, let's find the corresponding pmap
 			cpu_pmap = fs->map->gmem_pmap;
@@ -1413,6 +1416,7 @@ RetryFault:
 			VM_OBJECT_WLOCK(fs.first_object);
 		}
 		if (rv == KERN_MIGRATE) {
+			printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
@@ -1795,6 +1799,21 @@ RetryFault:
 			vm_fault_prefault(&fs, vaddr,
 			    faultcount > 0 ? behind : PFBAK,
 			    faultcount > 0 ? ahead : PFFOR, false);
+
+
+		// Activation code is skipped, since we hack the emulator to manage pages for devices by private page queues
+		/*
+		 * If the page is not wired down, then put it where the pageout daemon
+		 * can find it.
+		 */
+		if ((fs.fault_flags & VM_FAULT_WIRE) != 0)
+			vm_page_wire(fs.m);
+		else
+			vm_page_activate(fs.m);
+		if (fs.m_hold != NULL) {
+			(*fs.m_hold) = fs.m;
+			vm_page_wire(fs.m);
+		}
 	} else {
 		// Ok install the mapping on the device side.
 		if (VM_PAGE_TO_PHYS(fs.m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(fs.m) >= dev_pmap->mmu_ops->pa_max)
@@ -1804,20 +1823,8 @@ RetryFault:
 		// pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
 		*((vm_offset_t*) &fs.m->md) = vaddr >> 12 << 12;
 
+		printf("%s %d\n", __func__, __LINE__);
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
-	}
-
-	/*
-	 * If the page is not wired down, then put it where the pageout daemon
-	 * can find it.
-	 */
-	if ((fs.fault_flags & VM_FAULT_WIRE) != 0)
-		vm_page_wire(fs.m);
-	else
-		vm_page_activate(fs.m);
-	if (fs.m_hold != NULL) {
-		(*fs.m_hold) = fs.m;
-		vm_page_wire(fs.m);
 	}
 
 	// coordinated mapping mechanism for replicated mappings
