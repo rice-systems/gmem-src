@@ -1438,7 +1438,6 @@ RetryFault:
 			VM_OBJECT_WLOCK(fs.first_object);
 		}
 		if (rv == KERN_MIGRATE) {
-			// printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
@@ -1446,6 +1445,7 @@ RetryFault:
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
+				printf("%s %d: migrating back a device page\n", __func__, __LINE__);
 				// This is a device page, let's find the corresponding pmap
 				cpu_pmap = map->gmem_pmap;
 				if (cpu_pmap == NULL)
