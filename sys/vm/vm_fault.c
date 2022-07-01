@@ -1149,9 +1149,9 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 			map, VM_PAGE_TO_PHYS(victim_m), victim_va, victim_m->flags & PG_NOCPU);
 
 		// Simulate a CPU fault to migrate it back
-		reclaiming = 1;
+		// reclaiming = 1;
 		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
-		reclaiming = 0;
+		// reclaiming = 0;
 		printf("[vm_fault] victim should be migrated back to CPU now\n");
 
 		// At this time victim_m should be reclaimed. 
@@ -1225,7 +1225,10 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			alloc_req |= VM_ALLOC_ZERO;
 		if (dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE) {
 			/* This is a temporary hack, the VM system should be able to allocate a dev page without any cb */
+			// Drop the object lock to obtain a vm page. The page either requires DMA or performs another vm_fault to reclaim dev pages
+			VM_OBJECT_WUNLOCK(fs->object);
 			fs->m = dev_pmap->mmu_ops->alloc_page(dev_pmap);
+			VM_OBJECT_WLOCK(fs->object);
 			// printf("%s %d, paddr %lx\n", __func__, __LINE__, fs->m ? VM_PAGE_TO_PHYS(fs->m) : 0);
 			if (fs->m == NULL)
 				panic("Device pm management failed to reclaim pages\n");
