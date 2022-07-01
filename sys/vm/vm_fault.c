@@ -1132,6 +1132,9 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	vm_page_t victim_m;
 	vm_offset_t victim_va;
 
+	if (dev_pmap != NULL) 
+		printf("%s %d\n", __func__, __LINE__);
+	
 	if ((fs->object->flags & OBJ_SIZEVNLOCK) != 0) {
 		rv = vm_fault_lock_vnode(fs, true);
 		MPASS(rv == KERN_SUCCESS || rv == KERN_RESOURCE_SHORTAGE);
