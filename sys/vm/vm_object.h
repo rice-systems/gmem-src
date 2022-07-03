@@ -79,6 +79,9 @@
 
 #include <vm/_vm_radix.h>
 
+#include <vm/gmem.h>
+#include <vm/gmem_uvas.h>
+
 /*
  *	Types defined:
  *
@@ -386,7 +389,7 @@ boolean_t vm_object_page_clean(vm_object_t object, vm_ooffset_t start,
 void vm_object_page_noreuse(vm_object_t object, vm_pindex_t start,
     vm_pindex_t end);
 void vm_object_page_remove(vm_object_t object, vm_pindex_t start,
-    vm_pindex_t end, int options);
+    vm_pindex_t end, int options, gmem_uvas_t *uvas);
 boolean_t vm_object_populate(vm_object_t, vm_pindex_t, vm_pindex_t);
 void vm_object_print(long addr, boolean_t have_addr, long count, char *modif);
 void vm_object_reference (vm_object_t);

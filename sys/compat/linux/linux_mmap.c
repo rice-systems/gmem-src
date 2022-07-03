@@ -314,7 +314,7 @@ linux_madvise_dontneed(struct thread *td, vm_offset_t start, vm_offset_t end)
 			VM_OBJECT_WLOCK(object);
 			if ((object->flags & OBJ_ONEMAPPING) != 0) {
 				vm_object_collapse(object);
-				vm_object_page_remove(object, pstart, pend, 0);
+				vm_object_page_remove(object, pstart, pend, 0, map->gmem_pmap->uvas);
 				backing_object = object->backing_object;
 				if (backing_object != NULL &&
 				    (backing_object->flags & OBJ_ANON) != 0)

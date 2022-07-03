@@ -2046,7 +2046,7 @@ bufobj_invalbuf(struct bufobj *bo, int flags, int slpflag, int slptimeo)
 	    (flags & (V_ALT | V_NORMAL | V_CLEANONLY | V_VMIO)) == 0) {
 		VM_OBJECT_WLOCK(bo->bo_object);
 		vm_object_page_remove(bo->bo_object, 0, 0, (flags & V_SAVE) ?
-		    OBJPR_CLEANONLY : 0);
+		    OBJPR_CLEANONLY : 0, NULL);
 		VM_OBJECT_WUNLOCK(bo->bo_object);
 	}
 

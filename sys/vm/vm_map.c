@@ -3902,7 +3902,7 @@ vm_map_entry_delete(vm_map_t map, vm_map_entry_t entry)
 			 * of pages. 
 			 */
 			vm_object_page_remove(object, offidxstart, offidxend,
-			    OBJPR_NOTMAPPED);
+			    OBJPR_NOTMAPPED, map->gmem_pmap->uvas);
 			if (offidxend >= object->size &&
 			    offidxstart < object->size) {
 				size1 = object->size;

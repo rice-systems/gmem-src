@@ -105,7 +105,7 @@ linux_invalidate_mapping_pages_sub(vm_object_t obj, vm_pindex_t start,
 
 	VM_OBJECT_WLOCK(obj);
 	start_count = obj->resident_page_count;
-	vm_object_page_remove(obj, start, end, flags);
+	vm_object_page_remove(obj, start, end, flags, NULL);
 	end_count = obj->resident_page_count;
 	VM_OBJECT_WUNLOCK(obj);
 	return (start_count - end_count);

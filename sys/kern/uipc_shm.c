@@ -704,7 +704,7 @@ retry:
 
 		if (nobjsize < object->size)
 			vm_object_page_remove(object, nobjsize, object->size,
-			    0);
+			    0, NULL);
 
 		/* Free the swap accounted for shm */
 		swap_release_by_cred(delta, object->cred);

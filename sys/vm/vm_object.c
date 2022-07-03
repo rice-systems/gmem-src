@@ -1247,7 +1247,7 @@ vm_object_sync(vm_object_t object, vm_ooffset_t offset, vm_size_t size,
 		else
 			flags = OBJPR_CLEANONLY;
 		vm_object_page_remove(object, OFF_TO_IDX(offset),
-		    OFF_TO_IDX(offset + size + PAGE_MASK), flags);
+		    OFF_TO_IDX(offset + size + PAGE_MASK), flags, NULL);
 	}
 	VM_OBJECT_WUNLOCK(object);
 	return (res);
@@ -2072,9 +2072,10 @@ vm_object_collapse(vm_object_t object)
  */
 void
 vm_object_page_remove(vm_object_t object, vm_pindex_t start, vm_pindex_t end,
-    int options)
+    int options, gmem_uvas_t *uvas)
 {
 	vm_page_t p, next;
+	dev_pmap_t *pmap;
 
 	VM_OBJECT_ASSERT_WLOCKED(object);
 	KASSERT((object->flags & OBJ_UNMANAGED) == 0 ||
@@ -2133,7 +2134,16 @@ wired:
 		if ((options & OBJPR_NOTMAPPED) == 0 &&
 		    object->ref_count != 0 && !vm_page_try_remove_all(p))
 			goto wired;
-		vm_page_free(p);
+
+		if (p->flags & PG_NOCPU) {
+			// find the pmap and issue free_page(p);
+			TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list)
+				if (pmap->mode == EXCLUSIVE 
+					&& pmap->mmu_ops->pa_min <= VM_PAGE_TO_PHYS(p) && VM_PAGE_TO_PHYS(p) < pmap->mmu_ops->pa_max)
+					pmap->mmu_ops->free_page(p);
+		}
+		else
+			vm_page_free(p);
 	}
 	vm_object_pip_wakeup(object);
 
@@ -2307,7 +2317,7 @@ vm_object_coalesce(vm_object_t prev_object, vm_ooffset_t prev_offset,
 	 */
 	if (next_pindex < prev_object->size) {
 		vm_object_page_remove(prev_object, next_pindex, next_pindex +
-		    next_size, 0);
+		    next_size, 0, NULL);
 #if 0
 		if (prev_object->cred != NULL) {
 			KASSERT(prev_object->charge >=

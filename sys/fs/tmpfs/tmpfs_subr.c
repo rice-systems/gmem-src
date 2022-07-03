@@ -1569,7 +1569,7 @@ retry:
 		 * Release any swap space and free any whole pages.
 		 */
 		if (newpages < oldpages)
-			vm_object_page_remove(uobj, newpages, 0, 0);
+			vm_object_page_remove(uobj, newpages, 0, 0, NULL);
 	}
 	uobj->size = newpages;
 	VM_OBJECT_WUNLOCK(uobj);
