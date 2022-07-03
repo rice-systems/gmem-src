@@ -2142,8 +2142,10 @@ wired:
 			// find the pmap and issue free_page(p);
 			TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list)
 				if (pmap->mode == EXCLUSIVE 
-					&& pmap->mmu_ops->pa_min <= VM_PAGE_TO_PHYS(p) && VM_PAGE_TO_PHYS(p) < pmap->mmu_ops->pa_max)
+					&& pmap->mmu_ops->pa_min <= VM_PAGE_TO_PHYS(p) && VM_PAGE_TO_PHYS(p) < pmap->mmu_ops->pa_max) {
+					printf("Free dev page %lx\n", VM_PAGE_TO_PHYS(p));
 					pmap->mmu_ops->free_page(p);
+				}
 		}
 		else
 			vm_page_free(p);
