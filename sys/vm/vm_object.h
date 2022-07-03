@@ -80,6 +80,7 @@
 #include <vm/_vm_radix.h>
 
 #include <vm/gmem.h>
+#include <vm/gmem_uvas.h>
 
 /*
  *	Types defined:
