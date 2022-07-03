@@ -325,8 +325,6 @@ vm_fault_soft_fast(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			(VM_PAGE_TO_PHYS(m) < dev_pmap->mmu_ops->pa_min || VM_PAGE_TO_PHYS(m) >= dev_pmap->mmu_ops->pa_max))) {
 			fs->src_m = m;
 			rv = KERN_MIGRATE;
-			// printf("%s %d: MIGRATE\n", __func__, __LINE__);
-			// panic("Migration is not available yet\n");
 			goto out;
 		}
 	}
@@ -1089,19 +1087,14 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 				VM_CNT_INC(v_ozfod);
 			}
 			VM_CNT_INC(v_zfod);
-		} else {
-			// printf("%s %d: zeroing device page %lx\n", __func__, __LINE__, VM_PAGE_TO_PHYS(fs->m));
+		} else
 			dev_pmap->mmu_ops->zero_page(fs->m);
-		}
 	} else {
 		// panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
-		// printf("%s %d: migrating page %lx -> %lx\n", __func__, __LINE__, 
-		// 	VM_PAGE_TO_PHYS(fs->src_m), VM_PAGE_TO_PHYS(fs->m));
 		// It is time to release our src_m
 
-		// printf("%s %d\n", __func__, __LINE__);
 		if (fs->src_m->flags & PG_NOCPU) {
 			// This is a device page, let's find the corresponding pmap
 			cpu_pmap = fs->map->gmem_pmap;
@@ -1123,7 +1116,6 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	vm_page_valid(fs->m);
 }
 
-static int reclaiming = 0;
 int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 {
 	int reclaimed = 0, i;
@@ -1134,31 +1126,20 @@ int reclaim_dev_page(dev_pmap_t *dev_pmap, int target)
 	if (!(dev_pmap != NULL && dev_pmap->mode == EXCLUSIVE))
 		return 0;
 
-	// printf("[reclaim_dev_page] start\n");
 	for (i = 0; i < target; i ++) {
 		// Let's reclaim a device page
 		victim_m = dev_pmap->mmu_ops->get_victim_page();
 		if (victim_m == NULL)
 			break;
 
-		// victim_va = victim_m->p_links.mem_guard
-		// victim_va = pmap_delete_pv_entry(fs->map->pmap, victim_m);
 		// temporarily hack to load/save the va here
 		victim_va = *((vm_offset_t *) (&victim_m->md));
 		*((vm_offset_t*) &victim_m->md) = 0;
+
 		// Simply fault it by cpu, the fault handler will migrate the page back to CPU
 		// These flags should actually be recalculated if you want to support shadow dirty bits
-		// printf("[vm_fault] map %p, reclamation candidate: %lx, va %lx, page flags %d\n", 
-		// 	map, VM_PAGE_TO_PHYS(victim_m), victim_va, victim_m->flags & PG_NOCPU);
-
-		// Simulate a CPU fault to migrate it back
-		// reclaiming = 1;
 		vm_fault(map, victim_va, VM_PROT_READ | VM_PROT_WRITE, VM_FAULT_NORMAL, NULL, NULL);
-		// reclaiming = 0;
-		// printf("[vm_fault] victim should be migrated back to CPU now\n");
-		// At this time victim_m should be reclaimed. 
 	}
-	// printf("[reclaim_dev_page] %d pages reclaimed, target: %d\n", i, target);
 	return reclaimed;
 }
 
@@ -1171,9 +1152,6 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	struct domainset *dset;
 	int alloc_req;
 	int rv;
-
-	// if (dev_pmap != NULL) 
-	// 	printf("%s %d\n", __func__, __LINE__);
 
 	if ((fs->object->flags & OBJ_SIZEVNLOCK) != 0) {
 		rv = vm_fault_lock_vnode(fs, true);
@@ -1230,7 +1208,6 @@ vm_fault_allocate(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			VM_OBJECT_WUNLOCK(fs->object);
 			fs->m = dev_pmap->mmu_ops->alloc_page(dev_pmap);
 			VM_OBJECT_WLOCK(fs->object);
-			// printf("%s %d, paddr %lx\n", __func__, __LINE__, fs->m ? VM_PAGE_TO_PHYS(fs->m) : 0);
 			if (fs->m == NULL)
 				panic("Device pm management failed to reclaim pages\n");
 			if ((fs->m->flags & PG_NOCPU) == 0)
@@ -1420,12 +1397,8 @@ RetryFault:
 	 * Find the backing store object and offset into it to begin the
 	 * search.
 	 */
-	if (reclaiming)
-		printf("%s %d\n", __func__, __LINE__);
-
 	result = vm_fault_lookup(&fs);
 	if (result != KERN_SUCCESS) {
-		printf("%s %d: %d\n", __func__, __LINE__, result);
 		if (result == KERN_RESOURCE_SHORTAGE)
 			goto RetryFault;
 		return (result);
@@ -1451,15 +1424,12 @@ RetryFault:
 		}
 
 		if (rv == KERN_MIGRATE) {
-			// printf("%s %d\n", __func__, __LINE__);
 			// Let's now uninstall the page from the vm_object, the page has been saved in fs.src_m
 			vm_page_xbusy(fs.src_m);
 			vm_page_remove(fs.src_m);
-			// printf("%s %d\n", __func__, __LINE__);
 
 			// Also uninstall the mapping after destroying the logical mappnig
 			if (fs.src_m->flags & PG_NOCPU) {
-				// printf("%s %d: MIGRATION: device -> host\n", __func__, __LINE__);
 				// This is a device page, let's find the corresponding pmap
 				cpu_pmap = map->gmem_pmap;
 				if (cpu_pmap == NULL)
@@ -1477,15 +1447,11 @@ RetryFault:
 				}
 
 				// Now destroy its reverse mapping. The reverse mapping support will be broken if multiple devices map to the page
-				// pmap_delete_pv_entry(map->pmap, fs.src_m);
 				*((vm_offset_t*) &fs.src_m->md) = 0;
 			} else {
 				// This is a CPU page, unmap it by CPU VM code
-				// printf("%s %d MIGRATION: host -> device\n", __func__, __LINE__);
 				pmap_remove(map->pmap, vaddr, vaddr + PAGE_SIZE);
-				// printf("%s %d\n", __func__, __LINE__);
 			}
-			// src_m is now invisible to be copied.
 		}
 	} else {
 		VM_OBJECT_WLOCK(fs.first_object);
@@ -1724,11 +1690,6 @@ RetryFault:
 
 #if defined(__amd64__) && VM_NRESERVLEVEL > 0
 		if (m_left != NULL && nzeropages > 1) {
-			// printf("[vm_fault] faulting %d pages\n", nzeropages);
-			// unsigned long delta = rdtscp();
-			// pmap_zero_pages_idle(m_left, nzeropages);
-			// delta = rdtscp() - delta;
-			// printf("[vm_fault] avg page zeroing time: %lu cycles\n", delta / nzeropages);
 			for (m_tmp = m_left; m_tmp < &m_left[nzeropages]; m_tmp ++) {
 				if (m_tmp == fs.first_m) {
 					// prevent another zeroing in vm_fault_zerofill
@@ -1853,11 +1814,8 @@ RetryFault:
 			printf("%s %d: mapping va %lx - pa %lx out of range\n",__func__, __LINE__, vaddr, VM_PAGE_TO_PHYS(fs.m));
 
 		// install the reverse mapping so that we can reclaim the page.
-		// pmap_insert_pv_entry(fs.map->pmap, vaddr >> 12 << 12, fs.m);
-		// printf("Reverse mapping pa %lx -> va %lx\n", VM_PAGE_TO_PHYS(fs.m), vaddr >> 12 << 12);
 		*((vm_offset_t*) &fs.m->md) = vaddr >> 12 << 12;
 
-		// printf("%s %d\n", __func__, __LINE__);
 		dev_pmap->mmu_ops->mmu_pmap_enter(dev_pmap, vaddr >> 12 << 12, PAGE_SIZE, VM_PAGE_TO_PHYS(fs.m), fault_type, 0);
 	}
 
@@ -1865,10 +1823,7 @@ RetryFault:
 	// should adjust the if condition to support replicating a device in the future
 	if (map->gmem_pmap != NULL && map->gmem_pmap->pmap_replica != NULL) {
 		bool should_pin = false;
-		// if (map->gmem_pmap->pmap_replica->npmaps != 1)
-		// 	printf("Replicated pmap # is not 1, but %u\n", map->gmem_pmap->pmap_replica->npmaps);
 		for (int i = 0; i < map->gmem_pmap->pmap_replica->npmaps; i ++) {
-			// printf("vm fault mapping dev pmap\n");
 			dev_pmap_t *pmap = map->gmem_pmap->pmap_replica->replicated_pmaps[i];
 			if (pmap->policy.fault_with_replica) {
 				// We must also consider prefaulted pages...
@@ -2410,16 +2365,13 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	}
 
 	if (pmap->mode == REPLICATE_CPU) {
-		// printf("[gmem_uvas_fault] preparing CPU pages, zerofilled %lu, optimized zerofilled %lu\n", VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
 		// if device is a replica of CPU, prepare its physical memory by CPU. CPU uses dev_pmap policy
-		// delta = rdtscp();
 		int faulted = 0, mapped = 0;
 		if (pmap->replica_of_cpu != NULL) {
 			vm_map_t map = pmap->replica_of_cpu->data;
 			if (!vm_map_range_valid(map, addr, end))
 				return (-1);
 			for (mp = ma, va = addr; va < end; mp++, va += PAGE_SIZE) {
-				// printf("[gmem_uvas_fault] pinning va %lx\n", va);
 				*mp = pmap_extract_and_hold(map->pmap, va, prot);
 				if (*mp == NULL) {
 					// We actually always pin it and ignore pin_on_fault flag for now
@@ -2438,19 +2390,6 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 		}
 		else
 			printf("Device physical memory management is not implemented\n");
-
-		// delta = rdtscp() - delta;
-		// printf("[gmem_uvas_fault] preparing CPU pages done %lu cycles, zerofilled %lu, optimized zerofilled %lu\n", 
-		// 	delta, VM_CNT_FETCH(v_zfod), VM_CNT_FETCH(v_ozfod));
-		// printf("[gmem_uvas_fault] faulted %d, mapped %d\n", faulted, mapped);
-
-		// perform dev fault if it was not faulted by CPU vm fault
-		// if (!pmap->policy.fault_with_replica) {
-		// We insert dev mappings anyways, because even if fault_with_replica is enabled, 
-		// we do not replicate all mappings at the clContextCreate time, so some populated vm region
-		// may skip the GPU PTE installation.
-
-		// printf("[gmem_uvas_fault] preparing gpu page table, start %lx, size %d\n", addr, PAGE_SIZE * count);
 		
 		last_i = 0;
 		for (vm_offset_t i = 1; i <= count; i ++) {
@@ -2493,41 +2432,8 @@ int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot
 	} else if (pmap->mode == EXCLUSIVE) {
 		vm_map_t map = &curthread->td_proc->p_vmspace->vm_map;
 		// We don't consider soft page faults at this moment.
-		for (va = addr; va < end; va += PAGE_SIZE) {
-			// printf("Faulting va %lx\n", va);
+		for (va = addr; va < end; va += PAGE_SIZE)
 			vm_fault(map, va, prot, VM_FAULT_NORMAL, NULL, pmap);
-			// printf("Done\n");
-
-
-			// fs.vp = NULL;
-			// fs.vaddr = va;
-			// fs.m_hold = pmap->policy.pin_on_fault ? mp : NULL;
-			// fs.fault_flags = fault_flags;
-			// fs.map = map;
-			// fs.lookup_still_valid = false;
-			// fs.oom = 0;
-			// fs.fault_type = fault_type;
-			// vm_fault_lookup(&fs);
-
-			// // search the vm object to determine if the page was previously mapped by any device or host
-			// if (va cannot be looked up in the vm_object) {
-			// 	// This should really just be done by vm_page_alloc_contig with a given physical range from the device
-			// 	vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU
-			// 	pmap->mmu_ops->zero_page(m);
-			// 	Install m in the vm_object
-			// 	pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
-			// } else {
-			// 	vm_page_t mapped_m = find the current page in the vm_object
-			// 	unmap the current page, (CPU VM must use the paddr to look up the pmap and issue the right unmap calls)
-			// 	Uninstall it from the vm_object
-
-			// 	vm_page_t m = pmap->mmu_ops->alloc_page(); // m should be marked as PG_NOCPU, this flag  should be set up at boot time
-			// 	copy mapped_m -> m
-			// 	Install m in the vm_object
-			// 	pmap->mmu_ops->mmu_pmap_enter(pmap, va, PAGE_SIZE, VM_PAGE_TO_PHYS(m));
-			// 	Free mapped_m
-			// }
-		}
 	}
 
 	return count;
