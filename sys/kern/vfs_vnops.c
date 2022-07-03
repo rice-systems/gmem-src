@@ -2341,7 +2341,7 @@ vn_pages_remove(struct vnode *vp, vm_pindex_t start, vm_pindex_t end)
 	if ((object = vp->v_object) == NULL)
 		return;
 	VM_OBJECT_WLOCK(object);
-	vm_object_page_remove(object, start, end, 0);
+	vm_object_page_remove(object, start, end, 0, NULL);
 	VM_OBJECT_WUNLOCK(object);
 }
 
