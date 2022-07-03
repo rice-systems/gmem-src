@@ -3901,7 +3901,7 @@ vm_map_entry_delete(vm_map_t map, vm_map_entry_t entry)
 			 * pmap_remove() on the only mapping to this range
 			 * of pages. 
 			 */
-			printf("Remove vm object pages from %lu to %lu\n", offidxstart, offidxend);
+			// printf("Remove vm object pages from %lu to %lu\n", offidxstart, offidxend);
 			vm_object_page_remove(object, offidxstart, offidxend,
 			    OBJPR_NOTMAPPED, map->gmem_pmap == NULL? NULL : map->gmem_pmap->uvas);
 			if (offidxend >= object->size &&
