@@ -51,6 +51,8 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_extern.h>
 #include <vm/vm_map.h>
 #include <vm/vm_object.h>
+#include <vm/gmem.h>
+#include <vm/gmem_uvas.h>
 
 #include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_mmap.h>
