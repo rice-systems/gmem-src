@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 #include <vm/vm_map.h>
+#include <vm/vm_meter.h>
 #include <dev/pci/pcireg.h>
 #include <machine/atomic.h>
 #include <machine/bus.h>
@@ -612,9 +613,6 @@ static gmem_error_t intel_iommu_pmap_enter(dev_pmap_t *pmap, vm_offset_t va, vm_
 
 static gmem_error_t intel_iommu_pmap_release(dev_pmap_t *pmap, vm_offset_t va, vm_size_t size)
 {
-	intel_iommu_pgtable_t *pgtable = pmap->data;
-	struct dmar_domain *domain = pgtable->domain;
-
 	// destroy mappings
 	return domain_pmap_release_rw(((intel_iommu_pgtable_t *) pmap->data)->domain, va, size);
 }
