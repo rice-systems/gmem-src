@@ -81,7 +81,6 @@ struct dmar_domain {
 };
 
 struct dmar_ctx {
-	// gmem_uvas_t *uvas;		/* (c) */
 	struct iommu_ctx context;
 	uint64_t last_fault_rec[2];	/* Last fault reported */
 	LIST_ENTRY(dmar_ctx) link;	/* (u) Member in the domain list */
@@ -184,7 +183,6 @@ struct dmar_unit {
 	vmem_t *irtids;
 
 	/* Delayed freeing of map entries queue processing */
-	// struct gmem_uvas_entries_tailq tlb_flush_entries;
 	struct task qi_task;
 	struct taskqueue *qi_taskqueue;
 };

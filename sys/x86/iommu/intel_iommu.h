@@ -41,11 +41,6 @@ struct intel_iommu_pgtable
 	vm_object_t pgtbl_obj;
 
 	u_int flags;
-
-	// The original iommu data structure is messy -- 
-	//	domain contains both page table and address space data
-	//  dmar contains async queues
-	//  domain members use dmar lock???
 };
 
 typedef struct intel_iommu_dev_data intel_iommu_dev_data_t;
@@ -54,16 +49,6 @@ typedef struct intel_iommu_pgtable intel_iommu_pgtable_t;
 // both identity mapping and normal mappings should be supported
 extern gmem_mmu_ops_t intel_iommu_ops, intel_iommu_default_ops;
 
-
-// int domain_pmap_release_locked(struct dmar_domain *domain, vm_offset_t base, 
-//     vm_offset_t size, int lvl, dmar_pte_t *ptep);
-
-
 int domain_pmap_enter_rw(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
-int domain_pmap_enter_lockless(struct dmar_domain *domain, vm_offset_t va, vm_offset_t size, vm_offset_t pa, uint64_t pflags, int flags);
-
 int domain_pmap_release_rw(struct dmar_domain *domain, vm_offset_t base, vm_offset_t size);
-int domain_pmap_release_lockless(struct dmar_domain *domain, vm_offset_t base, vm_offset_t size);
-
-
 #endif

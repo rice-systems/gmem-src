@@ -173,7 +173,6 @@ dmar_identify(driver_t *driver, device_t parent)
 	ACPI_DMAR_HARDWARE_UNIT *dmarh;
 	ACPI_STATUS status;
 	int i, error;
-	gmem_dev_t *gmem_dev_tmp;
 
 	if (acpi_disabled("dmar"))
 		return;
@@ -220,11 +219,6 @@ dmar_identify(driver_t *driver, device_t parent)
 			device_delete_child(parent, dmar_devs[i]);
 			dmar_devs[i] = NULL;
 		}
-
-		// GMEM code: register this gmem device using iommu_ops
-		gmem_dev_tmp = gmem_dev_add(dmar_devs[i]);
-		// GMEM code: revert the registration of the gmem_dev upon errors
-		// gmem_dev_remove(gmem_dev_tmp);
 	}
 }
 

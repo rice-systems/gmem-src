@@ -515,17 +515,10 @@ dmar_domain_destroy(struct dmar_domain *domain)
 	    ("destroying dom %p with ctx_cnt %d", domain, domain->ctx_cnt));
 	KASSERT(domain->refs == 0,
 	    ("destroying dom %p with refs %d", domain, domain->refs));
-	if ((domain->iodom.flags & IOMMU_DOMAIN_GAS_INITED) != 0) {
-		// DMAR_DOMAIN_LOCK(domain);
-		// iommu_gas_fini_domain(iodom);
-		// TODO: replace domain_free_pgtbl with the same function
+	if ((domain->iodom.flags & IOMMU_DOMAIN_GAS_INITED) != 0)
 		gmem_uvas_delete(iodom->uvas);
-		// DMAR_DOMAIN_UNLOCK(domain);
-	}
-	if ((domain->iodom.flags & IOMMU_DOMAIN_PGTBL_INITED) != 0) {
+	if ((domain->iodom.flags & IOMMU_DOMAIN_PGTBL_INITED) != 0)
 		iodom->pmap->mmu_ops->mmu_pmap_destroy(iodom->pmap);
-		// domain_free_pgtbl(domain);
-	}
 
 	iommu_domain_fini(iodom);
 	dmar = DOM2DMAR(domain);
@@ -571,18 +564,6 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 		 */
 		DMAR_UNLOCK(dmar);
 
-		// GMEM Code: The gmem dev must instantiate a uvas along with
-		// the ctx instantiation.
-		// The dev happens to be the requester which actually uses IOMMU
-		// So, it could be a good idea to check if the device is a gmem_device
-		if (!is_gmem_dev(dev))
-		{
-			// GMEM code: register this gmem device using iommu_ops
-			gmem_dev_add(dev);
-			// Let's not panic, it could be normal
-			// panic("requesting device was not registered as a gmem device\n");
-		}
-
 		dmar_ensure_ctx_page(dmar, PCI_RID2BUS(rid));
 		domain1 = dmar_domain_alloc(dmar, id_mapped);
 
@@ -594,14 +575,12 @@ dmar_get_ctx_for_dev1(struct dmar_unit *dmar, device_t dev, uint16_t rid,
 			dev_data->dmar = dmar;
 			dev_data->domain = domain1;
 			dev_data->id_mapped = id_mapped;
-			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, device_get_gmem_dev(dev), &intel_iommu_default_ops,
+			gmem_uvas_create(&domain1->iodom.uvas, &domain1->iodom.pmap, NULL, &intel_iommu_default_ops,
 				NULL, dev_data, GMEM_UVAS_UNIQUE,
 				PAGE_SIZE, 0, 1ULL << 48, 4096);
-			debug_printf("uvas allocated for domain #%d, uvas %p\n", domain1->domain, domain1->iodom.uvas);
 
 			if (!id_mapped) {
 				/* Disable local apic region access */
-				// replace NULL with stupid msi_entry
 				error = gmem_uvas_alloc_span_fixed(domain1->iodom.uvas, 0xfee00000,
 				    0xfeefffff + 1, GMEM_PROT_READ, GMEM_MF_CANWAIT, &domain1->iodom.msi_entry);
 			}
