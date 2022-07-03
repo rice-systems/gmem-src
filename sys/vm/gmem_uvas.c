@@ -43,6 +43,8 @@
 #include <vm/gmem_uvas.h>
 #include <vm/gmem_rb_tree.h>
 
+struct hist instrument_hist[UVAS_INST_MAXPGCNT];
+
 static uma_zone_t gmem_uvas_entry_zone;
 static uma_zone_t gmem_uvas_unmap_requests_zone;
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas);
