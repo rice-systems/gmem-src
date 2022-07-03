@@ -2138,7 +2138,7 @@ wired:
 		    object->ref_count != 0 && !vm_page_try_remove_all(p))
 			goto wired;
 
-		if (p->flags & PG_NOCPU) {
+		if (uvas != NULL && (p->flags & PG_NOCPU)) {
 			// find the pmap and issue free_page(p);
 			TAILQ_FOREACH(pmap, &uvas->dev_pmap_header, unified_pmap_list)
 				if (pmap->mode == EXCLUSIVE 
