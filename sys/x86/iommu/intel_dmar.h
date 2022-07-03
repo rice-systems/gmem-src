@@ -34,10 +34,11 @@
 #ifndef __X86_IOMMU_INTEL_DMAR_H
 #define	__X86_IOMMU_INTEL_DMAR_H
 
+#include <sys/param.h>
+#include <sys/lock.h>
+#include <sys/rwlock.h>
 #include <dev/iommu/iommu.h>
 #include <vm/gmem.h>
-#include <sys/sx.h>
-#include <sys/rmlock.h>
 
 struct dmar_unit;
 
