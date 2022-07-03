@@ -17,7 +17,6 @@
 #include <sys/queue.h>
 #include <sys/vmem.h>
 #include <vm/vm.h>
-// #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 
 // debugging switch

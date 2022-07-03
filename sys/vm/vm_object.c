@@ -92,6 +92,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sx.h>
 
 #include <vm/vm.h>
+#include <vm/gmem_uvas.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
