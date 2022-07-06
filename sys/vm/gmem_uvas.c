@@ -697,6 +697,7 @@ int wakeup_time = 1; // 1 runs per 1 second
 int instrument = 1;
 int host_to_dev = 0;
 int dev_to_host = 0;
+int dev_zerofill = 0;
 
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
