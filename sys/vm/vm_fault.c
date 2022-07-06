@@ -1082,14 +1082,15 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		 */
 		if (dev_pmap == NULL || dev_pmap->mode != EXCLUSIVE) {			
 			if ((fs->m->flags & PG_ZERO) == 0) {
-				gmem_stats_inc_dev_zerofill();
 				pmap_zero_page(fs->m);
 			} else {
 				VM_CNT_INC(v_ozfod);
 			}
 			VM_CNT_INC(v_zfod);
-		} else
+		} else {
+			gmem_stats_inc_dev_zerofill();
 			dev_pmap->mmu_ops->zero_page(fs->m);
+		}
 	} else {
 		// panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
