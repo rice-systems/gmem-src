@@ -1092,6 +1092,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 	} else {
 		// panic("Migration code is not avialable in vm_fault_prepare\n");
 		/* It is a migration request */
+		gmem_stats_inc_dev_to_host_migrate();
 		pmap_copy_page(fs->src_m, fs->m); // If DMA is required, maybe some cb should be issued here.
 		// It is time to release our src_m
 
@@ -1110,6 +1111,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 			}
 		} else {
 			// This is a CPU page, unmap it by CPU VM code
+			gmem_stats_inc_host_to_dev_migrate();
 			vm_page_free(fs->src_m);
 		}
 	}

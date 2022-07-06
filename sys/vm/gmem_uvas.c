@@ -695,6 +695,8 @@ int enable_daemon = 1;
 int enable_async = 1;
 int wakeup_time = 1; // 1 runs per 1 second
 int instrument = 1;
+int host_to_dev = 0;
+int dev_to_host = 0;
 
 static void gmem_uvas_generic_unmap_handler(gmem_uvas_t *uvas)
 {
@@ -940,6 +942,17 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 		panic("uvas async daemon: error %d\n", error);
 }
 
+void
+gmem_stats_inc_host_to_dev_migrate()
+{
+	atomic_add_int(&host_to_dev, 1);
+}
+
+void
+gmem_stats_inc_dev_to_host_migrate()
+{
+	atomic_add_int(&dev_to_host, 1);
+}
 
 // int unmap_coalesce_threshold = 1024
 // int tlb_coalescing_threshold = 100;
@@ -965,3 +978,9 @@ SYSCTL_INT(_vm_gmem, OID_AUTO, instrument, CTLFLAG_RWTUN,
 SYSCTL_INT(_vm_gmem, OID_AUTO, enable_daemon, CTLFLAG_RWTUN,
     &enable_daemon, 0,
     "async unmap daemon");
+SYSCTL_INT(_vm_gmem, OID_AUTO, host_to_dev, CTLFLAG_RWTUN,
+    &host_to_dev, 0,
+    "host to device migration pages");
+SYSCTL_INT(_vm_gmem, OID_AUTO, dev_to_host, CTLFLAG_RWTUN,
+    &dev_to_host, 0,
+    "device to host migration pages");
