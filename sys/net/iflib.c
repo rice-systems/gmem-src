@@ -575,13 +575,9 @@ TASKQGROUP_DEFINE(if_config_tqg, 1, 1);
 
 static int async_rx_unmap = 0, 
 	async_tx_unmap = 0, 
-	async_rx_flush = 0,
-	iflib_reload_fast_mmu = 0;
+	async_rx_flush = 0;
 static SYSCTL_NODE(_net, OID_AUTO, iflib, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "iflib driver parameters");
-SYSCTL_INT(_net_iflib, OID_AUTO, iflib_reload_fast_mmu, CTLFLAG_RWTUN,
-    &iflib_reload_fast_mmu, 0,
-    "reload fast mmu");
 SYSCTL_INT(_net_iflib, OID_AUTO, async_rx_unmap, CTLFLAG_RWTUN,
     &async_rx_unmap, 0,
     "use async unmap DMA KPI for rx path");
@@ -5687,8 +5683,6 @@ iflib_queues_alloc(if_ctx_t ctx)
 	txq = ctx->ifc_txqs;
 	rxq = ctx->ifc_rxqs;
 
-	if (iflib_reload_fast_mmu)
-		bus_dmamap_reload_fast(bus_get_dma_tag(ctx->ifc_dev));
 	/*
 	 * XXX handle allocation failure
 	 */
