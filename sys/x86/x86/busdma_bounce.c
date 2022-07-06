@@ -1328,11 +1328,6 @@ busdma_swi(void)
 	mtx_unlock(&bounce_lock);
 }
 
-static void
-bounce_bus_dma_reload(bus_dma_tag_t dmat)
-{
-}
-
 struct bus_dma_impl bus_dma_bounce_impl = {
 	.tag_create = bounce_bus_dma_tag_create,
 	.tag_destroy = bounce_bus_dma_tag_destroy,
@@ -1349,5 +1344,4 @@ struct bus_dma_impl bus_dma_bounce_impl = {
 	.map_complete = bounce_bus_dmamap_complete,
 	.map_unload = bounce_bus_dmamap_unload,
 	.map_sync = bounce_bus_dmamap_sync,
-	.reload_fast = bounce_bus_dma_reload,
 };
