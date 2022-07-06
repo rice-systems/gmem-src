@@ -401,6 +401,7 @@ gmem_error_t pmap_reload_mmu(dev_pmap_t *pmap, gmem_mmu_ops_t *new_mmu);
 int gmem_uvas_fault(dev_pmap_t *pmap, vm_offset_t addr, vm_offset_t len, vm_prot_t prot, vm_page_t *out);
 
 
+void gmem_stats_inc_dev_zerofill(void);
 void gmem_stats_inc_host_to_dev_migrate(void);
 void gmem_stats_inc_dev_to_host_migrate(void);
 

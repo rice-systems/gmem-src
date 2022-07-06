@@ -1082,6 +1082,7 @@ vm_fault_prepare(struct faultstate *fs, dev_pmap_t *dev_pmap)
 		 */
 		if (dev_pmap == NULL || dev_pmap->mode != EXCLUSIVE) {			
 			if ((fs->m->flags & PG_ZERO) == 0) {
+				gmem_stats_inc_dev_zerofill();
 				pmap_zero_page(fs->m);
 			} else {
 				VM_CNT_INC(v_ozfod);

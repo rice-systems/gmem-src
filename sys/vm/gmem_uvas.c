@@ -943,6 +943,12 @@ gmem_uvas_async_unmap_start(gmem_uvas_t *uvas)
 }
 
 void
+gmem_stats_inc_dev_zerofill()
+{
+	atomic_add_int(&dev_zerofill, 1);
+}
+
+void
 gmem_stats_inc_host_to_dev_migrate()
 {
 	atomic_add_int(&host_to_dev, 1);
@@ -984,3 +990,6 @@ SYSCTL_INT(_vm_gmem, OID_AUTO, host_to_dev, CTLFLAG_RWTUN,
 SYSCTL_INT(_vm_gmem, OID_AUTO, dev_to_host, CTLFLAG_RWTUN,
     &dev_to_host, 0,
     "device to host migration pages");
+SYSCTL_INT(_vm_gmem, OID_AUTO, dev_zerofill, CTLFLAG_RWTUN,
+    &dev_zerofill, 0,
+    "device zero-fill pages");
