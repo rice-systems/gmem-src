@@ -54,6 +54,97 @@ __FBSDID("$FreeBSD$");
 #include <vm/gmem_uvas.h>
 #include <x86/iommu/intel_iommu.h>
 
+
+#include <dev/iommu/iommu_gas.h>
+#include <dev/iommu/iommu_msi.h>
+
+// IOMMU MSI code
+void
+iommu_unmap_msi(struct iommu_ctx *ctx)
+{
+	struct gmem_uvas_entry *entry;
+	struct iommu_domain *domain;
+
+	domain = ctx->domain;
+	entry = domain->msi_entry;
+	if (entry == NULL)
+		return;
+
+	gmem_uvas_unmap(domain->pmap, entry, true, NULL, NULL);
+
+	domain->msi_entry = NULL;
+	domain->msi_base = 0;
+	domain->msi_phys = 0;
+}
+
+int
+iommu_map_msi(struct iommu_ctx *ctx, iommu_gaddr_t size,
+    u_int eflags, u_int flags, vm_page_t *ma)
+{
+	struct iommu_domain *domain;
+	struct gmem_uvas_entry *entry;
+	int error;
+	vm_offset_t start;
+
+	error = 0;
+	domain = ctx->domain;
+
+	/* Check if there is already an MSI page allocated */
+	IOMMU_DOMAIN_LOCK(domain);
+	entry = domain->msi_entry;
+	IOMMU_DOMAIN_UNLOCK(domain);
+
+	if (entry == NULL) {
+		error = gmem_mmap_eager(domain->uvas, domain->pmap, &start, size,
+		    eflags, flags | GMEM_UVA_ALLOC, ma, false, &entry);
+
+		IOMMU_DOMAIN_LOCK(domain);
+		if (error == 0) {
+			if (domain->msi_entry == NULL) {
+				MPASS(domain->msi_base == 0);
+				MPASS(domain->msi_phys == 0);
+
+				domain->msi_entry = entry;
+				domain->msi_base = entry->start;
+				domain->msi_phys = VM_PAGE_TO_PHYS(ma[0]);
+			} else {
+				/*
+				 * We lost the race and already have an
+				 * MSI page allocated. Free the unneeded entry.
+				 */
+				gmem_uvas_free_entry(domain->uvas, entry);
+			}
+		} else if (domain->msi_entry != NULL) {
+			/*
+			 * The allocation failed, but another succeeded.
+			 * Return success as there is a valid MSI page.
+			 */
+			error = 0;
+		}
+		IOMMU_DOMAIN_UNLOCK(domain);
+	}
+
+	return (error);
+}
+
+void
+iommu_translate_msi(struct iommu_domain *domain, uint64_t *addr)
+{
+
+	*addr = (*addr - domain->msi_phys) + domain->msi_base;
+
+	KASSERT(*addr >= domain->msi_entry->start,
+	    ("%s: Address is below the MSI entry start address (%jx < %jx)",
+	    __func__, (uintmax_t)*addr, (uintmax_t)domain->msi_entry->start));
+
+	KASSERT(*addr + sizeof(*addr) <= domain->msi_entry->end,
+	    ("%s: Address is above the MSI entry end address (%jx < %jx)",
+	    __func__, (uintmax_t)*addr, (uintmax_t)domain->msi_entry->end));
+}
+
+SYSCTL_NODE(_hw, OID_AUTO, iommu, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, "");
+
+
 #define domain_page_shift(domain, lvl) ((domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT + DMAR_PAGE_SHIFT)
 #define domain_pgtbl_pte_off(domain, base, lvl) (base >> (DMAR_PAGE_SHIFT + (domain->pglvl - lvl - 1) * DMAR_NPTEPGSHIFT) & DMAR_PTEMASK)
 
