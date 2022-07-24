@@ -757,9 +757,13 @@ sysctl_iommu_hist(SYSCTL_HANDLER_ARGS)
 	sbuf_printf(&sbuf, "UVAS_INST_VA_ALLOC: %ld\n",
 		instrument_hist[1].latency[UVAS_INST_VA_ALLOC] / instrument_hist[1].count[UVAS_INST_VA_ALLOC]
 		);
-	sbuf_printf(&sbuf, "VUVAS_INST_A_FREE: %ld\n",
+	sbuf_printf(&sbuf, "UVAS_INST_VA_FREE: %ld\n",
 		instrument_hist[1].latency[UVAS_INST_VA_FREE] / instrument_hist[1].count[UVAS_INST_VA_FREE]
 		);
+	sbuf_printf(&sbuf, "UVAS_INST_TLB_INV: %ld\n",
+		instrument_hist[1].latency[UVAS_INST_TLB_INV] / instrument_hist[1].count[UVAS_INST_TLB_INV]
+		);
+	
 	error = sbuf_finish(&sbuf);
 	sbuf_delete(&sbuf);
 	return (error);

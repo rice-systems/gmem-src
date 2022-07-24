@@ -616,11 +616,13 @@ static inline void intel_iommu_tlb_inv_domain(dev_pmap_t *pmap)
 {
 	struct dmar_domain *domain = ((intel_iommu_pgtable_t *) pmap->data)->domain;
 
+	START_STATS;
 	if (!domain->dmar->qi_enabled) {
 		domain_flush_iotlb_domain(domain);
 	} else {
 		dmar_qi_invalidate_domain(domain);
 	}
+	FINISH_STATS(UVAS_INST_TLB_INV, 1);
 }
 
 static void intel_iommu_tlb_invl_coalesced(
