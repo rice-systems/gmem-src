@@ -1,3 +1,7 @@
+This repo contains the source for Gmem on the branches named "gmem".
+
+See https://arxiv.org/abs/2310.12554 for an overview of Gmem.
+
 FreeBSD Source:
 ---------------
 This is the top level of the FreeBSD source directory.
